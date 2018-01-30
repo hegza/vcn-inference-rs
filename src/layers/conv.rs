@@ -1,37 +1,48 @@
 use util::*;
 use geometry::*;
+use super::LayerData;
+use std::ops::Deref;
 
 /// A blueprint or a descriptor for a convolutional layer
-pub struct ConvLayer {
-    filter_shape: PaddedSquare,
-    weights: Vec<f32>,
-}
+pub struct ConvLayer(LayerData<f32>);
 
 impl ConvLayer {
     /// Creates a descriptor of a convolutional layer with a square filter the
     /// side of which will be set to filter_side.
-    pub fn new(
-        filter_side: usize,
-        filter_channels: usize,
-        feature_map_count: usize,
+    pub fn from_shapes(
+        filter_shape: &PaddedSquare,
+        input_shape: &ImageGeometry,
+        output_shape: &ImageGeometry,
         weights_file: &str,
     ) -> ConvLayer {
-        let filter_shape = PaddedSquare::from_side(filter_side);
-        ConvLayer {
-            filter_shape: filter_shape,
+        debug!(
+            "Create conv-layer with filter-shape: {:?}, input-shape: {:?}, output-shape: {:?}, weights: {}.",
+            filter_shape, input_shape, output_shape, weights_file
+        );
+        trace!(
+            "\t↳ input (size: {0}, channels: {1}), output: (size: {2}, channels: {3}), filter-size: {4}, weights-size: {4}x{2}x{2} = {5}.",
+            input_shape.num_elems(),
+            input_shape.channels(),
+            output_shape.num_elems(),
+            output_shape.channels(),
+            filter_shape.num_elems(),
+            filter_shape.num_elems() * input_shape.channels() * output_shape.channels()
+        );
+        ConvLayer(LayerData::<f32> {
+            num_in: input_shape.num_elems(),
+            num_out: output_shape.num_elems(),
             weights: read_file_as_f32s_checked(
                 weights_file,
-                filter_shape.num_elements() * filter_channels * feature_map_count,
+                filter_shape.num_elems() * input_shape.channels() * output_shape.channels(),
             ).unwrap(),
-        }
+        })
     }
-    pub fn weights(&self) -> &Vec<f32> {
-        &self.weights
-    }
-    pub fn num_weights(&self) -> usize {
-        self.weights.len()
-    }
-    pub fn filter_shape(&self) -> &PaddedSquare {
-        &self.filter_shape
+}
+
+impl Deref for ConvLayer {
+    type Target = LayerData<f32>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }

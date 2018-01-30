@@ -1,6 +1,6 @@
 use util::*;
 use ocl;
-use ocl::{flags, Buffer, Context, Device, MemFlags, OclPrm, Platform, Program, Queue, SpatialDims};
+use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
 
 /// Define which platform and device(s) to use. Create a context, queue, and program.
 pub fn init() -> ocl::Result<(Queue, Program, Context)> {
@@ -12,11 +12,11 @@ pub fn init() -> ocl::Result<(Queue, Program, Context)> {
         .iter()
         .map(|&device| device.name())
         .collect();
-    println!("Available OpenCL devices: {:?}.", device_names);
+    info!("Available OpenCL devices: {:?}.", device_names);
 
     // TODO: currently, the first available device is selected, make configurable
     let device = Device::first(platform);
-    println!("Using device \"{}\".", device.name());
+    info!("Using device \"{}\".", device.name());
 
     let context = Context::builder()
         .platform(platform)
@@ -40,4 +40,20 @@ pub fn init() -> ocl::Result<(Queue, Program, Context)> {
     )?;
 
     Ok((queue, program, context))
+}
+
+pub fn create_buffer<T>(
+    length: usize,
+    flags: flags::MemFlags,
+    queue: &Queue,
+) -> ocl::Result<Buffer<T>>
+where
+    T: OclPrm,
+{
+    info!("Queuing {:?} buffer with {} elements.", flags, length);
+    Buffer::<T>::builder()
+        .queue(queue.clone())
+        .flags(flags)
+        .dims(length)
+        .build()
 }

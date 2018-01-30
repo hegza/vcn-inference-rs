@@ -1,36 +1,37 @@
 /// A descriptor for the filter-geometry
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct PaddedSquare {
     side: usize,
     padding: usize,
 }
 
 /// A descriptor for input and intermediary image geometry
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct ImageGeometry {
     side: usize,
-    padding: usize,
     channels: usize,
 }
 
 impl ImageGeometry {
-    pub fn new(side: usize, padding: usize, channels: usize) -> ImageGeometry {
+    pub fn new(side: usize, channels: usize) -> ImageGeometry {
+        ImageGeometry { side, channels }
+    }
+    // ???: What is 'properly' here.
+    /// Returns a clone with padding set to the amount required to fit the filter into the image properly.
+    pub fn with_filter_padding(&self, filter_shape: &PaddedSquare) -> ImageGeometry {
         ImageGeometry {
-            side,
-            padding,
-            channels,
+            side: self.side + filter_shape.side() - 1,
+            channels: self.channels,
         }
     }
-    /// Returns a clone with the padding extended to the amount required to fit
-    /// the filter into the image properly. Discards previous padding.
-    pub fn with_filter_padding(&self, filter_shape: &PaddedSquare) -> ImageGeometry {
-        ImageGeometry::new(self.side, filter_shape.side() - 1, self.channels)
+    pub fn channels(&self) -> usize {
+        self.channels
     }
 }
 
 pub trait Square {
     fn side(&self) -> usize;
-    fn num_elements(&self) -> usize;
+    fn num_elems(&self) -> usize;
 }
 
 impl PaddedSquare {
@@ -46,16 +47,16 @@ impl Square for PaddedSquare {
     fn side(&self) -> usize {
         self.side + self.padding
     }
-    fn num_elements(&self) -> usize {
+    fn num_elems(&self) -> usize {
         self.side() * self.side()
     }
 }
 
 impl Square for ImageGeometry {
     fn side(&self) -> usize {
-        self.side + self.padding
+        self.side
     }
-    fn num_elements(&self) -> usize {
+    fn num_elems(&self) -> usize {
         self.side() * self.side() * self.channels
     }
 }

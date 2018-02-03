@@ -6,7 +6,7 @@ use std::path::Path;
 use std::io::prelude::*;
 use std::io::BufReader;
 use byteorder::{LittleEndian, ReadBytesExt};
-use layers::{Layer, LayerData};
+use layers::Layer;
 
 /// Reads a file into a string.
 pub fn read_file(filename: &str) -> String {
@@ -60,8 +60,22 @@ pub fn write_file_f32s(filename: &str, f32s: &[f32]) {
 }
 
 /// Verifies that each network layer inputs data of valid dimensions to the next layer.
-pub fn verify_network_dimensions(layers: &[&LayerData<f32>]) {
+pub fn verify_network_dimensions(layers: &[&Layer<f32>]) {
     for w in layers.windows(2) {
         debug_assert_eq!(w[0].num_out(), w[1].num_in());
+    }
+}
+
+pub trait IndexMatrix<T> {
+    fn elem(&self, length: usize, row: usize, column: usize) -> &T;
+    fn elem_mut(&mut self, length: usize, row: usize, column: usize) -> &mut T;
+}
+
+impl<T> IndexMatrix<T> for [T] {
+    fn elem(&self, length: usize, row: usize, column: usize) -> &T {
+        &self[row * length + column]
+    }
+    fn elem_mut(&mut self, length: usize, row: usize, column: usize) -> &mut T {
+        &mut self[row * length + column]
     }
 }

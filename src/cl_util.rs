@@ -28,7 +28,7 @@ pub fn init() -> ocl::Result<(Queue, Program, Context)> {
         .devices(device)
         .src(kernel_sources)
         // HACK: Allow the .cl files to include the contents of files in the working directory
-        .cmplr_opt("-I.")
+        .cmplr_opt("-I./input")
         .build(&context)?;
 
     // TODO: make separate queues for all the associated devices
@@ -50,7 +50,10 @@ pub fn create_buffer<T>(
 where
     T: OclPrm,
 {
-    info!("Queuing {:?} buffer with {} elements.", flags, length);
+    debug!(
+        "Queuing a buffer with {} elements. Flags: {:?}.",
+        length, flags
+    );
     Buffer::<T>::builder()
         .queue(queue.clone())
         .flags(flags)

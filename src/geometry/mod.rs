@@ -5,27 +5,41 @@ pub struct PaddedSquare {
     padding: usize,
 }
 
+// TODO: split into PaddedImageGeometry and ImageGeometry
 /// A descriptor for input and intermediary image geometry
 #[derive(Copy, Clone, Debug)]
 pub struct ImageGeometry {
     side: usize,
+    padding: usize,
     channels: usize,
 }
 
 impl ImageGeometry {
     pub fn new(side: usize, channels: usize) -> ImageGeometry {
-        ImageGeometry { side, channels }
+        ImageGeometry {
+            side,
+            padding: 0,
+            channels,
+        }
     }
     // ???: What is 'properly' here.
     /// Returns a clone with padding set to the amount required to fit the filter into the image properly.
     pub fn with_filter_padding(&self, filter_shape: &PaddedSquare) -> ImageGeometry {
         ImageGeometry {
-            side: self.side + filter_shape.side() - 1,
+            side: self.side,
+            padding: filter_shape.side() - 1,
             channels: self.channels,
         }
     }
     pub fn channels(&self) -> usize {
         self.channels
+    }
+    pub fn unpadded(&self) -> ImageGeometry {
+        ImageGeometry {
+            side: self.side,
+            padding: 0,
+            channels: self.channels,
+        }
     }
 }
 
@@ -54,7 +68,7 @@ impl Square for PaddedSquare {
 
 impl Square for ImageGeometry {
     fn side(&self) -> usize {
-        self.side
+        self.side + self.padding
     }
     fn num_elems(&self) -> usize {
         self.side() * self.side() * self.channels

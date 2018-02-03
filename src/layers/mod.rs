@@ -18,19 +18,5 @@ pub trait Layer<T> {
 
 /// The data contained in any given CNN-layer.
 pub struct LayerData<T> {
-    num_in: usize,
-    num_out: usize,
     weights: Vec<T>,
-}
-
-impl<T> Layer<T> for LayerData<T> {
-    fn weights(&self) -> &Vec<T> {
-        &self.weights
-    }
-    fn num_out(&self) -> usize {
-        self.num_out
-    }
-    fn num_in(&self) -> usize {
-        self.num_in
-    }
 }

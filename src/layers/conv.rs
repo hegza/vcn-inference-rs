@@ -1,41 +1,56 @@
 use util::*;
 use geometry::*;
-use super::LayerData;
+use super::{Layer, LayerData};
 use std::ops::Deref;
+use ocl::SpatialDims;
 
 /// A blueprint or a descriptor for a convolutional layer
-pub struct ConvLayer(LayerData<f32>);
+pub struct ConvLayer {
+    layer_data: LayerData<f32>,
+    input_shape: ImageGeometry,
+    output_shape: ImageGeometry,
+}
 
 impl ConvLayer {
     /// Creates a descriptor of a convolutional layer with a square filter the
     /// side of which will be set to filter_side.
     pub fn from_shapes(
-        filter_shape: &PaddedSquare,
+        num_filter_elems: usize,
         input_shape: &ImageGeometry,
         output_shape: &ImageGeometry,
         weights_file: &str,
     ) -> ConvLayer {
         debug!(
-            "Create conv-layer with filter-shape: {:?}, input-shape: {:?}, output-shape: {:?}, weights: {}.",
-            filter_shape, input_shape, output_shape, weights_file
+            "Create conv-layer with filter-elems: {:?}, input-shape: {:?}, output-shape: {:?}, weights: {}.",
+            num_filter_elems, input_shape, output_shape, weights_file
         );
-        trace!(
-            "\t↳ input (size: {0}, channels: {1}), output: (size: {2}, channels: {3}), filter-size: {4}, weights-size: {4}x{2}x{2} = {5}.",
-            input_shape.num_elems(),
-            input_shape.channels(),
-            output_shape.num_elems(),
-            output_shape.channels(),
-            filter_shape.num_elems(),
-            filter_shape.num_elems() * input_shape.channels() * output_shape.channels()
-        );
-        ConvLayer(LayerData::<f32> {
-            num_in: input_shape.num_elems(),
-            num_out: output_shape.num_elems(),
-            weights: read_file_as_f32s_checked(
-                weights_file,
-                filter_shape.num_elems() * input_shape.channels() * output_shape.channels(),
-            ).unwrap(),
-        })
+        ConvLayer {
+            layer_data: LayerData::<f32> {
+                weights: read_file_as_f32s_checked(
+                    weights_file,
+                    num_filter_elems * input_shape.channels() * output_shape.channels(),
+                ).unwrap(),
+            },
+            input_shape: input_shape.clone(),
+            output_shape: output_shape.clone(),
+        }
+    }
+
+    // The global work-group-size of the matching kernel
+    pub fn gws(&self) -> SpatialDims {
+        SpatialDims::Three(
+            self.output_shape.channels(),
+            self.output_shape.side(),
+            self.output_shape.side(),
+        )
+    }
+
+    pub fn input_shape(&self) -> &ImageGeometry {
+        &self.input_shape
+    }
+
+    pub fn output_shape(&self) -> &ImageGeometry {
+        &self.output_shape
     }
 }
 
@@ -43,6 +58,18 @@ impl Deref for ConvLayer {
     type Target = LayerData<f32>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.layer_data
+    }
+}
+
+impl Layer<f32> for ConvLayer {
+    fn weights(&self) -> &Vec<f32> {
+        &self.weights
+    }
+    fn num_out(&self) -> usize {
+        self.output_shape.num_elems()
+    }
+    fn num_in(&self) -> usize {
+        self.input_shape.num_elems()
     }
 }

@@ -29,6 +29,7 @@ pub fn init() -> ocl::Result<(Queue, Program, Context)> {
         .src(kernel_sources)
         // HACK: Allow the .cl files to include the contents of files in the working directory
         .cmplr_opt("-I./input")
+        .cmplr_opt("-cl-std=CL1.2")
         .build(&context)?;
 
     // TODO: make separate queues for all the associated devices
@@ -43,6 +44,7 @@ pub fn init() -> ocl::Result<(Queue, Program, Context)> {
 }
 
 pub fn create_buffer<T>(
+    name: &'static str,
     length: usize,
     flags: flags::MemFlags,
     queue: &Queue,
@@ -51,12 +53,23 @@ where
     T: OclPrm,
 {
     debug!(
-        "Queuing a buffer with {} elements. Flags: {:?}.",
-        length, flags
+        "Create buffer with {} elements for {}. Flags: {:?}.",
+        length, name, flags
     );
     Buffer::<T>::builder()
         .queue(queue.clone())
         .flags(flags)
         .dims(length)
         .build()
+}
+
+#[allow(dead_code)]
+fn write_buf_to_file(filename: &str, buf: ocl::Buffer<f32>) -> ocl::Result<()> {
+    unsafe {
+        let mut mem_map = buf.map().flags(flags::MAP_READ).len(buf.len()).enq()?;
+        write_file_f32s(filename, &mem_map);
+
+        mem_map.unmap().enq()?;
+    };
+    Ok(())
 }

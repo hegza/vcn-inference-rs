@@ -5,8 +5,11 @@ use std::fs::{create_dir_all, File};
 use std::path::Path;
 use std::io::prelude::*;
 use std::io::BufReader;
+use std;
 use byteorder::{LittleEndian, ReadBytesExt};
 use layers::Layer;
+use geometry::{ImageGeometry, Square};
+use std::time::Instant;
 
 /// Reads a file into a string.
 pub fn read_file(filename: &str) -> String {
@@ -78,4 +81,55 @@ impl<T> IndexMatrix<T> for [T] {
     fn elem_mut(&mut self, length: usize, row: usize, column: usize) -> &mut T {
         &mut self[row * length + column]
     }
+}
+
+/// Reads a file into a Vec of f32s and adds the given amount of padding.
+pub fn read_image_with_padding(filename: &str, padded_image_shape: ImageGeometry) -> Vec<f32> {
+    let image = read_file_as_f32s(filename);
+    let image_shape = padded_image_shape.unpadded();
+
+    debug_assert_eq!(image.len(), image_shape.num_elems());
+    let padding = (padded_image_shape.side() - image_shape.side()) / 2;
+
+    // TODO: There's some room to optimize here :)
+    let mut v: Vec<f32> =
+        unsafe { vec![std::mem::uninitialized(); padded_image_shape.num_elems()] };
+    {
+        let channels = v.chunks_mut(padded_image_shape.num_elems() / padded_image_shape.channels());
+        for (c, channel) in channels.enumerate() {
+            let mut rows: Vec<&mut [f32]> = channel.chunks_mut(padded_image_shape.side()).collect();
+            let (first_rows, other_rows) = rows.split_at_mut(padding);
+            let (n_rows, last_rows) = other_rows.split_at_mut(image_shape.side());
+
+            // Set the first row elements as 0's
+            first_rows
+                .iter_mut()
+                .for_each(|row| row.iter_mut().for_each(|elem| *elem = 0f32));
+            for (row_idx, row) in n_rows.iter_mut().enumerate() {
+                let (mut pad_left, mut right) = row.split_at_mut(padding);
+                let (mut im_middle, mut pad_right) = right.split_at_mut(image_shape.side());
+                // Pad left side of image with 0's
+                pad_left.iter_mut().for_each(|x| *x = 0f32);
+                // Fill image center with contents
+                for (col_idx, elem) in im_middle.iter_mut().enumerate() {
+                    *elem = image[c * (image_shape.num_elems() / padded_image_shape.channels())
+                                      + row_idx * image_shape.side()
+                                      + col_idx];
+                }
+                // Pad right side of image with 0's
+                pad_right.iter_mut().for_each(|x| *x = 0f32);
+            }
+            // Set the last rows elements as 0's
+            last_rows
+                .iter_mut()
+                .for_each(|row| row.iter_mut().for_each(|elem| *elem = 0f32));
+        }
+    }
+    debug_assert_eq!(v.len(), padded_image_shape.num_elems());
+    v
+}
+
+pub fn duration_between(start: Instant, end: Instant) -> f64 {
+    let duration = end.duration_since(start);
+    duration.as_secs() as f64 + duration.subsec_nanos() as f64 * 0.000000001f64
 }

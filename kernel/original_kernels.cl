@@ -104,10 +104,8 @@ __kernel void conv_relu_2(
 */
 }
 
-__kernel void mtx_mulf (
-    __global float* restrict B,
-    __global float* restrict c_mul,
-    __global float* restrict A) {
+__kernel void mtx_mulf(__global float* restrict B, __global float* restrict c_mul,
+                       __global float* restrict A) {
 
     const int Mdim = MAGIC;
     const int Kdim = 1;

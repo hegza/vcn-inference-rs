@@ -18,7 +18,7 @@ use util::*;
 use layers::*;
 use geometry::*;
 use math::*;
-use ocl::{flags, Buffer, Kernel, Queue, SpatialDims};
+use ocl::{flags, Buffer, Kernel, Queue};
 use std::time::Instant;
 
 // TODO: Write these into a hyper-parameters struct
@@ -118,20 +118,19 @@ fn run_dense3(
     dense3: &DenseLayer,
     dense3_kernel: &Kernel,
     dense3_out: &Buffer<f32>,
-    kernel3_global_size: SpatialDims,
     queue: &Queue,
 ) -> ocl::Result<Vec<f32>> {
+    // ???: work-dim in original version is 1; it's 3 here
     debug!(
-        "Enqueuing kernel dense3 with global-workgroup-size {:?} = {}.",
-        kernel3_global_size.to_lens()?,
-        kernel3_global_size.to_len()
+        "Enqueuing kernel dense3 with global-workgroup-size {}.",
+        dense3.gws().to_len()
     );
     unsafe {
         dense3_kernel
             .cmd()
             .queue(&queue)
             //TODO: gws is unrequired?
-            .gws(kernel3_global_size)
+            .gws(dense3.gws())
             .enq()?;
     }
     queue.finish()?;
@@ -157,6 +156,7 @@ fn run_dense3(
         dense3_output_host_with_relu
     };
     trace!("fifo_relu_out1: {:?}", &fifo_relu_out1);
+
     Ok(fifo_relu_out1)
 }
 
@@ -205,26 +205,44 @@ fn run() -> ocl::Result<()> {
     let (queue, program, _context) = cl::init()?;
 
     // Allocate read-only memory for the weights of the 1st three layers
-    let conv1_wgts_buf =
-        cl::create_buffer::<f32>(conv1.num_weights(), flags::MEM_READ_ONLY, &queue)?;
-    let conv2_wgts_buf =
-        cl::create_buffer::<f32>(conv2.num_weights(), flags::MEM_READ_ONLY, &queue)?;
-    let dense3_wgts_buf =
-        cl::create_buffer::<f32>(dense3.num_weights(), flags::MEM_READ_ONLY, &queue)?;
+    let conv1_wgts_buf = cl::create_buffer::<f32>(
+        "conv 1 weights",
+        conv1.num_weights(),
+        flags::MEM_READ_ONLY,
+        &queue,
+    )?;
+    let conv2_wgts_buf = cl::create_buffer::<f32>(
+        "conv 2 weights",
+        conv2.num_weights(),
+        flags::MEM_READ_ONLY,
+        &queue,
+    )?;
+    let dense3_wgts_buf = cl::create_buffer::<f32>(
+        "dense 3 weights",
+        dense3.num_weights(),
+        flags::MEM_READ_ONLY,
+        &queue,
+    )?;
 
     // Allocate read-only memory for the input geometry on device with host-accessible pointer for
     // writing input from file
     let input_buf = cl::create_buffer::<f32>(
+        "input img",
         conv1.num_in(),
         flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
         &queue,
     )?;
     // Allocate read-write memory for the 1st feature map on device
-    let fm1_buf = cl::create_buffer::<f32>(conv1.num_out(), flags::MEM_READ_WRITE, &queue)?;
+    let fm1_buf = cl::create_buffer::<f32>("FM 1", conv1.num_out(), flags::MEM_READ_WRITE, &queue)?;
     // Allocate read-write memory for the 2nd feature map on device
-    let fm2_buf = cl::create_buffer::<f32>(conv2.num_out(), flags::MEM_READ_WRITE, &queue)?;
+    let fm2_buf = cl::create_buffer::<f32>("FM 2", conv2.num_out(), flags::MEM_READ_WRITE, &queue)?;
     // Allocate read-write memory for the dense (3rd) layer output on device with host pointer for reading
-    let dense3_out_buf = cl::create_buffer::<f32>(dense3.num_out(), flags::MEM_WRITE_ONLY, &queue)?;
+    let dense3_out_buf = cl::create_buffer::<f32>(
+        "dense 3 output",
+        dense3.num_out(),
+        flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
+        &queue,
+    )?;
 
     // Write the weights of the 1st three layers to the global memory of the device
     unsafe {
@@ -235,18 +253,6 @@ fn run() -> ocl::Result<()> {
     }
     // TODO: this might not make any difference anywhere (verify with benchmark)
     queue.finish()?;
-
-    info!(
-        "dense3.num_out() = {}, fm2_geom.side() = {}, fm2_geom.side() = {}",
-        dense3.num_out(),
-        conv2.output_shape().side(),
-        conv2.output_shape().side()
-    );
-    let kernel3_global_size = SpatialDims::Three(
-        dense3.num_out(),
-        conv2.output_shape().side(),
-        conv2.output_shape().side(),
-    );
 
     // Create the kernel for the 1st layer (Convolution + ReLU)
     let conv_relu1 = Kernel::new("conv_relu_1", &program)?
@@ -271,7 +277,7 @@ fn run() -> ocl::Result<()> {
     // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
     let dense3_kernel = Kernel::new("mtx_mulf", &program)?
         .queue(queue.clone())
-        .gws(kernel3_global_size)
+        .gws(dense3.gws())
         // Input
         .arg_buf(&fm2_buf)
         // Output
@@ -310,13 +316,7 @@ fn run() -> ocl::Result<()> {
     let conv2_done_time = Instant::now();
 
     // Enqueue the 3rd layer (fully-connected)
-    let dense3_out = run_dense3(
-        &dense3,
-        &dense3_kernel,
-        &dense3_out_buf,
-        kernel3_global_size,
-        &queue,
-    )?;
+    let dense3_out = run_dense3(&dense3, &dense3_kernel, &dense3_out_buf, &queue)?;
     let dense3_done_time = Instant::now();
 
     // Run the 4th layer (fully-connected)
@@ -341,67 +341,5 @@ fn run() -> ocl::Result<()> {
     );
     write_file_f32s(OUT_FILE, &output);
 
-    Ok(())
-}
-
-fn duration_between(start: Instant, end: Instant) -> f64 {
-    let duration = end.duration_since(start);
-    duration.as_secs() as f64 + duration.subsec_nanos() as f64 * 0.000000001f64
-}
-
-/// Reads a file into a Vec of f32s and adds the given amount of padding.
-pub fn read_image_with_padding(filename: &str, padded_image_shape: ImageGeometry) -> Vec<f32> {
-    let image = read_file_as_f32s(filename);
-    let image_shape = padded_image_shape.unpadded();
-
-    debug_assert_eq!(image.len(), image_shape.num_elems());
-    let padding = (padded_image_shape.side() - image_shape.side()) / 2;
-
-    // TODO: There's some room to optimize here :)
-    let mut v: Vec<f32> =
-        unsafe { vec![std::mem::uninitialized(); padded_image_shape.num_elems()] };
-    {
-        let channels = v.chunks_mut(padded_image_shape.num_elems() / padded_image_shape.channels());
-        for (c, channel) in channels.enumerate() {
-            let mut rows: Vec<&mut [f32]> = channel.chunks_mut(padded_image_shape.side()).collect();
-            let (first_rows, other_rows) = rows.split_at_mut(padding);
-            let (n_rows, last_rows) = other_rows.split_at_mut(image_shape.side());
-
-            // Set the first row elements as 0's
-            first_rows
-                .iter_mut()
-                .for_each(|row| row.iter_mut().for_each(|elem| *elem = 0f32));
-            for (row_idx, row) in n_rows.iter_mut().enumerate() {
-                let (mut pad_left, mut right) = row.split_at_mut(padding);
-                let (mut im_middle, mut pad_right) = right.split_at_mut(image_shape.side());
-                // Pad left side of image with 0's
-                pad_left.iter_mut().for_each(|x| *x = 0f32);
-                // Fill image center with contents
-                for (col_idx, elem) in im_middle.iter_mut().enumerate() {
-                    *elem = image[c * (image_shape.num_elems() / padded_image_shape.channels())
-                                      + row_idx * image_shape.side()
-                                      + col_idx];
-                }
-                // Pad right side of image with 0's
-                pad_right.iter_mut().for_each(|x| *x = 0f32);
-            }
-            // Set the last rows elements as 0's
-            last_rows
-                .iter_mut()
-                .for_each(|row| row.iter_mut().for_each(|elem| *elem = 0f32));
-        }
-    }
-    debug_assert_eq!(v.len(), padded_image_shape.num_elems());
-    v
-}
-
-#[allow(dead_code)]
-fn write_buf_to_file(filename: &str, buf: ocl::Buffer<f32>) -> ocl::Result<()> {
-    unsafe {
-        let mut mem_map = buf.map().flags(flags::MAP_READ).len(buf.len()).enq()?;
-        write_file_f32s(filename, &mem_map);
-
-        mem_map.unmap().enq()?;
-    };
     Ok(())
 }

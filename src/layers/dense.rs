@@ -1,6 +1,7 @@
 use util::*;
 use super::{Layer, LayerData};
 use std::ops::Deref;
+use ocl::SpatialDims;
 
 /// A blueprint or a descriptor for a fully-connected layer
 pub struct DenseLayer {
@@ -23,6 +24,11 @@ impl DenseLayer {
             num_in: input_dim,
             num_out: output_dim,
         }
+    }
+
+    // The global work-group-size of the matching kernel
+    pub fn gws(&self) -> SpatialDims {
+        SpatialDims::One(self.num_out)
     }
 }
 

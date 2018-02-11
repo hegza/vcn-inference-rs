@@ -48,10 +48,6 @@ impl ConvLayer {
     pub fn input_shape(&self) -> &ImageGeometry {
         &self.input_shape
     }
-
-    pub fn output_shape(&self) -> &ImageGeometry {
-        &self.output_shape
-    }
 }
 
 impl Deref for ConvLayer {

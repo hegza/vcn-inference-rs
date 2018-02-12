@@ -4,7 +4,7 @@ use super::{Layer, LayerData};
 use std::ops::Deref;
 use ocl::SpatialDims;
 
-/// A blueprint or a descriptor for a convolutional layer
+/// A complete descriptor for a convolutional layer
 pub struct ConvLayer {
     layer_data: LayerData<f32>,
     input_shape: ImageGeometry,
@@ -20,7 +20,7 @@ impl ConvLayer {
         output_shape: &ImageGeometry,
         weights_file: &str,
     ) -> ConvLayer {
-        debug!(
+        trace!(
             "Create conv-layer with filter-elems: {:?}, input-shape: {:?}, output-shape: {:?}, weights: {}.",
             num_filter_elems, input_shape, output_shape, weights_file
         );
@@ -47,6 +47,9 @@ impl ConvLayer {
 
     pub fn input_shape(&self) -> &ImageGeometry {
         &self.input_shape
+    }
+    pub fn output_shape(&self) -> &ImageGeometry {
+        &self.output_shape
     }
 }
 

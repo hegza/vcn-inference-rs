@@ -7,7 +7,7 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std;
 use byteorder::{LittleEndian, ReadBytesExt};
-use layers::Layer;
+use network::Layer;
 use geometry::{ImageGeometry, Square};
 use std::time::Instant;
 
@@ -91,7 +91,7 @@ pub fn read_image_with_padding(filename: &str, padded_image_shape: ImageGeometry
     debug_assert_eq!(image.len(), image_shape.num_elems());
     let padding = (padded_image_shape.side() - image_shape.side()) / 2;
 
-    // TODO: There's some room to optimize here :)
+    // TODO: There's some room to optimize here, at least in terms of visual pleasure :)
     let mut v: Vec<f32> =
         unsafe { vec![std::mem::uninitialized(); padded_image_shape.num_elems()] };
     {

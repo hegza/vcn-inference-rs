@@ -3,7 +3,7 @@ use super::{Layer, LayerData};
 use std::ops::Deref;
 use ocl::SpatialDims;
 
-/// A blueprint or a descriptor for a fully-connected layer
+/// A complete descriptor for a fully-connected layer
 pub struct DenseLayer {
     layer_data: LayerData<f32>,
     num_in: usize,
@@ -13,9 +13,11 @@ pub struct DenseLayer {
 impl DenseLayer {
     /// Creates a descriptor of a fully-connected layer
     pub fn new(input_dim: usize, output_dim: usize, weights_file: &str) -> DenseLayer {
-        debug!(
+        trace!(
             "Create dense-layer with input-size: {}, output-size: {}, weights: {}.",
-            input_dim, output_dim, weights_file
+            input_dim,
+            output_dim,
+            weights_file
         );
         DenseLayer {
             layer_data: LayerData::<f32> {

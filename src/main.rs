@@ -8,32 +8,31 @@ extern crate ocl;
 extern crate test;
 
 mod geometry;
-mod layers;
+mod network;
 mod cl_util;
 mod util;
 mod math;
 
 use cl_util as cl;
 use util::*;
-use layers::*;
+use network::*;
 use geometry::*;
 use math::*;
 use ocl::{flags, Buffer, Kernel, Queue};
 use std::time::Instant;
 
-// TODO: Write these into a hyper-parameters struct
-// Channels for each RGB color
-const NUM_IMAGE_CHANNELS: usize = 3;
-// The size of the filter/kernels
-const CONV_1_FILTER_SIDE: usize = 5;
-const CONV_2_FILTER_SIDE: usize = 5;
-// The number of feature maps
-const NUM_FEATURE_MAPS: usize = 32;
-const STRIDE: usize = 2;
-// ???: What is this, what does it do? Was MAGIC in Jani's code
-const FULLY_CONNECTED_CONST: usize = 100;
-const NUM_OUTPUT_CLASSES: usize = 4;
+const HYPER_PARAMS: HyperParams = HyperParams {
+    source_side: 96,
+    num_source_channels: 3,
+    conv_1_filter_side: 5,
+    conv_2_filter_side: 5,
+    num_feature_maps: 32,
+    stride: 2,
+    fully_connected_const: 100,
+    num_output_classes: 4,
+};
 const IN_FILE: &'static str = "input/baseline/input1/in.bin";
+const WEIGHTS_DIR: &'static str = "input/weights";
 const OUT_FILE: &'static str = "output/out.f";
 
 fn main() {
@@ -45,49 +44,50 @@ fn main() {
     }
 }
 
-fn create_network() -> (ConvLayer, ConvLayer, DenseLayer, DenseLayer, DenseLayer) {
-    let conv1_filter_shape = PaddedSquare::from_side(CONV_1_FILTER_SIDE);
-    let conv2_filter_shape = PaddedSquare::from_side(CONV_2_FILTER_SIDE);
+fn create_network(
+    params: HyperParams,
+) -> (ConvLayer, ConvLayer, DenseLayer, DenseLayer, DenseLayer) {
+    let conv1_filter_shape = PaddedSquare::from_side(params.conv_1_filter_side);
+    let conv2_filter_shape = PaddedSquare::from_side(params.conv_2_filter_side);
 
-    // Create descriptor for input geometry with the a shape of an image, side: 96,
-    // channels: 3 (RGB)
-    let input_geom = ImageGeometry::new(96, NUM_IMAGE_CHANNELS);
-    let padded_input_geom = input_geom.with_filter_padding(&conv1_filter_shape);
+    // Create descriptor for input geometry with the a shape and properties of an image
+    let input_shape = ImageGeometry::new(params.source_side, params.num_source_channels);
+    let padded_input_shape = input_shape.with_filter_padding(&conv1_filter_shape);
     // Feature map 1 is a fraction of the side of initial image geometry due to stride
-    let fm1_geom = ImageGeometry::new(input_geom.side() / STRIDE, NUM_FEATURE_MAPS);
-    let padded_fm1_geom = fm1_geom.with_filter_padding(&conv2_filter_shape);
+    let fm1_shape = ImageGeometry::new(input_shape.side() / params.stride, params.num_feature_maps);
+    let padded_fm1_shape = fm1_shape.with_filter_padding(&conv2_filter_shape);
     // Feature map 2 is a fraction of the side of the tier 1 feature map due to stride
-    let fm2_geom = ImageGeometry::new(fm1_geom.side() / STRIDE, NUM_FEATURE_MAPS);
+    let fm2_shape = ImageGeometry::new(fm1_shape.side() / params.stride, params.num_feature_maps);
 
     // Create a representation of the 1st convolutional layer with weights from a file
     let conv1 = ConvLayer::from_shapes(
         conv1_filter_shape.num_elems(),
-        &padded_input_geom,
-        &padded_fm1_geom,
-        "input/weights/conv1_update.bin",
+        &padded_input_shape,
+        &padded_fm1_shape,
+        &format!("{}/conv1_update.bin", WEIGHTS_DIR),
     );
     // Create a representation of the 2nd convolutional layer with weights from a file
     let conv2 = ConvLayer::from_shapes(
         conv2_filter_shape.num_elems(),
-        &padded_fm1_geom,
-        &fm2_geom,
-        "input/weights/conv2_update.bin",
+        &conv1.output_shape(),
+        &fm2_shape,
+        &format!("{}/conv2_update.bin", WEIGHTS_DIR),
     );
-    // Create representations of the fully-connected layers
+    // Create the representations of the fully-connected layers
     let dense3 = DenseLayer::new(
         conv2.num_out(),
-        FULLY_CONNECTED_CONST,
-        "input/weights/ip3.bin",
+        params.fully_connected_const,
+        &format!("{}/ip3.bin", WEIGHTS_DIR),
     );
     let dense4 = DenseLayer::new(
         dense3.num_out(),
-        FULLY_CONNECTED_CONST,
-        "input/weights/ip4.bin",
+        params.fully_connected_const,
+        &format!("{}/ip4.bin", WEIGHTS_DIR),
     );
     let dense5 = DenseLayer::new(
         dense4.num_out(),
-        NUM_OUTPUT_CLASSES,
-        "input/weights/ip_last.bin",
+        params.num_output_classes,
+        &format!("{}/ip_last.bin", WEIGHTS_DIR),
     );
 
     // Verify that I/O dimensions match between layers
@@ -96,17 +96,12 @@ fn create_network() -> (ConvLayer, ConvLayer, DenseLayer, DenseLayer, DenseLayer
     (conv1, conv2, dense3, dense4, dense5)
 }
 
-fn run_conv(conv: &ConvLayer, kernel: &Kernel, queue: &Queue) -> ocl::Result<()> {
-    debug!(
-        "Enqueuing conv kernel with global-workgroup-size {:?} = {}.",
-        conv.gws().to_lens()?,
-        conv.gws().to_len()
-    );
+fn run_conv_kernel(kernel: &Kernel, conv: &ConvLayer, queue: &Queue) -> ocl::Result<()> {
     unsafe {
         kernel
             .cmd()
             .queue(&queue)
-            // TODO: gws is unrequired?
+            // TODO: gws is unrequired here? already included in Kernel
             .gws(conv.gws())
             .enq()?;
     }
@@ -114,92 +109,66 @@ fn run_conv(conv: &ConvLayer, kernel: &Kernel, queue: &Queue) -> ocl::Result<()>
     Ok(())
 }
 
-fn run_dense3(
-    dense3: &DenseLayer,
-    dense3_kernel: &Kernel,
-    dense3_out: &Buffer<f32>,
+fn run_dense_kernel_into_vec(
+    dense_kernel: &Kernel,
+    kernel_output_buf: &Buffer<f32>,
+    dense: &DenseLayer,
     queue: &Queue,
 ) -> ocl::Result<Vec<f32>> {
-    // ???: work-dim in original version is 1; it's 3 here
-    debug!(
-        "Enqueuing kernel dense3 with global-workgroup-size {}.",
-        dense3.gws().to_len()
-    );
     unsafe {
-        dense3_kernel
+        dense_kernel
             .cmd()
             .queue(&queue)
-            //TODO: gws is unrequired?
-            .gws(dense3.gws())
+            // TODO: gws is unrequired here? already included in Kernel
+            .gws(dense.gws())
             .enq()?;
     }
     queue.finish()?;
 
-    let fifo_relu_out1 = unsafe {
+    let out = unsafe {
         // Create a host-accessible output buffer for reading the dense3 output to host memory
-        let mut mem_map = dense3_out
+        let mut mem_map = kernel_output_buf
             .map()
             .flags(flags::MAP_READ)
-            .len(dense3.num_out())
+            .len(dense.num_out())
             .enq()?;
-        trace!("dense3_out mem_map: {:?}", &mem_map as &[f32]);
 
         // Read the dense3 output into host memory
-        debug!(
-            "Running lide_c_image_relu for mem_map. row: {}, column: {}.",
-            dense3.num_out(),
-            1
-        );
-        let dense3_output_host_with_relu = lide_c_image_relu(&mem_map, dense3.num_out(), 1);
+        let dense_output_host_with_relu = relu(&mem_map, dense.num_out(), 1);
 
         mem_map.unmap().enq()?;
-        dense3_output_host_with_relu
+        dense_output_host_with_relu
     };
-    trace!("fifo_relu_out1: {:?}", &fifo_relu_out1);
 
-    Ok(fifo_relu_out1)
+    Ok(out)
 }
 
-fn run_dense4(weights: &Vec<f32>, fifo: &[f32]) -> Vec<f32> {
-    // TODO: why are all the consts here; replace with the actual source
-    debug!(
-        "Running lide_c_mtx_mulf for dense4.weights()*fifo_relu_out1. m_dim: {}, n_dim: {}, k_dim: {}.",
-        FULLY_CONNECTED_CONST,
-        FULLY_CONNECTED_CONST,
-        1
-    );
-    let fifo_multi_out2 = lide_c_mtx_mulf(
-        weights,
-        fifo,
-        FULLY_CONNECTED_CONST,
-        FULLY_CONNECTED_CONST,
+fn mtxmul_relu(input_buffer: &[f32], dense: &DenseLayer) -> Vec<f32> {
+    let out = mtx_mul(
+        dense.weights(),
+        input_buffer,
+        dense.num_out(),
+        dense.num_in(),
         1,
     );
-    trace!("fifo_multi_out2: {:?}", &fifo_multi_out2);
-    debug!(
-        "Running lide_c_image_relu for fifo_multi_out2. row: {}, column: {}.",
-        FULLY_CONNECTED_CONST, 1
-    );
-    lide_c_image_relu(&fifo_multi_out2, FULLY_CONNECTED_CONST, 1)
+    relu(&out, dense.num_out(), 1)
 }
 
-fn run_dense5(weights: &Vec<f32>, fifo: &[f32]) -> Vec<f32> {
-    debug!(
-        "Running lide_c_mtx_mulf for dense5.weights()*fifo_relu_out2. m_dim: {}, n_dim: {}, k_dim: {}.",
-        NUM_OUTPUT_CLASSES,
-        FULLY_CONNECTED_CONST,
-        1
+fn mtxmul_softmax(input_buffer: &[f32], dense: &DenseLayer) -> Vec<f32> {
+    let out = mtx_mul(
+        dense.weights(),
+        input_buffer,
+        dense.num_out(),
+        dense.num_in(),
+        1,
     );
-    let fifo_multi_out3 =
-        lide_c_mtx_mulf(weights, &fifo, NUM_OUTPUT_CLASSES, FULLY_CONNECTED_CONST, 1);
-    trace!("fifo_multi_out3: {:?}", &fifo_multi_out3);
-    lide_c_softmax(&fifo_multi_out3, 4, 1)
+    softmax(&out, dense.num_out(), 1)
 }
 
 fn run() -> ocl::Result<()> {
     // TODO: extract hyper-parameters
     // Create the network representation from network hyper-parameters
-    let (conv1, conv2, dense3, dense4, dense5) = create_network();
+    let (conv1, conv2, dense3, dense4, dense5) = create_network(HYPER_PARAMS.clone());
 
     // Initialize OpenCL
     let (queue, program, _context) = cl::init()?;
@@ -306,31 +275,25 @@ fn run() -> ocl::Result<()> {
     let start_time = Instant::now();
 
     // Enqueue the kernel for the 1st layer (Convolution + ReLU)
-    run_conv(&conv1, &conv_relu1, &queue)?;
-
+    run_conv_kernel(&conv_relu1, &conv1, &queue)?;
     let conv1_done_time = Instant::now();
 
     // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
-    run_conv(&conv2, &conv_relu2, &queue)?;
-
+    run_conv_kernel(&conv_relu2, &conv2, &queue)?;
     let conv2_done_time = Instant::now();
 
     // Enqueue the 3rd layer (fully-connected)
-    let dense3_out = run_dense3(&dense3, &dense3_kernel, &dense3_out_buf, &queue)?;
+    let dense3_out = run_dense_kernel_into_vec(&dense3_kernel, &dense3_out_buf, &dense3, &queue)?;
     let dense3_done_time = Instant::now();
 
     // Run the 4th layer (fully-connected)
-    let dense4_out = run_dense4(&dense4.weights(), &dense3_out);
+    let dense4_out = mtxmul_relu(&dense3_out, &dense4);
     let dense4_done_time = Instant::now();
 
     // Run the 5th layer (fully-connected)
-    let output = run_dense5(&dense5.weights(), &dense4_out);
+    let output = mtxmul_softmax(&dense4_out, &dense5);
     let end_time = Instant::now();
 
-    info!(
-        "Total computation time: {}",
-        duration_between(start_time, end_time)
-    );
     info!(
         "Per-layer computation time, L1: {}, L2: {}, L3: {}, L4: {}, L5: {}",
         duration_between(start_time, conv1_done_time),
@@ -338,6 +301,10 @@ fn run() -> ocl::Result<()> {
         duration_between(conv2_done_time, dense3_done_time),
         duration_between(dense3_done_time, dense4_done_time),
         duration_between(dense4_done_time, end_time)
+    );
+    info!(
+        "Total computation time: {}",
+        duration_between(start_time, end_time)
     );
     write_file_f32s(OUT_FILE, &output);
 

@@ -12,11 +12,7 @@
             ],
             "problemMatcher": [
                 "$rustc"
-            ],
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            }
+            ]
         },
         {
             "type": "shell",
@@ -32,6 +28,32 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "type": "shell",
+            "label": "cargo test",
+            "command": "cargo",
+            "args": [
+                "test"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "type": "shell",
+            "label": "cargo bench",
+            "command": "cargo",
+            "args": [
+                "bench"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ]
         }
     ]
 }

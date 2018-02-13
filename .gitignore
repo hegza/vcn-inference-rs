@@ -3,4 +3,5 @@
 data/
 input/
 output/
+Cargo.lock
 

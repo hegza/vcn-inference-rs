@@ -12,7 +12,7 @@ pub fn init() -> ocl::Result<(Queue, Program, Context)> {
         .iter()
         .map(|&device| device.name())
         .collect();
-    info!("Available OpenCL devices: {:?}.", device_names);
+    debug!("Available OpenCL devices: {:?}.", device_names);
 
     // TODO: currently, the first available device is selected, make configurable
     let device = Device::first(platform);

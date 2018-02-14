@@ -21,16 +21,11 @@ impl DenseLayer {
         );
         DenseLayer {
             layer_data: LayerData::<f32> {
-                weights: read_file_as_f32s_checked(weights_file, input_dim * output_dim).unwrap(),
+                weights: read_file_as_f32s(weights_file),
             },
             num_in: input_dim,
             num_out: output_dim,
         }
-    }
-
-    // The global work-group-size of the matching kernel
-    pub fn gws(&self) -> SpatialDims {
-        SpatialDims::One(self.num_out)
     }
 }
 
@@ -51,5 +46,8 @@ impl Layer<f32> for DenseLayer {
     }
     fn num_in(&self) -> usize {
         self.num_in
+    }
+    fn gws(&self) -> SpatialDims {
+        SpatialDims::One(self.num_out)
     }
 }

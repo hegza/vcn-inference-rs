@@ -1,7 +1,7 @@
 use std;
 use util::*;
 
-// TODO: generalize from f32 to anything zeroable, while asserting performance match
+// TODO: generalize from f32 to anything zeroable, while asserting performance match with benchmarks on GPU
 
 /// Convert negative values in source to zero
 pub fn relu(source: &[f32], row: usize, column: usize) -> Vec<f32> {

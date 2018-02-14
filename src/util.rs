@@ -1,6 +1,7 @@
 /*
  * Trivial to understand utility functions that need not clutter other namespaces.
- */
+*/
+#![allow(dead_code)]
 use std::fs::{create_dir_all, File};
 use std::path::Path;
 use std::io::prelude::*;
@@ -34,22 +35,7 @@ pub fn read_file_as_f32s(filename: &str) -> Vec<f32> {
     floats
 }
 
-/// Reads a file into a Vec of f32s and verifies that the byte-count of the
-/// input file matches with the expected amount of f32s.
-pub fn read_file_as_f32s_checked(filename: &str, expected_len: usize) -> Result<Vec<f32>, String> {
-    let v = read_file_as_f32s(filename);
-
-    let len = v.len();
-    if len != expected_len {
-        return Err(format!(
-            "expected {} f32s to be read from '{}', but {} were read",
-            expected_len, filename, len
-        ));
-    }
-    Ok(v)
-}
-
-/// Writes a slice of f32's into a file with newline for each f32.
+/// Writes a slice of f32s into a file with newline for each f32.
 pub fn write_file_f32s(filename: &str, f32s: &[f32]) {
     let path: &Path = Path::new(filename);
     let parent: &Path = path.parent().unwrap();
@@ -60,6 +46,17 @@ pub fn write_file_f32s(filename: &str, f32s: &[f32]) {
         // TODO: the precision is required only for backwards compatibility with the original version (while debugging)
         write!(file, "{:.6}\n", f).expect("unable to write f32 to file");
     }
+}
+
+/// Read a vector of f32s from a file with newline for each f32.
+pub fn read_file_f32s(filename: &str) -> Vec<f32> {
+    let file = File::open(filename).expect("unable to create file");
+    let lines = BufReader::new(file).lines();
+    lines
+        .into_iter()
+        .filter_map(|res| res.ok())
+        .map(|line| line.trim().parse::<f32>().unwrap())
+        .collect::<Vec<f32>>()
 }
 
 /// Verifies that each network layer inputs data of valid dimensions to the next layer.

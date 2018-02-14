@@ -26,23 +26,11 @@ impl ConvLayer {
         );
         ConvLayer {
             layer_data: LayerData::<f32> {
-                weights: read_file_as_f32s_checked(
-                    weights_file,
-                    num_filter_elems * input_shape.channels() * output_shape.channels(),
-                ).unwrap(),
+                weights: read_file_as_f32s(weights_file),
             },
             input_shape: input_shape.clone(),
             output_shape: output_shape.clone(),
         }
-    }
-
-    // The global work-group-size of the matching kernel
-    pub fn gws(&self) -> SpatialDims {
-        SpatialDims::Three(
-            self.output_shape.channels(),
-            self.output_shape.side(),
-            self.output_shape.side(),
-        )
     }
 
     pub fn input_shape(&self) -> &ImageGeometry {
@@ -70,5 +58,12 @@ impl Layer<f32> for ConvLayer {
     }
     fn num_in(&self) -> usize {
         self.input_shape.num_elems()
+    }
+    fn gws(&self) -> SpatialDims {
+        SpatialDims::Three(
+            self.output_shape.channels(),
+            self.output_shape.side(),
+            self.output_shape.side(),
+        )
     }
 }

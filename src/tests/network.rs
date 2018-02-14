@@ -1,37 +1,12 @@
-use cl_util as cl;
-use util::*;
-use network::*;
-use ocl;
-use ocl::{flags, Kernel};
-use std::time::Instant;
-use env_logger;
 use super::*;
 
 #[test]
 fn test_network() {
     env_logger::init();
 
-    // HACK: this is hacky, should put it into a file probably
-    let result = run_network();
-    let correct = vec![0.000000f32, 0.000019f32, 0.999980f32, 0.000000f32];
-    match result {
-        Ok(v) => assert!(is_within_margin(&v, &correct, 0.000001f32)),
-        Err(err) => info!("Exited with error: {}", err),
-    }
-    assert!(run_network().is_ok());
-}
-
-fn is_within_margin(a: &[f32], b: &[f32], margin: f32) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-
-    for (idx, item) in a.iter().enumerate() {
-        if (b[idx] - item).abs() > margin {
-            return false;
-        }
-    }
-    true
+    let output = run_network().unwrap();
+    let correct = read_file_f32s(&format!("{}/out5.f", BASELINE_DIR));
+    assert!(is_within_margin(&output, &correct, RESULT_MARGIN));
 }
 
 fn run_network() -> ocl::Result<Vec<f32>> {
@@ -82,12 +57,9 @@ fn run_network() -> ocl::Result<Vec<f32>> {
     )?;
 
     // Write the weights of the 1st three layers to the global memory of the device
-    unsafe {
-        // TODO: the blockings here are probably not required
-        conv1_wgts_buf.write(conv1.weights()).block(true).enq()?;
-        conv2_wgts_buf.write(conv2.weights()).block(true).enq()?;
-        dense3_wgts_buf.write(dense3.weights()).block(true).enq()?;
-    }
+    conv1_wgts_buf.write(conv1.weights()).enq()?;
+    conv2_wgts_buf.write(conv2.weights()).enq()?;
+    dense3_wgts_buf.write(dense3.weights()).enq()?;
     // TODO: this might not make any difference anywhere (verify with benchmark)
     queue.finish()?;
 
@@ -121,37 +93,24 @@ fn run_network() -> ocl::Result<Vec<f32>> {
         .arg_buf(&dense3_out_buf)
         .arg_buf(&dense3_wgts_buf);
 
+    let input_data =
+        read_image_with_padding(&format!("{}/in.bin", BASELINE_DIR), *conv1.input_shape());
     unsafe {
-        // Create a host-accessible input buffer for writing the image into device memory
-        let mut mem_map = input_buf
-            .map()
-            .flags(flags::MAP_WRITE)
-            .len(conv1.num_in())
-            .enq()?;
-
-        // Read the input image into the input_buf as f32s
-        let input_data = read_image_with_padding(IN_FILE, *conv1.input_shape());
-        for (idx, f) in input_data.into_iter().enumerate() {
-            // TODO: one could pack them into Float4s, for instance here
-            mem_map[idx] = f;
-        }
-        mem_map.unmap().enq()?;
+        cl::write_buf(&input_buf, &input_data)?;
     }
-    // TODO: I added this here just in case, might not make a difference
-    queue.finish()?;
 
     let start_time = Instant::now();
 
     // Enqueue the kernel for the 1st layer (Convolution + ReLU)
-    run_conv_kernel(&conv_relu1, &conv1, &queue)?;
+    run_kernel(&conv_relu1, &conv1, &queue)?;
     let conv1_done_time = Instant::now();
 
     // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
-    run_conv_kernel(&conv_relu2, &conv2, &queue)?;
+    run_kernel(&conv_relu2, &conv2, &queue)?;
     let conv2_done_time = Instant::now();
 
     // Enqueue the 3rd layer (fully-connected)
-    let dense3_out = run_dense_kernel_into_vec(&dense3_kernel, &dense3_out_buf, &dense3, &queue)?;
+    let dense3_out = run_kernel_relu(&dense3_kernel, &dense3_out_buf, &dense3, &queue)?;
     let dense3_done_time = Instant::now();
 
     // Run the 4th layer (fully-connected)

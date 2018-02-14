@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use util::*;
 use ocl;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
@@ -63,13 +64,23 @@ where
         .build()
 }
 
-#[allow(dead_code)]
-fn write_buf_to_file(filename: &str, buf: ocl::Buffer<f32>) -> ocl::Result<()> {
-    unsafe {
-        let mut mem_map = buf.map().flags(flags::MAP_READ).len(buf.len()).enq()?;
-        write_file_f32s(filename, &mem_map);
+pub unsafe fn read_buf(buf: &Buffer<f32>) -> ocl::Result<Vec<f32>> {
+    let mut mem_map = buf.map().flags(flags::MAP_READ).len(buf.len()).enq()?;
+    let result = mem_map.to_vec();
+    mem_map.unmap().enq()?;
+    Ok(result)
+}
 
-        mem_map.unmap().enq()?;
-    };
+pub unsafe fn write_buf(buf: &Buffer<f32>, data: &[f32]) -> ocl::Result<()> {
+    // Create a host-accessible input buffer for writing the image into device memory
+    let mut mem_map = buf.map().flags(flags::MAP_WRITE).len(buf.len()).enq()?;
+
+    // Read the input image into the input_buf as f32s
+    for (idx, f) in data.into_iter().enumerate() {
+        // TODO: one could pack them into Float4s, for instance here
+        mem_map[idx] = *f;
+    }
+
+    mem_map.unmap().enq()?;
     Ok(())
 }

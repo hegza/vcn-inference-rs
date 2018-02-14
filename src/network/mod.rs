@@ -3,6 +3,7 @@ mod dense;
 
 pub use self::conv::*;
 pub use self::dense::*;
+use ocl::SpatialDims;
 
 /// A layer of a convolutive neural network.
 pub trait Layer<T> {
@@ -14,6 +15,8 @@ pub trait Layer<T> {
     fn num_out(&self) -> usize;
     /// Gets the number of elements in the input shape
     fn num_in(&self) -> usize;
+    // The global work-group-size of the matching kernel
+    fn gws(&self) -> SpatialDims;
 }
 
 /// The data contained in any given CNN-layer.

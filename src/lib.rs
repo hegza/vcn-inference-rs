@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 #![feature(test)]
 extern crate byteorder;
 extern crate env_logger;
@@ -18,7 +19,8 @@ use util::*;
 use network::*;
 use geometry::*;
 use math::*;
-use ocl::{flags, Buffer, Kernel, Queue};
+use ocl::{Buffer, Kernel, Queue};
+use cl_util as cl;
 
 pub const HYPER_PARAMS: HyperParams = HyperParams {
     source_side: 96,
@@ -30,7 +32,6 @@ pub const HYPER_PARAMS: HyperParams = HyperParams {
     fully_connected_const: 100,
     num_output_classes: 4,
 };
-const IN_FILE: &'static str = "input/baseline/input1/in.bin";
 const WEIGHTS_DIR: &'static str = "input/weights";
 
 pub fn create_network(
@@ -85,51 +86,30 @@ pub fn create_network(
     (conv1, conv2, dense3, dense4, dense5)
 }
 
-pub fn run_conv_kernel(kernel: &Kernel, conv: &ConvLayer, queue: &Queue) -> ocl::Result<()> {
+pub fn run_kernel<L: Layer<f32>>(kernel: &Kernel, layer: &L, queue: &Queue) -> ocl::Result<()> {
     unsafe {
         kernel
             .cmd()
             .queue(&queue)
-            // TODO: gws is unrequired here? already included in Kernel
-            .gws(conv.gws())
+            // TODO: gws is unrequired here? already included in Kernel, verify with benchmarks on a GPU
+            .gws(layer.gws())
             .enq()?;
     }
-    queue.finish()?;
-    Ok(())
+    queue.finish()
 }
 
-pub fn run_dense_kernel_into_vec(
+pub fn run_kernel_relu(
     dense_kernel: &Kernel,
     kernel_output_buf: &Buffer<f32>,
     dense: &DenseLayer,
     queue: &Queue,
 ) -> ocl::Result<Vec<f32>> {
-    unsafe {
-        dense_kernel
-            .cmd()
-            .queue(&queue)
-            // TODO: gws is unrequired here? already included in Kernel
-            .gws(dense.gws())
-            .enq()?;
-    }
-    queue.finish()?;
-
-    let out = unsafe {
-        // Create a host-accessible output buffer for reading the dense3 output to host memory
-        let mut mem_map = kernel_output_buf
-            .map()
-            .flags(flags::MAP_READ)
-            .len(dense.num_out())
-            .enq()?;
-
-        // Read the dense3 output into host memory
-        let dense_output_host_with_relu = relu(&mem_map, dense.num_out(), 1);
-
-        mem_map.unmap().enq()?;
-        dense_output_host_with_relu
-    };
-
-    Ok(out)
+    run_kernel(dense_kernel, dense, queue)?;
+    Ok(relu(
+        &unsafe { cl::read_buf(kernel_output_buf)? },
+        dense.num_out(),
+        1,
+    ))
 }
 
 pub fn mtxmul_relu(input_buffer: &[f32], dense: &DenseLayer) -> Vec<f32> {

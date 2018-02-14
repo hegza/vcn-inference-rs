@@ -5,7 +5,6 @@ pub struct PaddedSquare {
     padding: usize,
 }
 
-// TODO: split into PaddedImageGeometry and ImageGeometry
 /// A descriptor for input and intermediary image geometry
 #[derive(Copy, Clone, Debug)]
 pub struct ImageGeometry {

@@ -5,7 +5,10 @@ pub use self::conv::*;
 pub use self::dense::*;
 use geometry::*;
 use std::ops::Deref;
-use ocl::SpatialDims;
+use ocl::{OclPrm, SpatialDims};
+use util::*;
+use num_traits::{Float, NumAssign};
+use math::GenericOps;
 
 /// A layer of a convolutive neural network.
 pub trait Layer<T> {
@@ -82,7 +85,10 @@ impl NetworkParams {
             fm2_shape,
         }
     }
-    pub fn create_conv1(&self, weights_file: &str) -> ConvLayer {
+    pub fn create_conv1<T>(&self, weights_file: &str) -> ConvLayer<T>
+    where
+        T: Coeff,
+    {
         ConvLayer::from_shapes(
             self.conv1_filter_shape.num_elems(),
             &self.padded_input_shape,
@@ -90,7 +96,10 @@ impl NetworkParams {
             weights_file,
         )
     }
-    pub fn create_conv2(&self, weights_file: &str) -> ConvLayer {
+    pub fn create_conv2<T>(&self, weights_file: &str) -> ConvLayer<T>
+    where
+        T: Coeff,
+    {
         ConvLayer::from_shapes(
             self.conv2_filter_shape.num_elems(),
             &self.padded_fm1_shape,
@@ -98,27 +107,47 @@ impl NetworkParams {
             weights_file,
         )
     }
-    pub fn create_dense3(&self, weights_file: &str) -> DenseLayer {
+    pub fn create_dense3<T>(&self, weights_file: &str) -> DenseLayer<T>
+    where
+        T: Coeff,
+    {
         DenseLayer::new(
             self.fm2_shape.num_elems(),
             self.fully_connected_const,
             weights_file,
         )
     }
-    pub fn create_dense4(&self, weights_file: &str) -> DenseLayer {
+    pub fn create_dense4<T>(&self, weights_file: &str) -> DenseLayer<T>
+    where
+        T: Coeff,
+    {
         DenseLayer::new(
             self.fully_connected_const,
             self.fully_connected_const,
             weights_file,
         )
     }
-    pub fn create_dense5(&self, weights_file: &str) -> DenseLayer {
+    pub fn create_dense5<T>(&self, weights_file: &str) -> DenseLayer<T>
+    where
+        T: Coeff,
+    {
         DenseLayer::new(
             self.fully_connected_const,
             self.num_output_classes,
             weights_file,
         )
     }
+}
+
+pub struct Network<T>
+where
+    T: Coeff,
+{
+    pub conv1: ConvLayer<T>,
+    pub conv2: ConvLayer<T>,
+    pub dense3: DenseLayer<T>,
+    pub dense4: DenseLayer<T>,
+    pub dense5: DenseLayer<T>,
 }
 
 impl Deref for NetworkParams {
@@ -128,3 +157,9 @@ impl Deref for NetworkParams {
         &self.hyper_params
     }
 }
+
+pub trait Coeff: ReadBinFromFile + NumAssign + GenericOps + OclPrm {}
+pub trait CoeffFloat: Float + Coeff {}
+
+impl Coeff for f32 {}
+impl CoeffFloat for f32 {}

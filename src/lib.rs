@@ -6,6 +6,7 @@ extern crate env_logger;
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
+extern crate num_traits;
 extern crate ocl;
 extern crate test;
 
@@ -20,8 +21,10 @@ mod tests;
 pub use util::*;
 pub use network::*;
 pub use math::*;
-use ocl::{flags, Buffer, Kernel, Queue};
+use ocl::{flags, Buffer, Kernel, OclPrm, Queue};
 use cl_util as cl;
+use num_traits::{Float, Num, NumAssign, Zero};
+use std::ops::Mul;
 
 pub const HYPER_PARAMS: HyperParams = HyperParams {
     source_side: 96,
@@ -35,9 +38,10 @@ pub const HYPER_PARAMS: HyperParams = HyperParams {
 };
 const WEIGHTS_DIR: &'static str = "input/weights";
 
-pub fn create_network(
-    params: HyperParams,
-) -> (ConvLayer, ConvLayer, DenseLayer, DenseLayer, DenseLayer) {
+pub fn create_network<T>(params: HyperParams) -> Network<T>
+where
+    T: Coeff,
+{
     let params = NetworkParams::new(params);
     // Create a representation of the 1st convolutional layer with weights from a file
     let conv1 = params.create_conv1(&format!("{}/conv1_update.bin", WEIGHTS_DIR));
@@ -51,40 +55,37 @@ pub fn create_network(
     // Verify that I/O dimensions match between layers
     verify_network_dimensions(&[&conv1, &conv2, &dense3, &dense4, &dense5]);
 
-    (conv1, conv2, dense3, dense4, dense5)
+    Network {
+        conv1,
+        conv2,
+        dense3,
+        dense4,
+        dense5,
+    }
 }
 
-pub unsafe fn run_kernel<L: Layer<f32>>(
-    kernel: &Kernel,
-    layer: &L,
-    queue: &Queue,
-) -> ocl::Result<()> {
-    kernel
-            .cmd()
-            .queue(&queue)
-            // TODO: gws is unrequired here? already included in Kernel, verify with benchmarks on a GPU
-            .gws(layer.gws())
-            .enq()?;
+pub unsafe fn run_kernel(kernel: &Kernel, queue: &Queue) -> ocl::Result<()> {
+    kernel.cmd().queue(&queue).enq()?;
     queue.finish()
 }
 
-pub fn create_kernel<L: Layer<f32>>(
+pub fn create_kernel<L: Layer<T>, T: Num + OclPrm>(
     layer: &L,
     kernel_func: &str,
-    input_data: &[f32],
-) -> ocl::Result<(Kernel, Buffer<f32>, Queue)> {
+    input_data: &[T],
+) -> ocl::Result<(Kernel, Buffer<T>, Queue)> {
     // Initialize OpenCL
     let (queue, program, _context) = cl::init()?;
 
     let wgts_buf =
-        cl::create_buffer::<f32>("weights", layer.num_weights(), flags::MEM_READ_ONLY, &queue)?;
-    let in_buf = cl::create_buffer::<f32>(
+        cl::create_buffer::<T>("weights", layer.num_weights(), flags::MEM_READ_ONLY, &queue)?;
+    let in_buf = cl::create_buffer::<T>(
         "input",
         layer.num_in(),
         flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
         &queue,
     )?;
-    let out_buf = cl::create_buffer::<f32>(
+    let out_buf = cl::create_buffer::<T>(
         "output",
         layer.num_out(),
         flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
@@ -100,100 +101,79 @@ pub fn create_kernel<L: Layer<f32>>(
         .arg_buf(&out_buf)
         .arg_buf(&wgts_buf);
 
-    // Write the weights to the global memory of the device
+    // Write the weights and input to the global memory of the device
     wgts_buf.write(layer.weights()).enq()?;
-
     unsafe {
-        // Create a host-accessible input buffer for writing the image into device memory
-        let mut mem_map = in_buf
-            .map()
-            .flags(flags::MAP_WRITE)
-            .len(layer.num_in())
-            .enq()?;
-
-        // Write input data to device memory
-        for (idx, f) in input_data.iter().enumerate() {
-            mem_map[idx] = *f;
-        }
-        mem_map.unmap().enq()?;
+        cl::write_buf(&in_buf, &input_data)?;
     }
 
     Ok((kernel, out_buf, queue))
 }
 
-pub fn init_network(
+/// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have finished running.
+pub fn init_network<T>(
     input_file: &str,
-) -> ocl::Result<
-    (
-        ConvLayer,
-        ConvLayer,
-        DenseLayer,
-        DenseLayer,
-        DenseLayer,
-        Kernel,
-        Kernel,
-        Kernel,
-        Buffer<f32>,
-        Queue,
-    ),
-> {
+) -> ocl::Result<(Network<T>, Kernel, Kernel, Kernel, Buffer<T>, Queue)>
+where
+    T: CoeffFloat,
+{
     // Create the network representation from network hyper-parameters
-    let (conv1, conv2, dense3, dense4, dense5) = create_network(HYPER_PARAMS.clone());
+    let net = create_network(HYPER_PARAMS.clone());
 
     // Initialize OpenCL
     let (queue, program, _context) = cl::init()?;
 
     // Allocate read-only memory for the weights of the 1st three layers
-    let conv1_wgts_buf = cl::create_buffer::<f32>(
+    let conv1_wgts_buf = cl::create_buffer::<T>(
         "conv 1 weights",
-        conv1.num_weights(),
+        net.conv1.num_weights(),
         flags::MEM_READ_ONLY,
         &queue,
     )?;
-    let conv2_wgts_buf = cl::create_buffer::<f32>(
+    let conv2_wgts_buf = cl::create_buffer::<T>(
         "conv 2 weights",
-        conv2.num_weights(),
+        net.conv2.num_weights(),
         flags::MEM_READ_ONLY,
         &queue,
     )?;
-    let dense3_wgts_buf = cl::create_buffer::<f32>(
+    let dense3_wgts_buf = cl::create_buffer::<T>(
         "dense 3 weights",
-        dense3.num_weights(),
+        net.dense3.num_weights(),
         flags::MEM_READ_ONLY,
         &queue,
     )?;
 
     // Allocate read-only memory for the input geometry on device with host-accessible pointer for
     // writing input from file
-    let input_buf = cl::create_buffer::<f32>(
+    let input_buf = cl::create_buffer::<T>(
         "input img",
-        conv1.num_in(),
+        net.conv1.num_in(),
         flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
         &queue,
     )?;
     // Allocate read-write memory for the 1st feature map on device
-    let fm1_buf = cl::create_buffer::<f32>("FM 1", conv1.num_out(), flags::MEM_READ_WRITE, &queue)?;
+    let fm1_buf =
+        cl::create_buffer::<T>("FM 1", net.conv1.num_out(), flags::MEM_READ_WRITE, &queue)?;
     // Allocate read-write memory for the 2nd feature map on device
-    let fm2_buf = cl::create_buffer::<f32>("FM 2", conv2.num_out(), flags::MEM_READ_WRITE, &queue)?;
+    let fm2_buf =
+        cl::create_buffer::<T>("FM 2", net.conv2.num_out(), flags::MEM_READ_WRITE, &queue)?;
     // Allocate read-write memory for the dense (3rd) layer output on device with host pointer for reading
-    let dense3_out_buf = cl::create_buffer::<f32>(
+    let dense3_out_buf = cl::create_buffer::<T>(
         "dense 3 output",
-        dense3.num_out(),
+        net.dense3.num_out(),
         flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
         &queue,
     )?;
 
     // Write the weights of the 1st three layers to the global memory of the device
-    conv1_wgts_buf.write(conv1.weights()).enq()?;
-    conv2_wgts_buf.write(conv2.weights()).enq()?;
-    dense3_wgts_buf.write(dense3.weights()).enq()?;
-    // TODO: this might not make any difference anywhere (verify with benchmark)
-    queue.finish()?;
+    conv1_wgts_buf.write(net.conv1.weights()).enq()?;
+    conv2_wgts_buf.write(net.conv2.weights()).enq()?;
+    dense3_wgts_buf.write(net.dense3.weights()).enq()?;
 
     // Create the kernel for the 1st layer (Convolution + ReLU)
     let conv_relu1 = Kernel::new("conv_relu_1", &program)?
         .queue(queue.clone())
-        .gws(conv1.gws())
+        .gws(net.conv1.gws())
         // Input
         .arg_buf(&input_buf)
         // Output
@@ -203,7 +183,7 @@ pub fn init_network(
     // Create the kernel for the 2nd layer (Convolution + ReLU)
     let conv_relu2 = Kernel::new("conv_relu_2", &program)?
         .queue(queue.clone())
-        .gws(conv2.gws())
+        .gws(net.conv2.gws())
         // Input
         .arg_buf(&fm1_buf)
         // Output
@@ -213,24 +193,22 @@ pub fn init_network(
     // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
     let dense3_kernel = Kernel::new("mtx_mulf", &program)?
         .queue(queue.clone())
-        .gws(dense3.gws())
+        .gws(net.dense3.gws())
         // Input
         .arg_buf(&fm2_buf)
         // Output
         .arg_buf(&dense3_out_buf)
         .arg_buf(&dense3_wgts_buf);
 
-    let input_data = read_image_with_padding(input_file, *conv1.input_shape());
+    let input_data = read_image_with_padding(input_file, *net.conv1.input_shape());
     unsafe {
         cl::write_buf(&input_buf, &input_data)?;
     }
 
+    // Wait until all commands have finished running before returning.
+    queue.finish()?;
     Ok((
-        conv1,
-        conv2,
-        dense3,
-        dense4,
-        dense5,
+        net,
         conv_relu1,
         conv_relu2,
         dense3_kernel,
@@ -239,7 +217,10 @@ pub fn init_network(
     ))
 }
 
-pub fn mtxmul_relu(input_buffer: &[f32], dense: &DenseLayer) -> Vec<f32> {
+pub fn mtxmul_relu<T>(input_buffer: &[T], dense: &DenseLayer<T>) -> Vec<T>
+where
+    T: CoeffFloat,
+{
     let out = mtx_mul(
         dense.weights(),
         input_buffer,
@@ -250,7 +231,10 @@ pub fn mtxmul_relu(input_buffer: &[f32], dense: &DenseLayer) -> Vec<f32> {
     relu(&out, dense.num_out(), 1)
 }
 
-pub fn mtxmul_softmax(input_buffer: &[f32], dense: &DenseLayer) -> Vec<f32> {
+pub fn mtxmul_softmax<F>(input_buffer: &[F], dense: &DenseLayer<F>) -> Vec<F>
+where
+    F: CoeffFloat,
+{
     let out = mtx_mul(
         dense.weights(),
         input_buffer,

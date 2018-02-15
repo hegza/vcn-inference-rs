@@ -15,7 +15,6 @@ pub fn init() -> ocl::Result<(Queue, Program, Context)> {
         .collect();
     debug!("Available OpenCL devices: {:?}.", device_names);
 
-    // TODO: currently, the first available device is selected, make configurable
     let device = Device::first(platform);
     info!("Using device \"{}\".", device.name());
 
@@ -28,12 +27,10 @@ pub fn init() -> ocl::Result<(Queue, Program, Context)> {
     let program = Program::builder()
         .devices(device)
         .src(kernel_sources)
-        // HACK: Allow the .cl files to include the contents of files in the working directory
         .cmplr_opt("-I./input")
         .cmplr_opt("-cl-std=CL1.2")
         .build(&context)?;
 
-    // TODO: make separate queues for all the associated devices
     // Create the queue for the default device
     let queue = Queue::new(
         &context,
@@ -64,14 +61,14 @@ where
         .build()
 }
 
-pub unsafe fn read_buf(buf: &Buffer<f32>) -> ocl::Result<Vec<f32>> {
+pub unsafe fn read_buf<T: OclPrm>(buf: &Buffer<T>) -> ocl::Result<Vec<T>> {
     let mut mem_map = buf.map().flags(flags::MAP_READ).len(buf.len()).enq()?;
     let result = mem_map.to_vec();
     mem_map.unmap().enq()?;
     Ok(result)
 }
 
-pub unsafe fn write_buf(buf: &Buffer<f32>, data: &[f32]) -> ocl::Result<()> {
+pub unsafe fn write_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<()> {
     // Create a host-accessible input buffer for writing the image into device memory
     let mut mem_map = buf.map().flags(flags::MAP_WRITE).len(buf.len()).enq()?;
 

@@ -1,17 +1,23 @@
 use util::*;
 use geometry::*;
-use super::{Layer, LayerData};
+use super::{Coeff, Layer, LayerData};
 use std::ops::Deref;
 use ocl::SpatialDims;
 
 /// A complete descriptor for a convolutional layer
-pub struct ConvLayer {
-    layer_data: LayerData<f32>,
+pub struct ConvLayer<T>
+where
+    T: Coeff,
+{
+    layer_data: LayerData<T>,
     input_shape: ImageGeometry,
     output_shape: ImageGeometry,
 }
 
-impl ConvLayer {
+impl<T> ConvLayer<T>
+where
+    T: Coeff,
+{
     /// Creates a descriptor of a convolutional layer with a square filter the
     /// side of which will be set to filter_side.
     pub fn from_shapes(
@@ -19,14 +25,17 @@ impl ConvLayer {
         input_shape: &ImageGeometry,
         output_shape: &ImageGeometry,
         weights_file: &str,
-    ) -> ConvLayer {
+    ) -> ConvLayer<T> {
         trace!(
-            "Create conv-layer with filter-elems: {:?}, input-shape: {:?}, output-shape: {:?}, weights: {}.",
-            num_filter_elems, input_shape, output_shape, weights_file
+            "Create conv-layer with filter-elems: {:?}, input-shape: {:?}, output-shape: {:?}, weights-file: {:?}.",
+            num_filter_elems,
+            input_shape,
+            output_shape,
+            weights_file
         );
         ConvLayer {
-            layer_data: LayerData::<f32> {
-                weights: read_file_as_f32s(weights_file),
+            layer_data: LayerData::<T> {
+                weights: T::read_bin_from_file(weights_file),
             },
             input_shape: input_shape.clone(),
             output_shape: output_shape.clone(),
@@ -41,16 +50,22 @@ impl ConvLayer {
     }
 }
 
-impl Deref for ConvLayer {
-    type Target = LayerData<f32>;
+impl<T> Deref for ConvLayer<T>
+where
+    T: Coeff,
+{
+    type Target = LayerData<T>;
 
     fn deref(&self) -> &Self::Target {
         &self.layer_data
     }
 }
 
-impl Layer<f32> for ConvLayer {
-    fn weights(&self) -> &Vec<f32> {
+impl<T> Layer<T> for ConvLayer<T>
+where
+    T: Coeff,
+{
+    fn weights(&self) -> &Vec<T> {
         &self.weights
     }
     fn num_out(&self) -> usize {

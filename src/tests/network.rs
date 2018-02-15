@@ -102,15 +102,27 @@ fn run_network() -> ocl::Result<Vec<f32>> {
     let start_time = Instant::now();
 
     // Enqueue the kernel for the 1st layer (Convolution + ReLU)
-    run_kernel(&conv_relu1, &conv1, &queue)?;
+    unsafe {
+        run_kernel(&conv_relu1, &conv1, &queue)?;
+    }
     let conv1_done_time = Instant::now();
 
     // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
-    run_kernel(&conv_relu2, &conv2, &queue)?;
+    unsafe {
+        run_kernel(&conv_relu2, &conv2, &queue)?;
+    }
     let conv2_done_time = Instant::now();
 
     // Enqueue the 3rd layer (fully-connected)
-    let dense3_out = run_kernel_relu(&dense3_kernel, &dense3_out_buf, &dense3, &queue)?;
+    unsafe {
+        run_kernel(&dense3_kernel, &dense3, &queue)?;
+    }
+    let dense3_out = relu(
+        &unsafe { cl::read_buf(&dense3_out_buf)? },
+        dense3.num_out(),
+        1,
+    );
+
     let dense3_done_time = Instant::now();
 
     // Run the 4th layer (fully-connected)

@@ -11,6 +11,9 @@ use env_logger;
 
 const RESULT_MARGIN: f32 = 0.000002f32;
 const BASELINE_DIR: &'static str = "input/baseline/input1";
+lazy_static!{
+    static ref TEST_NETWORK: Network = Network::new(HYPER_PARAMS);
+}
 
 fn is_within_margin(a: &[f32], b: &[f32], margin: f32) -> bool {
     if a.len() != b.len() {

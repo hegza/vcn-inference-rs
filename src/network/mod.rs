@@ -43,7 +43,7 @@ pub struct HyperParams {
     pub num_output_classes: usize,
 }
 
-pub struct Network {
+pub struct NetworkParams {
     hyper_params: HyperParams,
     conv1_filter_shape: PaddedSquare,
     conv2_filter_shape: PaddedSquare,
@@ -52,8 +52,8 @@ pub struct Network {
     fm2_shape: ImageGeometry,
 }
 
-impl Network {
-    pub fn new(hyper_params: HyperParams) -> Network {
+impl NetworkParams {
+    pub fn new(hyper_params: HyperParams) -> NetworkParams {
         let conv1_filter_shape = PaddedSquare::from_side(hyper_params.conv_1_filter_side);
         let conv2_filter_shape = PaddedSquare::from_side(hyper_params.conv_2_filter_side);
 
@@ -73,7 +73,7 @@ impl Network {
             hyper_params.num_feature_maps,
         );
 
-        Network {
+        NetworkParams {
             hyper_params,
             conv1_filter_shape,
             conv2_filter_shape,
@@ -121,7 +121,7 @@ impl Network {
     }
 }
 
-impl Deref for Network {
+impl Deref for NetworkParams {
     type Target = HyperParams;
 
     fn deref(&self) -> &Self::Target {

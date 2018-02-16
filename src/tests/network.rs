@@ -31,11 +31,7 @@ fn run_network() -> ocl::Result<Vec<f32>> {
     unsafe {
         run_kernel(&dense3_kernel, &queue)?;
     }
-    let dense3_out = relu(
-        &unsafe { cl::read_buf(&dense3_out_buf)? },
-        net.dense3.num_out(),
-        1,
-    );
+    let dense3_out = relu(&unsafe { cl::read_buf(&dense3_out_buf)? });
 
     let dense3_done_time = Instant::now();
 

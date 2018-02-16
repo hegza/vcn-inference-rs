@@ -78,11 +78,7 @@ fn run_l3(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
         run_kernel(&kernel, &queue)?;
     }
     // Run relu on CPU
-    Ok(relu(
-        &unsafe { cl::read_buf(&out_buf)? },
-        dense.num_out(),
-        1,
-    ))
+    Ok(relu(&unsafe { cl::read_buf(&out_buf)? }))
 }
 
 fn run_l4(params: &NetworkParams) -> Vec<f32> {

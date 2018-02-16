@@ -12,25 +12,14 @@ pub trait GenericOps {
 }
 
 /// Convert negative values in source to zero
-pub fn relu<T>(source: &[T], row: usize, column: usize) -> Vec<T>
+pub fn relu<T>(source: &[T]) -> Vec<T>
 where
     T: Num + GenericOps + Copy,
 {
-    let mut destination = unsafe { vec![std::mem::uninitialized(); source.len()] };
-    for i in 0..row {
-        for j in 0..column {
-            // Convert negative values to zero
-            let elem = source.elem(column, i, j).generic_max(Zero::zero());
-            *destination.elem_mut(column, i, j) = elem;
-            /*
-            // TODO: Try this alternative in-place implementation that works without the return
-            // value (allocation).
-            let elem: &mut T = destination.elem_mut(column, i, j);
-            *elem = elem.max(Zero::zero());
-            */
-        }
-    }
-    destination
+    source
+        .iter()
+        .map(|&x| x.generic_max(Zero::zero()))
+        .collect()
 }
 
 pub fn mtx_mul<T>(a: &[T], b: &[T], m_dim: usize, n_dim: usize, k_dim: usize) -> Vec<T>

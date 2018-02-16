@@ -81,11 +81,7 @@ fn full_network_benchmark(c: &mut Criterion) {
             unsafe {
                 run_kernel(&dense3_kernel, &queue).unwrap();
             }
-            let dense3_out = relu(
-                &unsafe { cl::read_buf(&dense3_out_buf).unwrap() },
-                net.dense3.num_out(),
-                1,
-            );
+            let dense3_out = relu(&unsafe { cl::read_buf(&dense3_out_buf).unwrap() });
 
             // Run the 4th layer (fully-connected)
             let dense4_out = mtxmul_relu(&dense3_out, &net.dense4);

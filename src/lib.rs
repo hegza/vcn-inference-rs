@@ -228,7 +228,7 @@ where
         dense.num_in(),
         1,
     );
-    relu(&out, dense.num_out(), 1)
+    relu(&out)
 }
 
 pub fn mtxmul_softmax<F>(input_buffer: &[F], dense: &DenseLayer<F>) -> Vec<F>

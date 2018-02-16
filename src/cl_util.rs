@@ -42,7 +42,6 @@ pub fn init() -> ocl::Result<(Queue, Program, Context)> {
 }
 
 pub fn create_buffer<T>(
-    name: &'static str,
     length: usize,
     flags: flags::MemFlags,
     queue: &Queue,
@@ -51,8 +50,8 @@ where
     T: OclPrm,
 {
     debug!(
-        "Create buffer with {} elements for {}. Flags: {:?}.",
-        length, name, flags
+        "Create buffer with {} elements. Flags: {:?}.",
+        length, flags
     );
     Buffer::<T>::builder()
         .queue(queue.clone())
@@ -68,7 +67,7 @@ pub unsafe fn read_buf<T: OclPrm>(buf: &Buffer<T>) -> ocl::Result<Vec<T>> {
     Ok(result)
 }
 
-pub unsafe fn write_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<()> {
+pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<()> {
     // Create a host-accessible input buffer for writing the image into device memory
     let mut mem_map = buf.map().flags(flags::MAP_WRITE).len(buf.len()).enq()?;
 

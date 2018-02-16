@@ -139,7 +139,7 @@ impl NetworkParams {
     }
 }
 
-pub struct Network<T>
+pub struct Layers<T>
 where
     T: Coeff,
 {

@@ -10,29 +10,24 @@ fn test_network() {
 }
 
 fn run_network() -> ocl::Result<Vec<f32>> {
-    let (net, conv_relu1, conv_relu2, dense3_kernel, dense3_out_buf, queue) =
-        init_network(&format!("{}/in.bin", BASELINE_DIR))?;
+    // Initialize OpenCL
+    let (queue, program, _context) = cl::init()?;
+
+    let net = Network::new(&format!("{}/in.bin", BASELINE_DIR), &program, &queue)?;
 
     let start_time = Instant::now();
 
     // Enqueue the kernel for the 1st layer (Convolution + ReLU)
-    unsafe {
-        run_kernel(&conv_relu1, &queue)?;
-    }
+    run_kernel_wait(&net.conv_relu1, &queue)?;
     let conv1_done_time = Instant::now();
 
     // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
-    unsafe {
-        run_kernel(&conv_relu2, &queue)?;
-    }
+    run_kernel_wait(&net.conv_relu2, &queue)?;
     let conv2_done_time = Instant::now();
 
     // Enqueue the 3rd layer (fully-connected)
-    unsafe {
-        run_kernel(&dense3_kernel, &queue)?;
-    }
-    let dense3_out = relu(&unsafe { cl::read_buf(&dense3_out_buf)? });
-
+    run_kernel_wait(&net.dense3_kernel, &queue)?;
+    let dense3_out = relu(&unsafe { cl::read_buf(&net.dense3_out_buf)? });
     let dense3_done_time = Instant::now();
 
     // Run the 4th layer (fully-connected)

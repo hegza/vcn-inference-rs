@@ -46,11 +46,9 @@ fn run_l1(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
 
     let input_data =
         read_image_with_padding(&format!("{}/in.bin", BASELINE_DIR), *layer.input_shape());
-    let (kernel, out_buf, queue) = create_kernel(&layer, "conv_relu_1", &input_data)?;
+    let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "conv_relu_1", &input_data)?;
     // Enqueue the kernel for the 1st layer (Convolution + ReLU)
-    unsafe {
-        run_kernel(&kernel, &queue)?;
-    }
+    run_kernel_wait(&kernel, &queue)?;
     unsafe { cl::read_buf(&out_buf) }
 }
 
@@ -59,11 +57,9 @@ fn run_l2(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
     let layer = params.create_conv2(&format!("{}/conv2_update.bin", WEIGHTS_DIR));
 
     let input_data = f32::read_from_file(&format!("{}/fm1.f", BASELINE_DIR));
-    let (kernel, out_buf, queue) = create_kernel(&layer, "conv_relu_2", &input_data)?;
+    let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "conv_relu_2", &input_data)?;
     // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
-    unsafe {
-        run_kernel(&kernel, &queue)?;
-    }
+    run_kernel_wait(&kernel, &queue)?;
     unsafe { cl::read_buf(&out_buf) }
 }
 
@@ -72,11 +68,9 @@ fn run_l3(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
     let layer = params.create_dense3(&format!("{}/ip3.bin", WEIGHTS_DIR));
 
     let input_data = f32::read_from_file(&format!("{}/fm2.f", BASELINE_DIR));
-    let (kernel, out_buf, queue) = create_kernel(&layer, "mtx_mulf", &input_data)?;
+    let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "mtx_mulf", &input_data)?;
     // Enqueue the kernel for the 3rd layer (Convolution)
-    unsafe {
-        run_kernel(&kernel, &queue)?;
-    }
+    run_kernel_wait(&kernel, &queue)?;
     // Run relu on CPU
     Ok(relu(&unsafe { cl::read_buf(&out_buf)? }))
 }

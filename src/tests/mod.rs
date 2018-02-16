@@ -3,7 +3,7 @@ mod layers;
 
 use super::*;
 use util::*;
-use network::*;
+use layers::*;
 use ocl;
 use ocl::{flags, Kernel};
 use std::time::Instant;

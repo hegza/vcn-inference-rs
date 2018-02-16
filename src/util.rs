@@ -11,7 +11,7 @@ use std::time::Instant;
 use std::str::FromStr;
 use std::fmt::Debug;
 use byteorder::{LittleEndian, ReadBytesExt};
-use network::Layer;
+use layers::Layer;
 use geometry::{ImageGeometry, Square};
 use num_traits::{Num, Zero};
 use Coeff;

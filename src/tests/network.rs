@@ -13,7 +13,9 @@ fn run_network() -> ocl::Result<Vec<f32>> {
     // Initialize OpenCL
     let (queue, program, _context) = cl::init()?;
 
-    let net = Network::new(&format!("{}/in.bin", BASELINE_DIR), &program, &queue)?;
+    let net = Network::with_input_file(&format!("{}/in.bin", BASELINE_DIR), &program, &queue)?;
+
+    // TODO: replace with net.run() when phasing out of timers
 
     let start_time = Instant::now();
 

@@ -11,7 +11,7 @@ extern crate ocl;
 extern crate test;
 
 pub mod cl_util;
-mod geometry;
+pub mod geometry;
 mod layers;
 mod util;
 mod math;
@@ -48,6 +48,7 @@ where
     pub conv_relu2: Kernel,
     pub dense3_kernel: Kernel,
     pub dense3_out_buf: Buffer<T>,
+    in_buf: Buffer<T>,
     conv1_wgts_buf: Buffer<T>,
     conv2_wgts_buf: Buffer<T>,
     dense3_wgts_buf: Buffer<T>,
@@ -55,10 +56,24 @@ where
 
 impl<T> Network<T>
 where
-    T: Coeff,
+    T: CoeffFloat,
 {
-    /// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have finished running.
-    pub fn new(input_file: &str, program: &Program, queue: &Queue) -> ocl::Result<Network<T>> {
+    /// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have
+    /// finished running.
+    pub fn with_input_file(
+        input_file: &str,
+        program: &Program,
+        queue: &Queue,
+    ) -> ocl::Result<Network<T>> {
+        let net = Network::new(program, queue)?;
+        let input_data = read_image_with_padding(input_file, *net.conv1.input_shape());
+        net.upload_buffers(&input_data, queue)?;
+        Ok(net)
+    }
+    /// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have
+    /// finished running. Note that you must call upload_buffers before run, if using this method to
+    /// initialize.
+    pub fn new(program: &Program, queue: &Queue) -> ocl::Result<Network<T>> {
         // Create the network representation from network hyper-parameters
         let layers = create_layers(HYPER_PARAMS.clone());
 
@@ -72,7 +87,7 @@ where
 
         // Allocate read-only memory for the input geometry on device with host-accessible pointer for
         // writing input from file
-        let input_buf = cl::create_buffer::<T>(
+        let in_buf = cl::create_buffer::<T>(
             layers.conv1.num_in(),
             flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
             &queue,
@@ -95,7 +110,7 @@ where
         .queue(queue.clone())
         .gws(layers.conv1.gws())
         // Input
-        .arg_buf(&input_buf)
+        .arg_buf(&in_buf)
         // Output
         .arg_buf(&fm1_buf)
         .arg_buf(&conv1_wgts_buf);
@@ -120,28 +135,52 @@ where
         .arg_buf(&dense3_out_buf)
         .arg_buf(&dense3_wgts_buf);
 
-        // Write the weights of the 1st three layers to the global memory of the device
-        conv1_wgts_buf.write(layers.conv1.weights()).enq()?;
-        conv2_wgts_buf.write(layers.conv2.weights()).enq()?;
-        dense3_wgts_buf.write(layers.dense3.weights()).enq()?;
-
-        let input_data = read_image_with_padding(input_file, *layers.conv1.input_shape());
-        unsafe {
-            cl::map_to_buf(&input_buf, &input_data)?;
-        }
-
         // Wait until all commands have finished running before returning.
         queue.finish()?;
+
         Ok(Network {
             layers: layers,
             conv_relu1,
             conv_relu2,
             dense3_kernel,
             dense3_out_buf,
+            in_buf,
             conv1_wgts_buf,
             conv2_wgts_buf,
             dense3_wgts_buf,
         })
+    }
+    /// Writes weights to device memory, maps input buffer. Returns only after all commands have finished running.
+    pub fn upload_buffers(&self, input_data: &[T], queue: &Queue) -> ocl::Result<()> {
+        // Write the weights of the 1st three layers to the global memory of the device
+        self.conv1_wgts_buf.write(self.conv1.weights()).enq()?;
+        self.conv2_wgts_buf.write(self.conv2.weights()).enq()?;
+        self.dense3_wgts_buf.write(self.dense3.weights()).enq()?;
+
+        unsafe {
+            cl::map_to_buf(&self.in_buf, &input_data)?;
+        }
+        queue.finish()
+    }
+    pub fn run(&self, queue: &Queue) -> Vec<T> {
+        unsafe {
+            // Enqueue the kernel for the 1st layer (Convolution + ReLU)
+            self.conv_relu1.cmd().queue(&queue).enq().unwrap();
+            // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
+            self.conv_relu2.cmd().queue(&queue).enq().unwrap();
+            // Enqueue the 3rd layer (fully-connected)
+            self.dense3_kernel.cmd().queue(&queue).enq().unwrap();
+        }
+        // Wait for all on-device calculations to finish
+        queue.finish().unwrap();
+
+        let dense3_out = relu(&unsafe { cl::read_buf(&self.dense3_out_buf).unwrap() });
+
+        // Run the 4th layer (fully-connected)
+        let dense4_out = mtxmul_relu(&dense3_out, &self.dense4);
+
+        // Run the 5th layer (fully-connected)
+        mtxmul_softmax(&dense4_out, &self.dense5)
     }
 }
 

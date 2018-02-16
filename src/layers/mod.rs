@@ -60,7 +60,7 @@ impl NetworkParams {
         let conv1_filter_shape = PaddedSquare::from_side(hyper_params.conv_1_filter_side);
         let conv2_filter_shape = PaddedSquare::from_side(hyper_params.conv_2_filter_side);
 
-        // Create descriptor for input geometry with the a shape and properties of an image
+        // Create descriptor for input geometry with the shape and properties of an image
         let input_shape =
             ImageGeometry::new(hyper_params.source_side, hyper_params.num_source_channels);
         let padded_input_shape = input_shape.with_filter_padding(&conv1_filter_shape);

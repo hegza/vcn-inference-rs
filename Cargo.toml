@@ -15,5 +15,13 @@ num-traits = "^0.2"
 criterion = { version = "^0.2", features=["real_blackbox"] }
 
 [[bench]]
+name = "wall_clock_benchmark"
+harness = false
+
+[[bench]]
 name = "network_benchmark"
+harness = false
+
+[[bench]]
+name = "layers_benchmark"
 harness = false

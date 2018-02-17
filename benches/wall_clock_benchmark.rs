@@ -21,10 +21,10 @@ fn net_wall_benchmark(c: &mut Criterion) {
     let padded_input_shape = input_shape.with_filter_padding(&conv1_filter_shape);
 
     // Load input image with padding from disk
-    let input_data = read_image_with_padding_from_bin_in_channels(
+    let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
         &format!("{}/in.bin", BASELINE_DIR),
         padded_input_shape,
-    );
+    ));
 
     c.bench_function("network wall", move |b| {
         b.iter(|| {

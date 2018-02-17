@@ -9,7 +9,7 @@ use rusty_cnn::geometry::{ImageGeometry, PaddedSquare};
 
 const SAMPLE_SIZE: usize = 10;
 const NOISE_THRESHOLD: f64 = 0.03;
-const BASELINE_DIR: &'static str = "input/baseline/input1";
+const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
 
 /// Benchmark full-network with initialization included (excluding file I/O).
 fn net_wall_benchmark(c: &mut Criterion) {

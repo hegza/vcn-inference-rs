@@ -190,13 +190,13 @@ where
 {
     let params = NetworkParams::new(params);
     // Create a representation of the 1st convolutional layer with weights from a file
-    let conv1 = params.create_conv1(&format!("{}/conv1_update.bin", WEIGHTS_DIR));
+    let conv1 = params.create_conv1(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR));
     // Create a representation of the 2nd convolutional layer with weights from a file
-    let conv2 = params.create_conv2(&format!("{}/conv2_update.bin", WEIGHTS_DIR));
+    let conv2 = params.create_conv2(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR));
     // Create the representations of the fully-connected layers
-    let dense3 = params.create_dense3(&format!("{}/ip3.bin", WEIGHTS_DIR));
-    let dense4 = params.create_dense4(&format!("{}/ip4.bin", WEIGHTS_DIR));
-    let dense5 = params.create_dense5(&format!("{}/ip_last.bin", WEIGHTS_DIR));
+    let dense3 = params.create_dense3(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR));
+    let dense4 = params.create_dense4(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR));
+    let dense5 = params.create_dense5(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR));
 
     // Verify that I/O dimensions match between layers
     verify_network_dimensions(&[&conv1, &conv2, &dense3, &dense4, &dense5]);

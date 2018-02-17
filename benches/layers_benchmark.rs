@@ -7,7 +7,7 @@ use rusty_cnn::*;
 
 const SAMPLE_SIZE: usize = 150;
 const NOISE_THRESHOLD: f64 = 0.05;
-const BASELINE_DIR: &'static str = "input/baseline/input1";
+const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
 
 /// Benchmark each layer separately.
 fn per_layer_benchmark(c: &mut Criterion) {

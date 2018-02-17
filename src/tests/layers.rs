@@ -42,7 +42,7 @@ fn test_l5() {
 
 fn run_l1(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
     // Create the representation of the 1st convolutional layer with weights from a file
-    let layer = params.create_conv1(&format!("{}/conv1_update.bin", WEIGHTS_DIR));
+    let layer = params.create_conv1(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR));
 
     let input_data =
         read_image_with_padding(&format!("{}/in.bin", BASELINE_DIR), *layer.input_shape());
@@ -54,7 +54,7 @@ fn run_l1(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
 
 fn run_l2(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
     // Create the representation of the 2nd convolutional layer with weights from a file
-    let layer = params.create_conv2(&format!("{}/conv2_update.bin", WEIGHTS_DIR));
+    let layer = params.create_conv2(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR));
 
     let input_data = f32::read_from_file(&format!("{}/fm1.f", BASELINE_DIR));
     let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "conv_relu_2", &input_data)?;
@@ -65,7 +65,7 @@ fn run_l2(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
 
 fn run_l3(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
     // Create the representation of the fully-connected layer
-    let layer = params.create_dense3(&format!("{}/ip3.bin", WEIGHTS_DIR));
+    let layer = params.create_dense3(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR));
 
     let input_data = f32::read_from_file(&format!("{}/fm2.f", BASELINE_DIR));
     let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "mtx_mulf", &input_data)?;
@@ -77,7 +77,7 @@ fn run_l3(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
 
 fn run_l4(params: &NetworkParams) -> Vec<f32> {
     // Create the representation of the fully-connected layer
-    let layer = params.create_dense4(&format!("{}/ip4.bin", WEIGHTS_DIR));
+    let layer = params.create_dense4(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR));
 
     let input_data = f32::read_from_file(&format!("{}/fc3.f", BASELINE_DIR));
     mtxmul_relu(&input_data, &layer)
@@ -85,7 +85,7 @@ fn run_l4(params: &NetworkParams) -> Vec<f32> {
 
 fn run_l5(params: &NetworkParams) -> Vec<f32> {
     // Create the representation of the fully-connected layer
-    let layer = params.create_dense5(&format!("{}/ip_last.bin", WEIGHTS_DIR));
+    let layer = params.create_dense5(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR));
 
     let input_data = f32::read_from_file(&format!("{}/fc4.f", BASELINE_DIR));
     mtxmul_softmax(&input_data, &layer)

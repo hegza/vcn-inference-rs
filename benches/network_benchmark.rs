@@ -8,7 +8,7 @@ use rusty_cnn::cl_util as cl;
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.05;
-const BASELINE_DIR: &'static str = "input/baseline/input1";
+const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
 
 /// Benchmark writing of input and weights to device memory.
 fn net_buf_write_benchmark(c: &mut Criterion) {

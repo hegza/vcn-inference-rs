@@ -18,17 +18,15 @@ where
     T: Coeff,
 {
     /// Creates a descriptor of a fully-connected layer
-    pub fn new(input_dim: usize, output_dim: usize, weights_file: &str) -> DenseLayer<T> {
+    pub fn new(input_dim: usize, output_dim: usize, weights: Vec<T>) -> DenseLayer<T> {
         trace!(
-            "Create dense-layer with input-size: {}, output-size: {}, weights-file: {:?}.",
+            "Create dense-layer with input-size: {}, output-size: {}, weights-size: {}.",
             input_dim,
             output_dim,
-            weights_file
+            weights.len()
         );
         DenseLayer {
-            layer_data: LayerData::<T> {
-                weights: T::read_bin_from_file(weights_file),
-            },
+            layer_data: LayerData::<T> { weights },
             num_in: input_dim,
             num_out: output_dim,
         }

@@ -1,3 +1,5 @@
+//! The main interface of the convolutive neural network. Intended for ease of benchmarking and
+//! accuracy measurements.
 #![allow(unused_imports)]
 #![feature(test)]
 extern crate byteorder;
@@ -59,20 +61,7 @@ where
     T: CoeffFloat,
 {
     /// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have
-    /// finished running.
-    pub fn with_input_file(
-        input_file: &str,
-        program: &Program,
-        queue: &Queue,
-    ) -> ocl::Result<Network<T>> {
-        let net = Network::new(program, queue)?;
-        let input_data = read_image_with_padding(input_file, *net.conv1.input_shape());
-        net.upload_buffers(&input_data, queue)?;
-        Ok(net)
-    }
-    /// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have
-    /// finished running. Note that you must call upload_buffers before run, if using this method to
-    /// initialize.
+    /// finished running. Note that you must call upload_buffers before the network is run.
     pub fn new(program: &Program, queue: &Queue) -> ocl::Result<Network<T>> {
         // Create the network representation from network hyper-parameters
         let layers = create_layers(HYPER_PARAMS.clone());
@@ -107,33 +96,33 @@ where
 
         // Create the kernel for the 1st layer (Convolution + ReLU)
         let conv_relu1 = Kernel::new("conv_relu_1", &program)?
-        .queue(queue.clone())
-        .gws(layers.conv1.gws())
-        // Input
-        .arg_buf(&in_buf)
-        // Output
-        .arg_buf(&fm1_buf)
-        .arg_buf(&conv1_wgts_buf);
+            .queue(queue.clone())
+            .gws(layers.conv1.gws())
+            // Input
+            .arg_buf(&in_buf)
+            // Output
+            .arg_buf(&fm1_buf)
+            .arg_buf(&conv1_wgts_buf);
 
         // Create the kernel for the 2nd layer (Convolution + ReLU)
         let conv_relu2 = Kernel::new("conv_relu_2", &program)?
-        .queue(queue.clone())
-        .gws(layers.conv2.gws())
-        // Input
-        .arg_buf(&fm1_buf)
-        // Output
-        .arg_buf(&fm2_buf)
-        .arg_buf(&conv2_wgts_buf);
+            .queue(queue.clone())
+            .gws(layers.conv2.gws())
+            // Input
+            .arg_buf(&fm1_buf)
+            // Output
+            .arg_buf(&fm2_buf)
+            .arg_buf(&conv2_wgts_buf);
 
         // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
         let dense3_kernel = Kernel::new("mtx_mulf", &program)?
-        .queue(queue.clone())
-        .gws(layers.dense3.gws())
-        // Input
-        .arg_buf(&fm2_buf)
-        // Output
-        .arg_buf(&dense3_out_buf)
-        .arg_buf(&dense3_wgts_buf);
+            .queue(queue.clone())
+            .gws(layers.dense3.gws())
+            // Input
+            .arg_buf(&fm2_buf)
+            // Output
+            .arg_buf(&dense3_out_buf)
+            .arg_buf(&dense3_wgts_buf);
 
         // Wait until all commands have finished running before returning.
         queue.finish()?;
@@ -162,6 +151,7 @@ where
         }
         queue.finish()
     }
+    /// Runs the network with the currently loaded buffers, returning the result.
     pub fn run(&self, queue: &Queue) -> Vec<T> {
         unsafe {
             // Enqueue the kernel for the 1st layer (Convolution + ReLU)
@@ -190,13 +180,28 @@ where
 {
     let params = NetworkParams::new(params);
     // Create a representation of the 1st convolutional layer with weights from a file
-    let conv1 = params.create_conv1(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR));
+    let conv1 = params.create_conv(
+        1,
+        T::read_bin_from_file(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR)),
+    );
     // Create a representation of the 2nd convolutional layer with weights from a file
-    let conv2 = params.create_conv2(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR));
+    let conv2 = params.create_conv(
+        2,
+        T::read_bin_from_file(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR)),
+    );
     // Create the representations of the fully-connected layers
-    let dense3 = params.create_dense3(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR));
-    let dense4 = params.create_dense4(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR));
-    let dense5 = params.create_dense5(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR));
+    let dense3 = params.create_dense(
+        3,
+        T::read_bin_from_file(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR)),
+    );
+    let dense4 = params.create_dense(
+        4,
+        T::read_bin_from_file(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR)),
+    );
+    let dense5 = params.create_dense(
+        5,
+        T::read_bin_from_file(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR)),
+    );
 
     // Verify that I/O dimensions match between layers
     verify_network_dimensions(&[&conv1, &conv2, &dense3, &dense4, &dense5]);

@@ -13,7 +13,12 @@ fn run_network() -> ocl::Result<Vec<f32>> {
     // Initialize OpenCL
     let (queue, program, _context) = cl::init()?;
 
-    let net = Network::with_input_file(&format!("{}/in.bin", BASELINE_DIR), &program, &queue)?;
+    let net = Network::<f32>::new(&program, &queue).unwrap();
+    let input_data = read_image_with_padding_from_bin_in_channels(
+        &format!("{}/in.bin", BASELINE_DIR),
+        *net.conv1.input_shape(),
+    );
+    net.upload_buffers(&input_data, &queue).unwrap();
 
     // TODO: replace with net.run() when phasing out of timers
 

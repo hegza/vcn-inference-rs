@@ -24,19 +24,17 @@ where
         num_filter_elems: usize,
         input_shape: &ImageGeometry,
         output_shape: &ImageGeometry,
-        weights_file: &str,
+        weights: Vec<T>,
     ) -> ConvLayer<T> {
         trace!(
-            "Create conv-layer with filter-elems: {:?}, input-shape: {:?}, output-shape: {:?}, weights-file: {:?}.",
+            "Create conv-layer with filter-elems: {:?}, input-shape: {:?}, output-shape: {:?}, weights-size: {}.",
             num_filter_elems,
             input_shape,
             output_shape,
-            weights_file
+            weights.len()
         );
         ConvLayer {
-            layer_data: LayerData::<T> {
-                weights: T::read_bin_from_file(weights_file),
-            },
+            layer_data: LayerData::<T> { weights },
             input_shape: input_shape.clone(),
             output_shape: output_shape.clone(),
         }

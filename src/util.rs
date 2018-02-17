@@ -10,6 +10,7 @@ use std::io::BufReader;
 use std::time::Instant;
 use std::str::FromStr;
 use std::fmt::Debug;
+use std::slice::from_raw_parts_mut;
 use byteorder::{LittleEndian, ReadBytesExt};
 use layers::Layer;
 use geometry::{ImageGeometry, Square};
@@ -46,11 +47,14 @@ pub trait IndexMatrix<T> {
 impl ReadBinFromFile for f32 {
     /// Reads a file into a Vec of f32s.
     fn read_bin_from_file(filename: &str) -> Vec<f32> {
+        let metadata = std::fs::metadata(&filename).expect("file not found");
+
         let f = File::open(filename).expect("file not found");
         let mut reader = BufReader::new(f);
 
         // Iterate the file into f32s
-        let mut floats: Vec<f32> = Vec::new();
+        let len_f32s = metadata.len() * 4;
+        let mut floats: Vec<f32> = Vec::with_capacity(len_f32s as usize + 1);
         while let Ok(f) = reader.read_f32::<LittleEndian>() {
             floats.push(f);
         }
@@ -108,41 +112,59 @@ impl<T> IndexMatrix<T> for [T] {
     }
 }
 
-/// Reads a file into a Vec of f32s and adds the given amount of padding.
-pub fn read_image_with_padding<T>(filename: &str, padded_image_shape: ImageGeometry) -> Vec<T>
+/// Splits the input slice into three slices
+fn split_in_three_mut<T>(
+    slice: &mut [T],
+    first_mark: usize,
+    second_mark: usize,
+) -> (&mut [T], &mut [T], &mut [T]) {
+    let len = slice.len();
+    let ptr = slice.as_mut_ptr();
+    debug_assert!(first_mark <= len);
+    debug_assert!(second_mark <= len);
+    debug_assert!(first_mark <= second_mark);
+    unsafe {
+        (
+            from_raw_parts_mut(ptr, first_mark),
+            from_raw_parts_mut(ptr.offset(first_mark as isize), second_mark - first_mark),
+            from_raw_parts_mut(ptr.offset(second_mark as isize), len - second_mark),
+        )
+    }
+}
+
+/// `data` is a vector of Ts that's organized into channels.
+fn with_edge_padding_by_channel<T>(data: Vec<T>, shape: &ImageGeometry, padding: usize) -> Vec<T>
 where
     T: Zero + ReadBinFromFile + Copy,
 {
-    let image = T::read_bin_from_file(filename);
-    let image_shape = padded_image_shape.unpadded();
+    debug_assert_eq!(data.len(), shape.num_elems());
 
-    debug_assert_eq!(image.len(), image_shape.num_elems());
-    let padding = (padded_image_shape.side() - image_shape.side()) / 2;
+    let padded_shape = shape.with_padding(padding);
+    let padding = padding / 2;
 
-    // TODO: There's some room to optimize here, at least in terms of visual pleasure :)
-    let mut v: Vec<T> =
-        unsafe { vec![std::mem::uninitialized(); padded_image_shape.num_elems()] };
+    let mut v: Vec<T> = unsafe { vec![std::mem::uninitialized(); padded_shape.num_elems()] };
     {
-        let channels = v.chunks_mut(padded_image_shape.num_elems() / padded_image_shape.channels());
-        for (c, channel) in channels.enumerate() {
-            let mut rows: Vec<&mut [T]> = channel.chunks_mut(padded_image_shape.side()).collect();
-            let (first_rows, other_rows) = rows.split_at_mut(padding);
-            let (n_rows, last_rows) = other_rows.split_at_mut(image_shape.side());
+        // Divide the image area into single-channel chunks (eg. R, G, B)
+        let channels = v.chunks_mut(padded_shape.num_elems_per_channel());
+        // Iterate each channel (eg. R, G, B)
+        for (c_idx, channel) in channels.enumerate() {
+            let mut rows: Vec<&mut [T]> = channel.chunks_mut(padded_shape.side()).collect();
+            let (first_rows, n_rows, last_rows) =
+                split_in_three_mut(&mut rows, padding, padded_shape.side() - padding);
 
             // Set the first row elements as 0's
             first_rows
                 .iter_mut()
                 .for_each(|row| row.iter_mut().for_each(|elem| *elem = Zero::zero()));
             for (row_idx, row) in n_rows.iter_mut().enumerate() {
-                let (mut pad_left, mut right) = row.split_at_mut(padding);
-                let (mut im_middle, mut pad_right) = right.split_at_mut(image_shape.side());
+                let (mut pad_left, mut im_middle, mut pad_right) =
+                    split_in_three_mut(row, padding, padded_shape.side() - padding);
                 // Pad left side of image with 0's
                 pad_left.iter_mut().for_each(|x| *x = Zero::zero());
                 // Fill image center with contents
                 for (col_idx, elem) in im_middle.iter_mut().enumerate() {
-                    *elem = image[c * (image_shape.num_elems() / padded_image_shape.channels())
-                                      + row_idx * image_shape.side()
-                                      + col_idx];
+                    *elem = data
+                        [c_idx * shape.num_elems_per_channel() + row_idx * shape.side() + col_idx];
                 }
                 // Pad right side of image with 0's
                 pad_right.iter_mut().for_each(|x| *x = Zero::zero());
@@ -153,8 +175,23 @@ where
                 .for_each(|row| row.iter_mut().for_each(|elem| *elem = Zero::zero()));
         }
     }
-    debug_assert_eq!(v.len(), padded_image_shape.num_elems());
+    debug_assert_eq!(v.len(), padded_shape.num_elems());
     v
+}
+
+/// Reads a file into a Vec of f32s and adds the given amount of padding.
+pub fn read_image_with_padding_from_bin_in_channels<T>(
+    filename: &str,
+    padded_image_shape: ImageGeometry,
+) -> Vec<T>
+where
+    T: Zero + ReadBinFromFile + Copy,
+{
+    let image = T::read_bin_from_file(filename);
+    let image_shape = padded_image_shape.unpadded();
+    let padding = padded_image_shape.padding();
+
+    with_edge_padding_by_channel(image, &image_shape, padding)
 }
 
 pub fn duration_between(start: Instant, end: Instant) -> f64 {

@@ -17,7 +17,7 @@ fn net_buf_write_benchmark(c: &mut Criterion) {
 
     let net = Network::<f32>::new(&program, &queue).unwrap();
 
-    let input_data = read_image_with_padding(
+    let input_data = read_image_with_padding_from_bin_in_channels(
         &format!("{}/in.bin", BASELINE_DIR),
         *net.conv1.input_shape(),
     );
@@ -31,9 +31,12 @@ fn net_comp_benchmark(c: &mut Criterion) {
     // Initialize OpenCL
     let (queue, program, _context) = cl::init().unwrap();
 
-    let net =
-        Network::<f32>::with_input_file(&format!("{}/in.bin", BASELINE_DIR), &program, &queue)
-            .unwrap();
+    let net = Network::<f32>::new(&program, &queue).unwrap();
+    let input_data = read_image_with_padding_from_bin_in_channels(
+        &format!("{}/in.bin", BASELINE_DIR),
+        *net.conv1.input_shape(),
+    );
+    net.upload_buffers(&input_data, &queue).unwrap();
 
     c.bench_function("network comp", move |b| b.iter(|| net.run(&queue)));
 }

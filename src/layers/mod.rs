@@ -85,57 +85,36 @@ impl NetworkParams {
             fm2_shape,
         }
     }
-    pub fn create_conv1<T>(&self, weights_file: &str) -> ConvLayer<T>
+    pub fn create_conv<T>(&self, idx: usize, weights: Vec<T>) -> ConvLayer<T>
     where
         T: Coeff,
     {
-        ConvLayer::from_shapes(
-            self.conv1_filter_shape.num_elems(),
-            &self.padded_input_shape,
-            &self.padded_fm1_shape,
-            weights_file,
-        )
+        let (filter_elems, in_shape, out_shape) = match idx {
+            1 => (
+                self.conv1_filter_shape.num_elems(),
+                self.padded_input_shape,
+                self.padded_fm1_shape,
+            ),
+            2 => (
+                self.conv2_filter_shape.num_elems(),
+                self.padded_fm1_shape,
+                self.fm2_shape,
+            ),
+            _ => panic!(format!("no conv layer for idx {}", idx)),
+        };
+        ConvLayer::from_shapes(filter_elems, &in_shape, &out_shape, weights)
     }
-    pub fn create_conv2<T>(&self, weights_file: &str) -> ConvLayer<T>
+    pub fn create_dense<T>(&self, idx: usize, weights: Vec<T>) -> DenseLayer<T>
     where
         T: Coeff,
     {
-        ConvLayer::from_shapes(
-            self.conv2_filter_shape.num_elems(),
-            &self.padded_fm1_shape,
-            &self.fm2_shape,
-            weights_file,
-        )
-    }
-    pub fn create_dense3<T>(&self, weights_file: &str) -> DenseLayer<T>
-    where
-        T: Coeff,
-    {
-        DenseLayer::new(
-            self.fm2_shape.num_elems(),
-            self.fully_connected_const,
-            weights_file,
-        )
-    }
-    pub fn create_dense4<T>(&self, weights_file: &str) -> DenseLayer<T>
-    where
-        T: Coeff,
-    {
-        DenseLayer::new(
-            self.fully_connected_const,
-            self.fully_connected_const,
-            weights_file,
-        )
-    }
-    pub fn create_dense5<T>(&self, weights_file: &str) -> DenseLayer<T>
-    where
-        T: Coeff,
-    {
-        DenseLayer::new(
-            self.fully_connected_const,
-            self.num_output_classes,
-            weights_file,
-        )
+        let (num_in, num_out) = match idx {
+            3 => (self.fm2_shape.num_elems(), self.fully_connected_const),
+            4 => (self.fully_connected_const, self.fully_connected_const),
+            5 => (self.fully_connected_const, self.num_output_classes),
+            _ => panic!(format!("no dense layer for idx {}", idx)),
+        };
+        DenseLayer::new(num_in, num_out, weights)
     }
 }
 

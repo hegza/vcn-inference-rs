@@ -21,8 +21,10 @@ fn per_layer_benchmark(c: &mut Criterion) {
 }
 
 fn bench_layer1(conv1: ConvLayer<f32>, c: &mut Criterion) {
-    let input_data =
-        read_image_with_padding(&format!("{}/in.bin", BASELINE_DIR), *conv1.input_shape());
+    let input_data = read_image_with_padding_from_bin_in_channels(
+        &format!("{}/in.bin", BASELINE_DIR),
+        *conv1.input_shape(),
+    );
     let (kernel, _, queue) = create_standalone_kernel(&conv1, "conv_relu_1", &input_data).unwrap();
     c.bench_function("layer 1 kernel comp", move |b| {
         b.iter(|| run_kernel_wait(&kernel, &queue).unwrap())

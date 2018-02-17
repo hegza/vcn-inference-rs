@@ -223,6 +223,7 @@ pub fn run_kernel_wait(kernel: &Kernel, queue: &Queue) -> ocl::Result<()> {
     queue.finish()
 }
 
+/// Creates a standalone kernel for benchmarking. Returns only after all commands have finished.
 pub fn create_standalone_kernel<L: Layer<T>, T: Num + OclPrm>(
     layer: &L,
     kernel_func: &str,
@@ -257,6 +258,7 @@ pub fn create_standalone_kernel<L: Layer<T>, T: Num + OclPrm>(
     unsafe {
         cl::map_to_buf(&in_buf, &input_data)?;
     }
+    queue.finish()?;
 
     Ok((kernel, out_buf, queue))
 }

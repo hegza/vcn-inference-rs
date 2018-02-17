@@ -22,9 +22,7 @@ fn net_buf_write_benchmark(c: &mut Criterion) {
         *net.conv1.input_shape(),
     );
     c.bench_function("network write bufs", move |b| {
-        b.iter(|| {
-            net.upload_buffers(&input_data, &queue).unwrap();
-        })
+        b.iter(|| net.upload_buffers(&input_data, &queue).unwrap())
     });
 }
 

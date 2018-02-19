@@ -50,10 +50,11 @@ where
     pub conv_relu2: Kernel,
     pub dense3_kernel: Kernel,
     pub dense3_out_buf: Buffer<T>,
-    in_buf: Buffer<T>,
-    conv1_wgts_buf: Buffer<T>,
-    conv2_wgts_buf: Buffer<T>,
-    dense3_wgts_buf: Buffer<T>,
+    // TODO: rewrap in_buffer and weights buffers as private (predict()-refactor)
+    pub in_buf: Buffer<T>,
+    pub conv1_wgts_buf: Buffer<T>,
+    pub conv2_wgts_buf: Buffer<T>,
+    pub dense3_wgts_buf: Buffer<T>,
 }
 
 impl<T> Network<T>

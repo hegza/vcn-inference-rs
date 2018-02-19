@@ -133,7 +133,11 @@ fn split_in_three_mut<T>(
 }
 
 /// `data` is a vector of Ts that's organized into channels.
-fn with_edge_padding_by_channel<T>(data: Vec<T>, shape: &ImageGeometry, padding: usize) -> Vec<T>
+pub fn with_edge_padding_by_channel<T>(
+    data: Vec<T>,
+    shape: &ImageGeometry,
+    padding: usize,
+) -> Vec<T>
 where
     T: Zero + ReadBinFromFile + Copy,
 {

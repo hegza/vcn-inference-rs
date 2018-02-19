@@ -2,8 +2,6 @@ use super::*;
 
 #[test]
 fn test_network() {
-    env_logger::init();
-
     let output = run_network().unwrap();
     let correct = f32::read_from_file(&format!("{}/out5.f", BASELINE_DIR));
     assert!(is_within_margin(&output, &correct, RESULT_MARGIN));

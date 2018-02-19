@@ -10,7 +10,7 @@ const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.05;
 const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
 
-/// Benchmark writing of input and weights to device memory.
+/// Benchmark writing of input to device memory.
 fn net_buf_write_benchmark(c: &mut Criterion) {
     // Initialize OpenCL
     let (queue, program, _context) = cl::init().unwrap();
@@ -22,7 +22,7 @@ fn net_buf_write_benchmark(c: &mut Criterion) {
         *net.conv1.input_shape(),
     ));
     c.bench_function("network write bufs", move |b| {
-        b.iter(|| net.upload_buffers(&input_data, &queue).unwrap())
+        b.iter(|| unsafe { cl::map_to_buf(&net.in_buf, &input_data).unwrap() })
     });
 }
 
@@ -36,9 +36,10 @@ fn net_comp_benchmark(c: &mut Criterion) {
         &format!("{}/in.bin", BASELINE_DIR),
         *net.conv1.input_shape(),
     ));
-    net.upload_buffers(&input_data, &queue).unwrap();
 
-    c.bench_function("network comp", move |b| b.iter(|| net.run(&queue)));
+    c.bench_function("network comp", move |b| {
+        b.iter(|| net.predict(&input_data, &queue))
+    });
 }
 
 criterion_group!{

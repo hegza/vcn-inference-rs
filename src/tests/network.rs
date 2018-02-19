@@ -16,7 +16,6 @@ fn run_network() -> ocl::Result<Vec<f32>> {
         &format!("{}/in.bin", BASELINE_DIR),
         *net.conv1.input_shape(),
     );
-    net.upload_buffers(&input_data, &queue).unwrap();
 
-    Ok(net.run(&queue))
+    net.predict(&input_data, &queue)
 }

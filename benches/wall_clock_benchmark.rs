@@ -32,8 +32,7 @@ fn net_wall_benchmark(c: &mut Criterion) {
             let (queue, program, _context) = cl::init().unwrap();
 
             let net = Network::<f32>::new(&program, &queue).unwrap();
-            net.upload_buffers(&input_data, &queue).unwrap();
-            net.run(&queue)
+            net.predict(&input_data, &queue)
         })
     });
 }

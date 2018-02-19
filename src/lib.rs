@@ -50,11 +50,7 @@ where
     pub conv_relu2: Kernel,
     pub dense3_kernel: Kernel,
     pub dense3_out_buf: Buffer<T>,
-    // TODO: rewrap in_buffer and weights buffers as private (predict()-refactor)
     pub in_buf: Buffer<T>,
-    pub conv1_wgts_buf: Buffer<T>,
-    pub conv2_wgts_buf: Buffer<T>,
-    pub dense3_wgts_buf: Buffer<T>,
 }
 
 impl<T> Network<T>
@@ -125,6 +121,11 @@ where
             .arg_buf(&dense3_out_buf)
             .arg_buf(&dense3_wgts_buf);
 
+        // Write the weights of the 1st three layers to the global memory of the device
+        conv1_wgts_buf.write(layers.conv1.weights()).enq()?;
+        conv2_wgts_buf.write(layers.conv2.weights()).enq()?;
+        dense3_wgts_buf.write(layers.dense3.weights()).enq()?;
+
         // Wait until all commands have finished running before returning.
         queue.finish()?;
 
@@ -135,26 +136,13 @@ where
             dense3_kernel,
             dense3_out_buf,
             in_buf,
-            conv1_wgts_buf,
-            conv2_wgts_buf,
-            dense3_wgts_buf,
         })
     }
-    /// Writes weights to device memory, maps input buffer. Returns only after all commands have finished running.
-    pub fn upload_buffers(&self, input_data: &[T], queue: &Queue) -> ocl::Result<()> {
-        // Write the weights of the 1st three layers to the global memory of the device
-        self.conv1_wgts_buf.write(self.conv1.weights()).enq()?;
-        self.conv2_wgts_buf.write(self.conv2.weights()).enq()?;
-        self.dense3_wgts_buf.write(self.dense3.weights()).enq()?;
-
+    /// Maps the input buffer, and runs the network, returning the result.
+    pub fn predict(&self, input_data: &[T], queue: &Queue) -> ocl::Result<Vec<T>> {
         unsafe {
             cl::map_to_buf(&self.in_buf, &input_data)?;
-        }
-        queue.finish()
-    }
-    /// Runs the network with the currently loaded buffers, returning the result.
-    pub fn run(&self, queue: &Queue) -> Vec<T> {
-        unsafe {
+
             // Enqueue the kernel for the 1st layer (Convolution + ReLU)
             self.conv_relu1.cmd().queue(&queue).enq().unwrap();
             // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
@@ -171,7 +159,7 @@ where
         let dense4_out = mtxmul_relu(&dense3_out, &self.dense4);
 
         // Run the 5th layer (fully-connected)
-        mtxmul_softmax(&dense4_out, &self.dense5)
+        Ok(mtxmul_softmax(&dense4_out, &self.dense5))
     }
 }
 

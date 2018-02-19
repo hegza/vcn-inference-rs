@@ -38,23 +38,11 @@ pub fn main() {
     // Initialize the network
     let net = Network::<f32>::new(&program, &queue).unwrap();
 
-    // Write the weights of the 1st three layers to the global memory of the device
-    net.conv1_wgts_buf.write(net.conv1.weights()).enq().unwrap();
-    net.conv2_wgts_buf.write(net.conv2.weights()).enq().unwrap();
-    net.dense3_wgts_buf
-        .write(net.dense3.weights())
-        .enq()
-        .unwrap();
-
     // Make classifications using the network
     let mut num_correct = 0;
     let mut num_total = 0;
     for &(ref input_image, ref correct) in test_data.iter() {
-        unsafe {
-            cl::map_to_buf(&net.in_buf, &input_image).unwrap();
-        }
-
-        let result = net.run(&queue);
+        let result = net.predict(&input_image, &queue).unwrap();
         let result = result.into_iter().map(|f| r32(f)).collect::<Vec<R32>>();
         let idx_of_correct = result
             .iter()

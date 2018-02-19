@@ -52,6 +52,7 @@ impl ReadBinFromFile for f32 {
         let f = File::open(filename).expect("file not found");
         let mut reader = BufReader::new(f);
 
+        // TODO: specify BufReader with correct buffer capacity
         // Iterate the file into f32s
         let len_f32s = metadata.len() * 4;
         let mut floats: Vec<f32> = Vec::with_capacity(len_f32s as usize + 1);

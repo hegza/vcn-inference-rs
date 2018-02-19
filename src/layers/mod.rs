@@ -31,7 +31,7 @@ pub struct LayerData<T> {
 }
 
 #[derive(Clone, Debug)]
-pub struct HyperParams {
+pub struct ClassicHyperParams {
     pub source_side: usize,
     // channels for each rgb color
     pub num_source_channels: usize,
@@ -47,7 +47,7 @@ pub struct HyperParams {
 }
 
 pub struct NetworkParams {
-    hyper_params: HyperParams,
+    hyper_params: ClassicHyperParams,
     conv1_filter_shape: PaddedSquare,
     conv2_filter_shape: PaddedSquare,
     padded_input_shape: ImageGeometry,
@@ -56,7 +56,7 @@ pub struct NetworkParams {
 }
 
 impl NetworkParams {
-    pub fn new(hyper_params: HyperParams) -> NetworkParams {
+    pub fn new(hyper_params: ClassicHyperParams) -> NetworkParams {
         let conv1_filter_shape = PaddedSquare::from_side(hyper_params.conv_1_filter_side);
         let conv2_filter_shape = PaddedSquare::from_side(hyper_params.conv_2_filter_side);
 
@@ -89,6 +89,7 @@ impl NetworkParams {
     where
         T: Coeff,
     {
+        // TODO: unwrap these into per-layer, not per-IO
         let (filter_elems, in_shape, out_shape) = match idx {
             1 => (
                 self.conv1_filter_shape.num_elems(),
@@ -108,6 +109,7 @@ impl NetworkParams {
     where
         T: Coeff,
     {
+        // TODO: unwrap these
         let (num_in, num_out) = match idx {
             3 => (self.fm2_shape.num_elems(), self.fully_connected_const),
             4 => (self.fully_connected_const, self.fully_connected_const),
@@ -130,7 +132,7 @@ where
 }
 
 impl Deref for NetworkParams {
-    type Target = HyperParams;
+    type Target = ClassicHyperParams;
 
     fn deref(&self) -> &Self::Target {
         &self.hyper_params

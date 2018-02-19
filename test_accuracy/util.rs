@@ -11,6 +11,7 @@ pub fn load_jpeg<P>(file: P) -> Vec<f32>
 where
     P: AsRef<Path>,
 {
+    // TODO: find out local min + max
     let img = image::open(file).unwrap();
     let num_pixels = (img.width() * img.height()) as usize;
     const UMAX: f32 = 255f32;
@@ -75,7 +76,7 @@ where
     F: Fn(&String) -> Vec<T>,
     T: Coeff,
 {
-    let conv1_filter_shape = PaddedSquare::from_side(HYPER_PARAMS.conv_1_filter_side);
+    let conv1_filter_shape = PaddedSquare::from_side(CLASSIC_HYPER_PARAMS.conv_1_filter_side);
     let padded_image_shape = input_shape.with_filter_padding(&conv1_filter_shape);
     let padding = padded_image_shape.padding();
 

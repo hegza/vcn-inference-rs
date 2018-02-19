@@ -21,8 +21,10 @@ const INPUT_IMG_DIR: &str = "input/images";
 pub fn main() {
     env_logger::init();
 
-    let input_shape =
-        ImageGeometry::new(HYPER_PARAMS.source_side, HYPER_PARAMS.num_source_channels);
+    let input_shape = ImageGeometry::new(
+        CLASSIC_HYPER_PARAMS.source_side,
+        CLASSIC_HYPER_PARAMS.num_source_channels,
+    );
 
     // Load input images (x, y)
     debug!("Loading input images...");
@@ -36,7 +38,7 @@ pub fn main() {
     let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
 
     // Initialize the network
-    let net = Network::<f32>::new(&program, &queue).unwrap();
+    let net = ClassicNetwork::<f32>::new(&program, &queue).unwrap();
 
     // Make classifications using the network
     let mut num_correct = 0;

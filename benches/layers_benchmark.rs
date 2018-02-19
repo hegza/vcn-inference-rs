@@ -11,7 +11,7 @@ const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
 
 /// Benchmark each layer separately.
 fn per_layer_benchmark(c: &mut Criterion) {
-    let net = create_layers(HYPER_PARAMS.clone());
+    let net = create_layers(CLASSIC_HYPER_PARAMS.clone());
 
     bench_layer1(net.conv1, c);
     bench_layer2(net.conv2, c);

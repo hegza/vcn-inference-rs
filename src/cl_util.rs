@@ -77,7 +77,7 @@ pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<
 
     // Read the input image into the input_buf as f32s
     for (idx, f) in data.into_iter().enumerate() {
-        // TODO: one could pack them into Float4s, for instance here
+        // TODO: the mapping could be done in float4's
         mem_map[idx] = *f;
     }
 

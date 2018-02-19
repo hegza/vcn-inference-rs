@@ -15,9 +15,11 @@ const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
 fn net_wall_benchmark(c: &mut Criterion) {
     // Create descriptor for input geometry for determining the size and padding of the image loaded
     // from disk.
-    let conv1_filter_shape = PaddedSquare::from_side(HYPER_PARAMS.conv_1_filter_side);
-    let input_shape =
-        ImageGeometry::new(HYPER_PARAMS.source_side, HYPER_PARAMS.num_source_channels);
+    let conv1_filter_shape = PaddedSquare::from_side(CLASSIC_HYPER_PARAMS.conv_1_filter_side);
+    let input_shape = ImageGeometry::new(
+        CLASSIC_HYPER_PARAMS.source_side,
+        CLASSIC_HYPER_PARAMS.num_source_channels,
+    );
     let padded_input_shape = input_shape.with_filter_padding(&conv1_filter_shape);
 
     // Load input image with padding from disk
@@ -31,7 +33,7 @@ fn net_wall_benchmark(c: &mut Criterion) {
             // Initialize OpenCL
             let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
 
-            let net = Network::<f32>::new(&program, &queue).unwrap();
+            let net = ClassicNetwork::<f32>::new(&program, &queue).unwrap();
             net.predict(&input_data, &queue)
         })
     });

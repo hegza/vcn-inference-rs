@@ -34,7 +34,7 @@
             "label": "cargo test",
             "command": "cargo",
             "args": [
-                "test"
+                "test --lib"
             ],
             "problemMatcher": [
                 "$rustc"

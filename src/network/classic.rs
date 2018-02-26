@@ -16,12 +16,12 @@ pub struct ClassicNetwork<T>
 where
     T: Coeff,
 {
-    pub layers: Layers<T>,
-    pub conv_relu1: Kernel,
-    pub conv_relu2: Kernel,
-    pub dense3_kernel: Kernel,
-    pub dense3_out_buf: Buffer<T>,
-    pub in_buf: Buffer<T>,
+    layers: Layers<T>,
+    conv_relu1: Kernel,
+    conv_relu2: Kernel,
+    dense3_kernel: Kernel,
+    dense3_out_buf: Buffer<T>,
+    in_buf: Buffer<T>,
 }
 
 impl<T> ClassicNetwork<T>
@@ -226,34 +226,6 @@ pub fn create_standalone_kernel<L: Layer<T>, T: Num + OclPrm>(
     queue.finish()?;
 
     Ok((kernel, out_buf, queue))
-}
-
-pub fn mtxmul_relu<T>(input_buffer: &[T], dense: &DenseLayer<T>) -> Vec<T>
-where
-    T: CoeffFloat,
-{
-    let out = mtx_mul(
-        dense.weights(),
-        input_buffer,
-        dense.num_out(),
-        dense.num_in(),
-        1,
-    );
-    relu(&out)
-}
-
-pub fn mtxmul_softmax<F>(input_buffer: &[F], dense: &DenseLayer<F>) -> Vec<F>
-where
-    F: CoeffFloat,
-{
-    let out = mtx_mul(
-        dense.weights(),
-        input_buffer,
-        dense.num_out(),
-        dense.num_in(),
-        1,
-    );
-    softmax(&out, dense.num_out(), 1)
 }
 
 impl<T> Deref for ClassicNetwork<T>

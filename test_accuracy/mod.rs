@@ -12,7 +12,6 @@ mod util;
 use rusty_cnn::*;
 use cl_util as cl;
 use noisy_float::prelude::*;
-use rusty_cnn::geometry::*;
 use util::*;
 use class::Class;
 

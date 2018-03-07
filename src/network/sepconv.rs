@@ -128,7 +128,7 @@ where
             .gws(SpatialDims::Three(params.width, params.height, params.c2))
             .lws(SpatialDims::Three(
                 params.columns_blockdim_x,
-                params.columns2_blockdim_y,
+                params.columns_blockdim_y,
                 1,
             ))
             .arg_buf(&dev_input)
@@ -137,10 +137,12 @@ where
         let krn_r_conv1 = Kernel::new("rowConv", &program).unwrap()
             .queue(queue.clone())
             .gws(SpatialDims::Three(params.width, params.height, params.c3))
+            // HACK: my desktop GPU cannot handle the full dimension (params.rows_blockdim_x*params.rows_blockdim_y*1 = 384) use 256 instead
+            // TODO: benchmark different combinations: 32x4x2 -> 32x8x1
             .lws(SpatialDims::Three(
-                params.rows_blockdim_x,
+                params.c3,
                 params.rows_blockdim_y,
-                1,
+                2,
             ))
             .arg_buf(&dev_out_v1)
             .arg_buf(&dev_out_h1)
@@ -148,9 +150,11 @@ where
         let krn_max_pool1 = Kernel::new("MaxPool1", &program).unwrap()
             .queue(queue.clone())
             .gws(SpatialDims::Three(params.width, params.height, 32))
+            // HACK: my desktop GPU cannot handle the full dimension (params.mp1_block_dim*params.mp1_block_dim*1 = 384) use 256 instead
+            // TODO: benchmark different combinations: 32x8x1 -> 32x4x2
             .lws(SpatialDims::Three(
                 params.mp1_block_dim,
-                params.mp1_block_dim,
+                params.mp1_block_dim/4,
                 1,
             ))
             .arg_buf(&dev_out_h1)

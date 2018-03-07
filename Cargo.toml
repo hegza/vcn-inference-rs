@@ -14,7 +14,7 @@ noisy_float = "^0.1"
 image = { version = "^0.18" }
 
 [dev-dependencies]
-criterion = { version = "^0.2", features=["real_blackbox"] }
+criterion = { version = "^0.2" }
 
 [[bin]]
 name = "test_accuracy"

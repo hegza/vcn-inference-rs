@@ -1,7 +1,6 @@
 //! The main interface of the convolutive neural network. Intended for ease of benchmarking and
 //! accuracy measurements.
 #![allow(unused_imports)]
-#![feature(test)]
 extern crate byteorder;
 extern crate env_logger;
 #[macro_use]
@@ -10,7 +9,6 @@ extern crate lazy_static;
 extern crate log;
 extern crate num_traits;
 extern crate ocl;
-extern crate test;
 
 pub mod cl_util;
 pub mod geometry;

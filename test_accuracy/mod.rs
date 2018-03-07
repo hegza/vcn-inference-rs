@@ -37,13 +37,13 @@ pub fn main() {
     let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
 
     // Initialize the network
-    let net = ClassicNetwork::<f32>::new(&program, &queue).unwrap();
+    let net = ClassicNetwork::<f32>::new(&program, &queue);
 
     // Make classifications using the network
     let mut num_correct = 0;
     let mut num_total = 0;
     for &(ref input_image, ref correct) in test_data.iter() {
-        let result = net.predict(&input_image, &queue).unwrap();
+        let result = net.predict(&input_image, &queue);
         let result = result.into_iter().map(|f| r32(f)).collect::<Vec<R32>>();
         let idx_of_correct = result
             .iter()

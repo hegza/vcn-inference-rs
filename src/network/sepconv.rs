@@ -63,7 +63,7 @@ impl<T> SepconvNetwork<T>
 where
     T: CoeffFloat,
 {
-    pub fn new(program: &Program, queue: &Queue) -> ocl::Result<SepconvNetwork<T>> {
+    pub fn new(program: &Program, queue: &Queue) -> SepconvNetwork<T> {
         // Create meta
         let params = SEPCONV_HYPER_PARAMS.clone();
 
@@ -86,29 +86,29 @@ where
             params.c1 * params.width * params.height,
             flags::MEM_READ_ONLY,
             &queue,
-        )?;
+        ).unwrap();
         let dev_out_v1 = cl::create_buffer::<T>(
             params.c2 * params.width * params.height,
             flags::MEM_READ_WRITE,
             &queue,
-        )?;
+        ).unwrap();
         let dev_out_h1 = cl::create_buffer::<T>(
             params.c3 * params.width * params.height,
             flags::MEM_READ_WRITE,
             &queue,
-        )?;
+        ).unwrap();
         let dev_out_v2 = cl::create_buffer::<T>(
             params.c2 * params.width / 2 * params.height / 2,
             flags::MEM_READ_WRITE,
             &queue,
-        )?;
-        let dev_out_h2 = cl::create_buffer::<T>(32 * 48 * 48, flags::MEM_READ_WRITE, &queue)?;
-        let dev_v1 = cl::create_buffer::<T>(1 * 5 * 3 * 7, flags::MEM_READ_ONLY, &queue)?;
-        let dev_h1 = cl::create_buffer::<T>(1 * 5 * 7 * 32, flags::MEM_READ_ONLY, &queue)?;
-        let dev_v2 = cl::create_buffer::<T>(1 * 5 * 32 * 7, flags::MEM_READ_ONLY, &queue)?;
-        let dev_h2 = cl::create_buffer::<T>(1 * 5 * 7 * 32, flags::MEM_READ_ONLY, &queue)?;
-        let dev_mxp_h1 = cl::create_buffer::<T>(48 * 48 * 32, flags::MEM_READ_WRITE, &queue)?;
-        let dev_mxp_h2 = cl::create_buffer::<T>(24 * 24 * 32, flags::MEM_READ_WRITE, &queue)?;
+        ).unwrap();
+        let dev_out_h2 = cl::create_buffer::<T>(32 * 48 * 48, flags::MEM_READ_WRITE, &queue).unwrap();
+        let dev_v1 = cl::create_buffer::<T>(1 * 5 * 3 * 7, flags::MEM_READ_ONLY, &queue).unwrap();
+        let dev_h1 = cl::create_buffer::<T>(1 * 5 * 7 * 32, flags::MEM_READ_ONLY, &queue).unwrap();
+        let dev_v2 = cl::create_buffer::<T>(1 * 5 * 32 * 7, flags::MEM_READ_ONLY, &queue).unwrap();
+        let dev_h2 = cl::create_buffer::<T>(1 * 5 * 7 * 32, flags::MEM_READ_ONLY, &queue).unwrap();
+        let dev_mxp_h1 = cl::create_buffer::<T>(48 * 48 * 32, flags::MEM_READ_WRITE, &queue).unwrap();
+        let dev_mxp_h2 = cl::create_buffer::<T>(24 * 24 * 32, flags::MEM_READ_WRITE, &queue).unwrap();
 
         // TODO: check if this bin-read implementation matches with what's done in the original sep-conv
         let v1 = T::read_bin_from_file("input/weights/sepconv-_-_/v1-f32-le.bin");
@@ -117,13 +117,13 @@ where
         let h2 = T::read_bin_from_file("input/weights/sepconv-_-_/h2-f32-le.bin");
 
         // Write buffers to device
-        dev_v1.write(&v1).enq()?;
-        dev_h1.write(&h1).enq()?;
-        dev_v2.write(&v2).enq()?;
-        dev_h2.write(&h2).enq()?;
+        dev_v1.write(&v1).enq().unwrap();
+        dev_h1.write(&h1).enq().unwrap();
+        dev_v2.write(&v2).enq().unwrap();
+        dev_h2.write(&h2).enq().unwrap();
 
         // Create kernels
-        let krn_c_conv1 = Kernel::new("colConv", &program)?
+        let krn_c_conv1 = Kernel::new("colConv", &program).unwrap()
             .queue(queue.clone())
             .gws(SpatialDims::Three(params.width, params.height, params.c2))
             .lws(SpatialDims::Three(
@@ -134,7 +134,7 @@ where
             .arg_buf(&dev_input)
             .arg_buf(&dev_out_v1)
             .arg_buf(&dev_v1);
-        let krn_r_conv1 = Kernel::new("rowConv", &program)?
+        let krn_r_conv1 = Kernel::new("rowConv", &program).unwrap()
             .queue(queue.clone())
             .gws(SpatialDims::Three(params.width, params.height, params.c3))
             .lws(SpatialDims::Three(
@@ -145,7 +145,7 @@ where
             .arg_buf(&dev_out_v1)
             .arg_buf(&dev_out_h1)
             .arg_buf(&dev_h1);
-        let krn_max_pool1 = Kernel::new("MaxPool1", &program)?
+        let krn_max_pool1 = Kernel::new("MaxPool1", &program).unwrap()
             .queue(queue.clone())
             .gws(SpatialDims::Three(params.width, params.height, 32))
             .lws(SpatialDims::Three(
@@ -155,7 +155,7 @@ where
             ))
             .arg_buf(&dev_out_h1)
             .arg_buf(&dev_mxp_h1);
-        let krn_c_conv2 = Kernel::new("colConv2", &program)?
+        let krn_c_conv2 = Kernel::new("colConv2", &program).unwrap()
             .queue(queue.clone())
             .gws(SpatialDims::Three(params.width / 2, params.height / 2, 7))
             .lws(SpatialDims::Three(
@@ -166,7 +166,7 @@ where
             .arg_buf(&dev_mxp_h1)
             .arg_buf(&dev_out_v2)
             .arg_buf(&dev_v2);
-        let krn_r_conv2 = Kernel::new("rowConv2", &program)?
+        let krn_r_conv2 = Kernel::new("rowConv2", &program).unwrap()
             .queue(queue.clone())
             .gws(SpatialDims::Three(params.width / 2, params.height / 2, 32))
             .lws(SpatialDims::Three(
@@ -177,7 +177,7 @@ where
             .arg_buf(&dev_out_v2)
             .arg_buf(&dev_out_h2)
             .arg_buf(&dev_h2);
-        let krn_max_pool2 = Kernel::new("MaxPool2", &program)?
+        let krn_max_pool2 = Kernel::new("MaxPool2", &program).unwrap()
             .queue(queue.clone())
             .gws(SpatialDims::Three(params.width / 2, params.height / 2, 32))
             .lws(SpatialDims::Three(
@@ -188,7 +188,7 @@ where
             .arg_buf(&dev_out_h2)
             .arg_buf(&dev_mxp_h2);
 
-        Ok(SepconvNetwork {
+        SepconvNetwork {
             in_buf: dev_input,
             krn_c_conv1,
             krn_r_conv1,
@@ -199,19 +199,19 @@ where
             dev_mxp_h2,
             dense4,
             dense5,
-        })
+        }
     }
     // Maps the input buffer, and runs the network, returning the result.
-    pub fn predict(&self, input_data: &[T], queue: &Queue) -> ocl::Result<Vec<T>> {
+    pub fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<T> {
         unsafe {
-            cl::map_to_buf(&self.in_buf, &input_data)?;
+            cl::map_to_buf(&self.in_buf, &input_data).unwrap();
 
-            self.krn_c_conv1.cmd().queue(&queue).enq()?;
-            self.krn_r_conv1.cmd().queue(&queue).enq()?;
-            self.krn_max_pool1.cmd().queue(&queue).enq()?;
-            self.krn_c_conv2.cmd().queue(&queue).enq()?;
-            self.krn_r_conv2.cmd().queue(&queue).enq()?;
-            self.krn_max_pool2.cmd().queue(&queue).enq()?;
+            self.krn_c_conv1.cmd().queue(&queue).enq().unwrap();
+            self.krn_r_conv1.cmd().queue(&queue).enq().unwrap();
+            self.krn_max_pool1.cmd().queue(&queue).enq().unwrap();
+            self.krn_c_conv2.cmd().queue(&queue).enq().unwrap();
+            self.krn_r_conv2.cmd().queue(&queue).enq().unwrap();
+            self.krn_max_pool2.cmd().queue(&queue).enq().unwrap();
         }
         // Wait for all on-device calculations to finish
         queue.finish().unwrap();
@@ -222,6 +222,6 @@ where
         let dense4_out = mtxmul_relu(&mxp_out, &self.dense4);
 
         // Run the 5th layer (fully-connected)
-        Ok(mtxmul_softmax(&dense4_out, &self.dense5))
+        mtxmul_softmax(&dense4_out, &self.dense5)
     }
 }

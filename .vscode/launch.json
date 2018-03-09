@@ -8,7 +8,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceRoot}/target/debug/rusty-cnn",
+            "program": "${workspaceRoot}/target/debug/test_accuracy",
             "args": [],
             "cwd": "${workspaceRoot}"
         }

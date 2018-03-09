@@ -17,10 +17,7 @@
         {
             "type": "shell",
             "label": "cargo check",
-            "command": "cargo",
-            "args": [
-                "check"
-            ],
+            "command": "cargo check --bins --tests --benches",
             "problemMatcher": [
                 "$rustc"
             ],
@@ -32,10 +29,7 @@
         {
             "type": "shell",
             "label": "cargo test",
-            "command": "cargo",
-            "args": [
-                "test --lib"
-            ],
+            "command": "cargo test --lib",
             "problemMatcher": [
                 "$rustc"
             ],

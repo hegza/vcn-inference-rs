@@ -1,6 +1,6 @@
 use util::*;
 use geometry::*;
-use super::{Coeff, Layer, LayerData};
+use super::*;
 use std::ops::Deref;
 use ocl::SpatialDims;
 
@@ -9,7 +9,7 @@ pub struct ConvLayer<T>
 where
     T: Coeff,
 {
-    layer_data: LayerData<T>,
+    weights: Vec<T>,
     input_shape: ImageGeometry,
     output_shape: ImageGeometry,
 }
@@ -33,8 +33,13 @@ where
             output_shape,
             weights.len()
         );
+        // Make sure that the weight count is correct
+        debug_assert_eq!(
+            num_filter_elems * input_shape.channels() * output_shape.channels(),
+            weights.len()
+        );
         ConvLayer {
-            layer_data: LayerData::<T> { weights },
+            weights,
             input_shape: input_shape.clone(),
             output_shape: output_shape.clone(),
         }
@@ -48,35 +53,30 @@ where
     }
 }
 
-impl<T> Deref for ConvLayer<T>
+impl<T> Layer for ConvLayer<T>
 where
     T: Coeff,
 {
-    type Target = LayerData<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.layer_data
-    }
-}
-
-impl<T> Layer<T> for ConvLayer<T>
-where
-    T: Coeff,
-{
-    fn weights(&self) -> &Vec<T> {
-        &self.weights
-    }
     fn num_out(&self) -> usize {
         self.output_shape.num_elems()
     }
     fn num_in(&self) -> usize {
         self.input_shape.num_elems()
     }
-    fn gws(&self) -> SpatialDims {
+    fn gws_hint(&self) -> SpatialDims {
         SpatialDims::Three(
             self.output_shape.channels(),
             self.output_shape.side(),
             self.output_shape.side(),
         )
+    }
+}
+
+impl<T> WeightedLayer<T> for ConvLayer<T>
+where
+    T: Coeff,
+{
+    fn weights(&self) -> &Vec<T> {
+        &self.weights
     }
 }

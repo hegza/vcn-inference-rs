@@ -19,7 +19,7 @@ fn net_buf_write_benchmark(c: &mut Criterion) {
 
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
         &format!("{}/in.bin", BASELINE_DIR),
-        *net.conv1.input_shape(),
+        *net.input_shape(),
     ));
     c.bench_function("network write bufs", move |b| {
         b.iter(|| unsafe { cl::map_to_buf(&net.in_buf, &input_data).unwrap() })
@@ -34,7 +34,7 @@ fn net_comp_benchmark(c: &mut Criterion) {
     let net = ClassicNetwork::<f32>::new(&program, &queue);
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
         &format!("{}/in.bin", BASELINE_DIR),
-        *net.conv1.input_shape(),
+        *net.input_shape(),
     ));
 
     c.bench_function("network comp", move |b| {

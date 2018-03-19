@@ -59,7 +59,7 @@ fn bench_layer4(dense4: DenseLayer<f32>, c: &mut Criterion) {
         BASELINE_DIR
     )));
     c.bench_function("layer 4 comp", move |b| {
-        b.iter(|| mtxmul_relu(&input_data, &dense4))
+        b.iter(|| relu(&dense4.mtx_mul(&input_data)))
     });
 }
 
@@ -69,7 +69,7 @@ fn bench_layer5(dense5: DenseLayer<f32>, c: &mut Criterion) {
         BASELINE_DIR
     )));
     c.bench_function("layer 5 comp", move |b| {
-        b.iter(|| mtxmul_softmax(&input_data, &dense5))
+        b.iter(|| softmax(&dense5.mtx_mul(&input_data)))
     });
 }
 

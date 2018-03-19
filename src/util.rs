@@ -142,10 +142,7 @@ pub trait IndexMatrix<T> {
 }
 
 /// Verifies that each network layer inputs data of valid dimensions to the next layer.
-pub fn verify_network_dimensions<T>(layers: &[&Layer<T>])
-where
-    T: Coeff,
-{
+pub fn verify_network_dimensions(layers: &[&Layer]) {
     for w in layers.windows(2) {
         debug_assert_eq!(w[0].num_out(), w[1].num_in());
     }

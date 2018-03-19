@@ -1,4 +1,6 @@
 use super::*;
+use geometry::*;
+use ocl::{Kernel, SpatialDims};
 
 #[test]
 fn test_l1() {
@@ -94,7 +96,7 @@ fn run_l4(params: &NetworkParams) -> Vec<f32> {
     );
 
     let input_data = f32::read_lines_from_file(&format!("{}/fc3.f", BASELINE_DIR));
-    mtxmul_relu(&input_data, &layer)
+    relu(&layer.mtx_mul(&input_data))
 }
 
 fn run_l5(params: &NetworkParams) -> Vec<f32> {
@@ -105,5 +107,5 @@ fn run_l5(params: &NetworkParams) -> Vec<f32> {
     );
 
     let input_data = f32::read_lines_from_file(&format!("{}/fc4.f", BASELINE_DIR));
-    mtxmul_softmax(&input_data, &layer)
+    softmax(&layer.mtx_mul(&input_data))
 }

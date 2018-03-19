@@ -69,7 +69,7 @@ where
 
 impl<T> SepconvNetwork<T>
 where
-    T: CoeffFloat,
+    T: CoeffFloat + ReadCsvFromFile,
 {
     pub fn new(program: &Program, queue: &Queue) -> SepconvNetwork<T> {
         let p = SEPCONV_HYPER_PARAMS.clone();
@@ -126,8 +126,7 @@ where
             flags::MEM_READ_ONLY,
             &queue,
         ).unwrap();
-        let dense3_buf =
-            cl::create_buffer::<T>(dense3.num_weights(), flags::MEM_READ_ONLY, &queue).unwrap();
+        let dense3_buf = dense3.create_wgts_buf(&queue).unwrap();
 
         // Allocate memory on-device for the I/O buffers
         let in_buf = cl::create_buffer(
@@ -247,7 +246,7 @@ where
         let krn_dense3 = Kernel::new("mtx_mulf", &program)
             .unwrap()
             .queue(queue.clone())
-            .gws(dense3.gws())
+            .gws(dense3.gws_hint())
             .arg_buf(&mxp2_buf)
             .arg_buf(&dense3_out_buf)
             .arg_buf(&dense3_buf);
@@ -276,10 +275,10 @@ where
 
 impl<T> Predict<T> for SepconvNetwork<T>
 where
-    T: CoeffFloat,
+    T: CoeffFloat + WriteLinesIntoFile,
 {
     // Maps the input buffer, and runs the network, returning the result.
-    fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<T> {
+    fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<f32> {
         unsafe {
             T::write_lines_into_file("output/sepconv/in.f", input_data);
 
@@ -323,9 +322,9 @@ where
         let dense3_out = relu(&unsafe { cl::read_buf(&self.dense3_out_buf).unwrap() });
 
         // Run the 4th layer (fully-connected)
-        let dense4_out = mtxmul_relu(&dense3_out, &self.dense4);
+        let dense4_out = relu(&self.dense4.mtx_mul(&dense3_out));
 
         // Run the 5th layer (fully-connected)
-        mtxmul_softmax(&dense4_out, &self.dense5)
+        softmax(&self.dense5.mtx_mul(&dense4_out))
     }
 }

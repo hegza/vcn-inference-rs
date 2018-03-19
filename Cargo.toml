@@ -18,7 +18,7 @@ criterion = { version = "^0.2" }
 
 [[bin]]
 name = "test_accuracy"
-path = "src/test_accuracy/mod.rs"
+path = "test_accuracy/mod.rs"
 
 [[bench]]
 name = "wall_clock_benchmark"

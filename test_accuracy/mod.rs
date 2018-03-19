@@ -30,7 +30,7 @@ pub fn main() {
     let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
 
     // Initialize OpenCL and the network
-    let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
+    let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
     let net = ClassicNetwork::<f32>::new(&program, &queue);
 
     // Make classifications and measure accuracy using the original network
@@ -44,14 +44,14 @@ pub fn main() {
     let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
 
     // Initialize OpenCL and the sep-conv network
-    let (queue, program, _context) = cl::init("sep_conv_kernels.cl").unwrap();
+    let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
     let net = SepconvNetwork::<f32>::new(&program, &queue);
 
     // Make classifications and measure accuracy using the sep-conv network
     let accuracy = measure_accuracy(&net, &test_data, queue.clone());
     println!("sep-conv network accuracy:");
     println!("{}", accuracy);
-    */
+*/
 }
 
 fn measure_accuracy<F, P>(predictor: &P, test_data: &[(Vec<F>, Class)], queue: Queue) -> f32

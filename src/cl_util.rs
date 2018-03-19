@@ -4,12 +4,10 @@ use ocl;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
 use ocl::enums::*;
 
-const KERNEL_PATH: &str = "kernel";
+const KERNEL_PATH: &str = "src/cl";
 
 /// Define which platform and device(s) to use. Create a context, queue, and program.
-pub fn init(kernel_file: &str) -> ocl::Result<(Queue, Program, Context)> {
-    let kernel_sources = read_file(&format!("{}/{}", KERNEL_PATH, kernel_file));
-
+pub fn init(kernel_files: &[&str]) -> ocl::Result<(Queue, Program, Context)> {
     // The platform is the thing that's provided by whatever vendor.
     let platform = Platform::default();
     let devices = Device::list_all(&platform)?;
@@ -27,13 +25,17 @@ pub fn init(kernel_file: &str) -> ocl::Result<(Queue, Program, Context)> {
         .devices(device.clone())
         .build()?;
 
-    // This is the 'deck of cards' that can be dealt to the 'players'
-    let program = Program::builder()
+    let mut program = Program::builder()
         .devices(device)
-        .src(kernel_sources)
-        .cmplr_opt("-I./input")
-        .cmplr_opt("-cl-std=CL1.2")
-        .build(&context)?;
+        .cmplr_opt("-I./src/cl")
+        .cmplr_opt("-cl-std=CL1.2");
+    // Input the kernel source files
+    kernel_files.iter().for_each(|&src| {
+        program = program
+            .clone()
+            .src_file(&format!("{}/{}", KERNEL_PATH, src));
+    });
+    let program = program.build(&context)?;
 
     // Create the queue for the default device
     let queue = Queue::new(

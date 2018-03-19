@@ -31,7 +31,7 @@ fn net_wall_benchmark(c: &mut Criterion) {
     c.bench_function("network wall", move |b| {
         b.iter(|| {
             // Initialize OpenCL
-            let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
+            let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
 
             let net = ClassicNetwork::<f32>::new(&program, &queue);
             net.predict(&input_data, &queue)

@@ -18,7 +18,7 @@ fn test_sepconv() {
 
 fn run_classic() -> Vec<f32> {
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
+    let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
 
     let net = ClassicNetwork::<f32>::new(&program, &queue);
     let input_data = read_image_with_padding_from_bin_in_channels(
@@ -30,7 +30,7 @@ fn run_classic() -> Vec<f32> {
 
 fn run_sepconv() -> Vec<f32> {
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init("sep_conv_kernels.cl").unwrap();
+    let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
 
     let net = SepconvNetwork::<f32>::new(&program, &queue);
     let input_data = f32::read_bin_from_file("input/baseline/sepconv-f32-xcorr-all-layers/in.bin");

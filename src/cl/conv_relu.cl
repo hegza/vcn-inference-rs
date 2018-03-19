@@ -103,19 +103,3 @@ __kernel void conv_relu_2(
     } // fm
 */
 }
-
-__kernel void mtx_mulf(__global float* restrict B, __global float* restrict c_mul,
-                       __global float* restrict A) {
-
-    const int Mdim = MAGIC;
-    const int Kdim = 1;
-    const int Ndim = PATCH3SQ * FM_COUNT;
-
-    int i = get_global_id(0);
-
-    float acc = 0.0;
-    for (int z = 0; z < Ndim; z++) {
-        acc += A[Ndim*i + z] * B[z];
-    }
-    c_mul[i] = acc;
-}

@@ -150,67 +150,82 @@ where
         queue.finish().unwrap();
 
         // Create kernels
-        let krn_v_conv1 = Kernel::new("colConv", &program)
-            .unwrap()
+        let krn_v_conv1 = Kernel::builder()
+            .program(&program)
+            .name("colConv")
             .queue(queue.clone())
-            .gws(vconv1.gws_hint())
-            .lws(SpatialDims::Three(
+            .global_work_size(vconv1.gws_hint())
+            .local_work_size(SpatialDims::Three(
                 p.columns_blockdim_x,
                 p.columns_blockdim_y,
                 1,
             ))
-            .arg_buf(&in_buf)
-            .arg_buf(&conv1_mid_buf)
-            .arg_buf(&v1_wgts_buf);
-        let krn_h_conv1 = Kernel::new("rowConv", &program).unwrap()
+            .arg(&in_buf)
+            .arg(&conv1_mid_buf)
+            .arg(&v1_wgts_buf)
+            .build()
+            .unwrap();
+        let krn_h_conv1 = Kernel::builder().program(&program).name("rowConv")
             .queue(queue.clone())
-            .gws(hconv1.gws_hint())
+            .global_work_size(hconv1.gws_hint())
             // NOTE: my desktop GPU cannot handle the full dimension (p.side*p.rows_blockdim_y*1 = 384)
-            .lws(SpatialDims::Three(p.side, p.rows_blockdim_y, 1))
-            .arg_buf(&conv1_mid_buf)
-            .arg_buf(&conv1_out_buf)
-            .arg_buf(&h1_wgts_buf);
-        let krn_max_pool1 = Kernel::new("MaxPool1", &program).unwrap()
+            .local_work_size(SpatialDims::Three(p.side, p.rows_blockdim_y, 1))
+            .arg(&conv1_mid_buf)
+            .arg(&conv1_out_buf)
+            .arg(&h1_wgts_buf).build().unwrap();
+        let krn_max_pool1 = Kernel::builder().program(&program).name("MaxPool1")
             .queue(queue.clone())
-            .gws(mxp1.gws_hint())
+            .global_work_size(mxp1.gws_hint())
             // TODO: my desktop GPU cannot handle the full dimension (p.mp1_block_dim*p.mp1_block_dim*1 = 384), find a way to use 256 instead (without segfaults :P)
-            .lws(SpatialDims::Three(p.mp1_block_dim, p.mp1_block_dim, 1))
-            .arg_buf(&conv1_out_buf)
-            .arg_buf(&mxp1_out_buf);
-        let krn_v_conv2 = Kernel::new("colConv2", &program)
-            .unwrap()
+            .local_work_size(SpatialDims::Three(p.mp1_block_dim, p.mp1_block_dim, 1))
+            .arg(&conv1_out_buf)
+            .arg(&mxp1_out_buf).build().unwrap();
+        let krn_v_conv2 = Kernel::builder()
+            .name("colConv2")
+            .program(&program)
             .queue(queue.clone())
-            .gws(vconv2.gws_hint())
-            .lws(SpatialDims::Three(
+            .global_work_size(vconv2.gws_hint())
+            .local_work_size(SpatialDims::Three(
                 p.columns2_blockdim_x,
                 p.columns_blockdim_y,
                 1,
             ))
-            .arg_buf(&mxp1_out_buf)
-            .arg_buf(&conv2_mid_buf)
-            .arg_buf(&v2_wgts_buf);
-        let krn_h_conv2 = Kernel::new("rowConv2", &program)
-            .unwrap()
+            .arg(&mxp1_out_buf)
+            .arg(&conv2_mid_buf)
+            .arg(&v2_wgts_buf)
+            .build()
+            .unwrap();
+        let krn_h_conv2 = Kernel::builder()
+            .name("rowConv2")
+            .program(&program)
             .queue(queue.clone())
-            .gws(hconv2.gws_hint())
-            .lws(SpatialDims::Three(p.side / 2, p.rows_blockdim_y, 1))
-            .arg_buf(&conv2_mid_buf)
-            .arg_buf(&conv2_out_buf)
-            .arg_buf(&h2_wgts_buf);
-        let krn_max_pool2 = Kernel::new("MaxPool2", &program)
-            .unwrap()
+            .global_work_size(hconv2.gws_hint())
+            .local_work_size(SpatialDims::Three(p.side / 2, p.rows_blockdim_y, 1))
+            .arg(&conv2_mid_buf)
+            .arg(&conv2_out_buf)
+            .arg(&h2_wgts_buf)
+            .build()
+            .unwrap();
+        let krn_max_pool2 = Kernel::builder()
+            .name("MaxPool2")
+            .program(&program)
             .queue(queue.clone())
-            .gws(mxp2.gws_hint())
-            .lws(SpatialDims::Three(p.mp2_block_dim, p.mp2_block_dim, 1))
-            .arg_buf(&conv2_out_buf)
-            .arg_buf(&mxp2_out_buf);
-        let krn_dense3 = Kernel::new("mtx_mulf", &program)
-            .unwrap()
+            .global_work_size(mxp2.gws_hint())
+            .local_work_size(SpatialDims::Three(p.mp2_block_dim, p.mp2_block_dim, 1))
+            .arg(&conv2_out_buf)
+            .arg(&mxp2_out_buf)
+            .build()
+            .unwrap();
+        let krn_dense3 = Kernel::builder()
+            .name("mtx_mulf")
+            .program(&program)
             .queue(queue.clone())
-            .gws(dense3.gws_hint())
-            .arg_buf(&mxp2_out_buf)
-            .arg_buf(&dense3_out_buf)
-            .arg_buf(&d3_wgts_buf);
+            .global_work_size(dense3.gws_hint())
+            .arg(&mxp2_out_buf)
+            .arg(&dense3_out_buf)
+            .arg(&d3_wgts_buf)
+            .build()
+            .unwrap();
 
         SepconvNetwork {
             in_buf: in_buf,

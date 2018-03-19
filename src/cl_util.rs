@@ -13,27 +13,26 @@ pub fn init(kernel_files: &[&str]) -> ocl::Result<(Queue, Program, Context)> {
     let devices = Device::list_all(&platform)?;
     let device_names: Vec<String> = devices
         .iter()
-        .map(|&device| device.name())
+        .map(|&device| device.name().unwrap())
         .collect();
     debug!("Available OpenCL devices: {:?}.", device_names);
 
-    let device = Device::first(platform);
-    info!("Using device \"{}\".", device.name());
+    let device = Device::first(platform)?;
+    info!("Using device \"{}\".", device.name().unwrap());
 
     let context = Context::builder()
         .platform(platform)
         .devices(device.clone())
         .build()?;
 
-    let mut program = Program::builder()
+    let mut program = Program::builder();
+    program
         .devices(device)
         .cmplr_opt("-I./src/cl")
         .cmplr_opt("-cl-std=CL1.2");
     // Input the kernel source files
     kernel_files.iter().for_each(|&src| {
-        program = program
-            .clone()
-            .src_file(&format!("{}/{}", KERNEL_PATH, src));
+        program.src_file(&format!("{}/{}", KERNEL_PATH, src));
     });
     let program = program.build(&context)?;
 
@@ -58,7 +57,7 @@ where
     Buffer::<T>::builder()
         .queue(queue.clone())
         .flags(flags)
-        .dims(length)
+        .len(length)
         .build()
 }
 

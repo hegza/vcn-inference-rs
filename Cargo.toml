@@ -7,11 +7,12 @@ authors = ["Henri Lunnikivi <henri.lunnikivi@gmail.com>"]
 byteorder = "^1"
 env_logger = "^0.5"
 log = { version = "^0.4", features = ["release_max_level_info"] }
-ocl = "^0.16"
+ocl = "^0.18"
 lazy_static = "^1.0"
 num-traits = "^0.2"
 noisy_float = "^0.1"
 image = { version = "^0.18" }
+ndarray = { version = "^0.11", features = ["blas"] }
 
 [dev-dependencies]
 criterion = { version = "^0.2" }

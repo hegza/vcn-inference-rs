@@ -64,34 +64,34 @@ where
             .unwrap();
 
         // Create the kernel for the 1st layer (Convolution + ReLU)
-        let conv_relu1 = Kernel::new("conv_relu_1", &program).unwrap()
+        let conv_relu1 = Kernel::builder().program(&program).name("conv_relu_1")
             .queue(queue.clone())
-            .gws(conv1.gws_hint())
+            .global_work_size(conv1.gws_hint())
             // Input
-            .arg_buf(&in_buf)
+            .arg(&in_buf)
             // Output
-            .arg_buf(&fm1_buf)
-            .arg_buf(&conv1_wgts_buf);
+            .arg(&fm1_buf)
+            .arg(&conv1_wgts_buf).build().unwrap();
 
         // Create the kernel for the 2nd layer (Convolution + ReLU)
-        let conv_relu2 = Kernel::new("conv_relu_2", &program).unwrap()
+        let conv_relu2 = Kernel::builder().program(&program).name("conv_relu_2")
             .queue(queue.clone())
-            .gws(conv2.gws_hint())
+            .global_work_size(conv2.gws_hint())
             // Input
-            .arg_buf(&fm1_buf)
+            .arg(&fm1_buf)
             // Output
-            .arg_buf(&fm2_buf)
-            .arg_buf(&conv2_wgts_buf);
+            .arg(&fm2_buf)
+            .arg(&conv2_wgts_buf).build().unwrap();
 
         // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
-        let dense3_kernel = Kernel::new("mtx_mulf", &program).unwrap()
+        let dense3_kernel = Kernel::builder().program(&program).name("mtx_mulf")
             .queue(queue.clone())
-            .gws(dense3.gws_hint())
+            .global_work_size(dense3.gws_hint())
             // Input
-            .arg_buf(&fm2_buf)
+            .arg(&fm2_buf)
             // Output
-            .arg_buf(&dense3_out_buf)
-            .arg_buf(&dense3_wgts_buf);
+            .arg(&dense3_out_buf)
+            .arg(&dense3_wgts_buf).build().unwrap();
 
         // Write the weights of the 1st three layers to the global memory of the device
         conv1_wgts_buf.write(conv1.weights()).enq().unwrap();
@@ -210,14 +210,14 @@ pub fn create_standalone_kernel<L: ClWeightedLayer<T>, T: Coeff>(
         &queue,
     )?;
 
-    let kernel = Kernel::new(kernel_func, &program)?
+    let kernel = Kernel::builder().program(&program).name(kernel_func)
         .queue(queue.clone())
-        .gws(layer.gws_hint())
+        .global_work_size(layer.gws_hint())
         // Input
-        .arg_buf(&in_buf)
+        .arg(&in_buf)
         // Output
-        .arg_buf(&out_buf)
-        .arg_buf(&wgts_buf);
+        .arg(&out_buf)
+        .arg(&wgts_buf).build().unwrap();
 
     // Write the weights and input to the global memory of the device
     wgts_buf.write(layer.weights()).enq().unwrap();

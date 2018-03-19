@@ -130,13 +130,16 @@ fn test_mxp() {
         flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
         &queue,
     ).unwrap();
-    let mxp_krn = Kernel::new("MaxPool", &program)
-        .unwrap()
+    let mxp_krn = Kernel::builder()
+        .program(&program)
+        .name("MaxPool")
         .queue(queue.clone())
-        .gws(SpatialDims::Three(SIDE, SIDE, 1))
-        .lws(SpatialDims::Three(SIDE, SIDE, 1))
-        .arg_buf(&in_buf)
-        .arg_buf(&out_buf);
+        .global_work_size(SpatialDims::Three(SIDE, SIDE, 1))
+        .local_work_size(SpatialDims::Three(SIDE, SIDE, 1))
+        .arg(&in_buf)
+        .arg(&out_buf)
+        .build()
+        .unwrap();
     let gpu_out = unsafe {
         cl::map_to_buf(&in_buf, &in_img).unwrap();
         mxp_krn.cmd().queue(&queue).enq().unwrap();

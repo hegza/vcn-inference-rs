@@ -1,6 +1,7 @@
 /target/
 **/*.rs.bk
 data/
+input
 input/
 output/
 Cargo.lock

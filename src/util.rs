@@ -28,28 +28,35 @@ pub fn read_file(filename: &str) -> String {
 }
 
 pub trait ReadBinFromFile: Sized {
+    /// Reads a file into a Vec of Selfs.
     fn read_bin_from_file(filename: &str) -> Vec<Self>;
 }
 
-pub trait WriteIntoFile: Sized {
-    fn write_into_file(filename: &str, buf: &[Self]);
+pub trait WriteLinesIntoFile: Sized {
+    /// Writes a slice of Self into a file with newline for each Self.
+    fn write_lines_into_file(filename: &str, buf: &[Self]);
 }
 
-pub trait ReadFromFile: Sized {
-    fn read_from_file(filename: &str) -> Vec<Self>;
+pub trait ReadLinesFromFile: Sized {
+    /// Read a vector of Selfs from a file with newline for each Self.
+    fn read_lines_from_file(filename: &str) -> Vec<Self>;
 }
 
-pub trait IndexMatrix<T> {
-    fn elem(&self, length: usize, row: usize, column: usize) -> &T;
-    fn elem_mut(&mut self, length: usize, row: usize, column: usize) -> &mut T;
+pub trait ReadCsvFromFile: Sized {
+    fn read_csv_from_file(filename: &str) -> Vec<Self>;
+}
+
+pub trait WriteCsvIntoFile: Sized {
+    /// Writes a slice of Selfs into a csv file
+    fn write_csv_into_file(filename: &str, buf: &[Self]);
 }
 
 impl ReadBinFromFile for f32 {
-    /// Reads a file into a Vec of f32s.
     fn read_bin_from_file(filename: &str) -> Vec<f32> {
-        let metadata = std::fs::metadata(&filename).expect("file not found");
+        let metadata =
+            std::fs::metadata(&filename).expect(&format!("file not found '{}'", filename));
 
-        let f = File::open(filename).expect("file not found");
+        let f = File::open(filename).expect(&format!("file not found '{}'", filename));
         let mut reader = BufReader::new(f);
 
         // TODO: specify BufReader with correct buffer capacity
@@ -63,9 +70,8 @@ impl ReadBinFromFile for f32 {
     }
 }
 
-impl WriteIntoFile for f32 {
-    /// Writes a slice of f32s into a file with newline for each f32.
-    fn write_into_file(filename: &str, f32s: &[f32]) {
+impl WriteLinesIntoFile for f32 {
+    fn write_lines_into_file(filename: &str, f32s: &[f32]) {
         let path: &Path = Path::new(filename);
         let parent: &Path = path.parent().unwrap();
         create_dir_all(parent).unwrap();
@@ -77,14 +83,50 @@ impl WriteIntoFile for f32 {
     }
 }
 
-impl<T> ReadFromFile for T
+impl<T> ReadCsvFromFile for T
 where
     T: Num + FromStr,
     <T as FromStr>::Err: Debug,
 {
-    /// Read a vector of Ts from a file with newline for each T.
-    fn read_from_file(filename: &str) -> Vec<T> {
-        let file = File::open(filename).expect("unable to create file");
+    fn read_csv_from_file(filename: &str) -> Vec<T> {
+        let file = File::open(filename).expect(&format!("unable to read file '{}'", filename));
+        let chars = BufReader::new(file)
+            .lines()
+            .filter_map(|res| res.ok())
+            .fold(String::new(), |total, line| [total, line].join(""));
+        let entries = chars.split(',');
+        // Parse into T
+        entries
+            .map(|e| e.trim().parse::<T>())
+            .filter_map(|res| res.ok())
+            .collect::<Vec<T>>()
+    }
+}
+
+impl<T> WriteCsvIntoFile for T
+where
+    T: Num + FromStr + std::fmt::Display,
+    <T as FromStr>::Err: Debug,
+{
+    fn write_csv_into_file(filename: &str, buf: &[T]) {
+        let path: &Path = Path::new(filename);
+        let parent: &Path = path.parent().unwrap();
+        create_dir_all(parent).unwrap();
+        let mut file = File::create(filename).expect("unable to create file");
+
+        for val in buf {
+            write!(file, "{},", val).expect("unable to write into file");
+        }
+    }
+}
+
+impl<T> ReadLinesFromFile for T
+where
+    T: Num + FromStr,
+    <T as FromStr>::Err: Debug,
+{
+    fn read_lines_from_file(filename: &str) -> Vec<T> {
+        let file = File::open(filename).expect(&format!("unable to read file '{}'", filename));
         let lines = BufReader::new(file).lines();
         lines
             .into_iter()
@@ -92,6 +134,11 @@ where
             .map(|line| line.trim().parse::<T>().unwrap())
             .collect::<Vec<T>>()
     }
+}
+
+pub trait IndexMatrix<T> {
+    fn elem(&self, length: usize, row: usize, column: usize) -> &T;
+    fn elem_mut(&mut self, length: usize, row: usize, column: usize) -> &mut T;
 }
 
 /// Verifies that each network layer inputs data of valid dimensions to the next layer.

@@ -36,11 +36,14 @@ where
 
         // Allocate read-only memory for the weights of the 1st three layers
         let conv1_wgts_buf =
-            cl::create_buffer::<T>(layers.conv1.num_weights(), flags::MEM_READ_ONLY, &queue).unwrap();
+            cl::create_buffer::<T>(layers.conv1.num_weights(), flags::MEM_READ_ONLY, &queue)
+                .unwrap();
         let conv2_wgts_buf =
-            cl::create_buffer::<T>(layers.conv2.num_weights(), flags::MEM_READ_ONLY, &queue).unwrap();
+            cl::create_buffer::<T>(layers.conv2.num_weights(), flags::MEM_READ_ONLY, &queue)
+                .unwrap();
         let dense3_wgts_buf =
-            cl::create_buffer::<T>(layers.dense3.num_weights(), flags::MEM_READ_ONLY, &queue).unwrap();
+            cl::create_buffer::<T>(layers.dense3.num_weights(), flags::MEM_READ_ONLY, &queue)
+                .unwrap();
 
         // Allocate read-only memory for the input geometry on device with host-accessible pointer for
         // writing input from file
@@ -95,7 +98,10 @@ where
         // Write the weights of the 1st three layers to the global memory of the device
         conv1_wgts_buf.write(layers.conv1.weights()).enq().unwrap();
         conv2_wgts_buf.write(layers.conv2.weights()).enq().unwrap();
-        dense3_wgts_buf.write(layers.dense3.weights()).enq().unwrap();
+        dense3_wgts_buf
+            .write(layers.dense3.weights())
+            .enq()
+            .unwrap();
 
         // Wait until all commands have finished running before returning.
         queue.finish().unwrap();
@@ -109,8 +115,17 @@ where
             in_buf,
         }
     }
+    pub fn input_shape(&self) -> &ImageGeometry {
+        self.conv1.input_shape()
+    }
+}
+
+impl<T> Predict<T> for ClassicNetwork<T>
+where
+    T: CoeffFloat,
+{
     /// Maps the input buffer, and runs the network, returning the result.
-    pub fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<T> {
+    fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<T> {
         unsafe {
             cl::map_to_buf(&self.in_buf, &input_data).unwrap();
 
@@ -132,9 +147,6 @@ where
 
         // Run the 5th layer (fully-connected)
         mtxmul_softmax(&dense4_out, &self.dense5)
-    }
-    pub fn input_shape(&self) -> &ImageGeometry {
-        self.conv1.input_shape()
     }
 }
 
@@ -196,7 +208,8 @@ pub fn create_standalone_kernel<L: Layer<T>, T: Num + OclPrm>(
     // Initialize OpenCL
     let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
 
-    let wgts_buf = cl::create_buffer::<T>(layer.num_weights(), flags::MEM_READ_ONLY, &queue).unwrap();
+    let wgts_buf =
+        cl::create_buffer::<T>(layer.num_weights(), flags::MEM_READ_ONLY, &queue).unwrap();
     let in_buf = cl::create_buffer::<T>(
         layer.num_in(),
         flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,

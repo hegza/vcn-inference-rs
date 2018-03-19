@@ -1,3 +1,4 @@
+#include "cnn.h"
 
 #define WIDTH 96
 #define HEIGHT 96
@@ -53,20 +54,10 @@ __kernel void rowConv(__global float *d_Src, __global float *d_Dst, __constant f
         float C_sum = 0;
 
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
-
-            C_sum += c_rowKernel[KERNEL_RADIUS - j + c * KERNEL_LENGTH +
+            C_sum += c_rowKernel[KERNEL_RADIUS + j + c * KERNEL_LENGTH +
                                  get_group_id(2) * KERNEL_LENGTH * C2] *
                      l_data[liy][lix + j + KERNEL_RADIUS];
         }
-        // The following is a possibly correct implementation of flipping the weights during runtime
-        /*
-        for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
-
-            C_sum += c_rowKernel[j + c * KERNEL_LENGTH +
-                                 get_group_id(2) * KERNEL_LENGTH * C2] *
-                     l_data[liy][lix + j + KERNEL_RADIUS];
-        }
-        */
 
         sum += C_sum;
 
@@ -139,7 +130,7 @@ __kernel void colConv(__global float *d_Src, __global float *d_Dst, __constant f
 
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
 
-            C_sum += c_colKernel[KERNEL_RADIUS - j + c * KERNEL_LENGTH +
+            C_sum += c_colKernel[KERNEL_RADIUS + j + c * KERNEL_LENGTH +
                                  get_group_id(2) * KERNEL_LENGTH * C1] *
                      l_data[liy + j + KERNEL_RADIUS][lix];
         }
@@ -183,7 +174,7 @@ __kernel void rowConv2(__global float *d_Src, __global float *d_Dst,
 
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
 
-            C_sum += c_row2Kernel[KERNEL_RADIUS - j + c * KERNEL_LENGTH +
+            C_sum += c_row2Kernel[KERNEL_RADIUS + j + c * KERNEL_LENGTH +
                                   get_group_id(2) * KERNEL_LENGTH * C2] *
                      l_data[liy][lix + j + KERNEL_RADIUS];
         }
@@ -260,7 +251,7 @@ __kernel void colConv2(__global float *d_Src, __global float *d_Dst,
 
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
 
-            C_sum += c_col2Kernel[KERNEL_RADIUS - j + c * KERNEL_LENGTH +
+            C_sum += c_col2Kernel[KERNEL_RADIUS + j + c * KERNEL_LENGTH +
                                   get_group_id(2) * KERNEL_LENGTH * C3] *
                      l_data[liy + j + KERNEL_RADIUS][lix];
         }
@@ -299,7 +290,7 @@ __kernel void MaxPool1(__global const float *src, __global float *dst) {
         if (locMax < sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1])
             locMax = sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1];
 
-        dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax;
+        dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax > 0 ? locMax : 0;
     }
 }
 
@@ -331,6 +322,22 @@ __kernel void MaxPool2(__global const float *src, __global float *dst) {
         if (locMax < sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1])
             locMax = sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1];
 
-        dst[get_local_id(1) * WIDTH / 4 + get_local_id(0)] = locMax;
+        dst[get_local_id(1) * WIDTH / 4 + get_local_id(0)] = locMax > 0 ? locMax : 0;
     }
+}
+
+__kernel void mtx_mulf(__global float* restrict B, __global float* restrict c_mul,
+                       __global float* restrict A) {
+
+    const int Mdim = MAGIC;
+    const int Kdim = 1;
+    const int Ndim = PATCH3SQ * FM_COUNT;
+
+    int i = get_global_id(0);
+
+    float acc = 0.0;
+    for (int z = 0; z < Ndim; z++) {
+        acc += A[Ndim*i + z] * B[z];
+    }
+    c_mul[i] = acc;
 }

@@ -32,7 +32,10 @@ fn bench_layer1(conv1: ConvLayer<f32>, c: &mut Criterion) {
 }
 
 fn bench_layer2(conv2: ConvLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_from_file(&format!("{}/fm1.f", BASELINE_DIR)));
+    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
+        "{}/fm1.f",
+        BASELINE_DIR
+    )));
     let (kernel, _, queue) = create_standalone_kernel(&conv2, "conv_relu_2", &input_data).unwrap();
     c.bench_function("layer 2 kernel comp", move |b| {
         b.iter(|| run_kernel_wait(&kernel, &queue).unwrap())
@@ -40,7 +43,10 @@ fn bench_layer2(conv2: ConvLayer<f32>, c: &mut Criterion) {
 }
 
 fn bench_layer3(dense3: DenseLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_from_file(&format!("{}/fm2.f", BASELINE_DIR)));
+    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
+        "{}/fm2.f",
+        BASELINE_DIR
+    )));
     let (kernel, _, queue) = create_standalone_kernel(&dense3, "mtx_mulf", &input_data).unwrap();
     c.bench_function("layer 3 kernel comp", move |b| {
         b.iter(|| run_kernel_wait(&kernel, &queue).unwrap())
@@ -48,14 +54,20 @@ fn bench_layer3(dense3: DenseLayer<f32>, c: &mut Criterion) {
 }
 
 fn bench_layer4(dense4: DenseLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_from_file(&format!("{}/fc3.f", BASELINE_DIR)));
+    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
+        "{}/fc3.f",
+        BASELINE_DIR
+    )));
     c.bench_function("layer 4 comp", move |b| {
         b.iter(|| mtxmul_relu(&input_data, &dense4))
     });
 }
 
 fn bench_layer5(dense5: DenseLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_from_file(&format!("{}/fc4.f", BASELINE_DIR)));
+    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
+        "{}/fc4.f",
+        BASELINE_DIR
+    )));
     c.bench_function("layer 5 comp", move |b| {
         b.iter(|| mtxmul_softmax(&input_data, &dense5))
     });

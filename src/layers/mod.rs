@@ -89,7 +89,6 @@ impl NetworkParams {
     where
         T: Coeff,
     {
-        // TODO: unwrap these into per-layer, not per-IO
         let (filter_elems, in_shape, out_shape) = match idx {
             1 => (
                 self.conv1_filter_shape.num_elems(),
@@ -109,7 +108,6 @@ impl NetworkParams {
     where
         T: Coeff,
     {
-        // TODO: unwrap these
         let (num_in, num_out) = match idx {
             3 => (self.fm2_shape.num_elems(), self.fully_connected_const),
             4 => (self.fully_connected_const, self.fully_connected_const),
@@ -139,7 +137,15 @@ impl Deref for NetworkParams {
     }
 }
 
-pub trait Coeff: ReadBinFromFile + NumAssign + GenericOps + OclPrm {}
+pub trait Coeff
+    : ReadCsvFromFile
+    + ReadBinFromFile
+    + WriteCsvIntoFile
+    + WriteLinesIntoFile
+    + NumAssign
+    + GenericOps
+    + OclPrm {
+}
 pub trait CoeffFloat: Float + Coeff {}
 
 impl Coeff for f32 {}

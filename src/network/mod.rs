@@ -35,3 +35,7 @@ where
     );
     softmax(&out, dense.num_out(), 1)
 }
+
+pub trait Predict<T> {
+    fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<T>;
+}

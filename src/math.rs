@@ -2,6 +2,7 @@ use std;
 use util::*;
 use num_traits::{Float, Num, NumAssign, Zero};
 use std::ops::Mul;
+use std::cmp::Ordering;
 
 /// Combines the max operations of integral and float types.
 pub trait GenericOps {
@@ -9,6 +10,7 @@ pub trait GenericOps {
     fn generic_max(self, other: Self) -> Self;
     /// Returns the absolute value of the variable.
     fn generic_abs(&self) -> Self;
+    fn generic_partial_cmp(&self, other: &Self) -> Option<Ordering>;
 }
 
 /// Convert negative values in source to zero
@@ -60,6 +62,9 @@ impl GenericOps for f32 {
     fn generic_abs(&self) -> Self {
         self.abs()
     }
+    fn generic_partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.partial_cmp(other)
+    }
 }
 
 impl GenericOps for i32 {
@@ -68,5 +73,8 @@ impl GenericOps for i32 {
     }
     fn generic_abs(&self) -> Self {
         self.abs()
+    }
+    fn generic_partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.partial_cmp(other)
     }
 }

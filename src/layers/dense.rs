@@ -25,6 +25,8 @@ where
             output_dim,
             weights.len()
         );
+        // Make sure that the weight count is correct
+        debug_assert_eq!(input_dim * output_dim, weights.len());
         DenseLayer {
             layer_data: LayerData::<T> { weights },
             num_in: input_dim,

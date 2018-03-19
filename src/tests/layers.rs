@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_l1() {
     let output = run_l1(&TEST_NETWORK).unwrap();
-    let correct = f32::read_from_file(&format!("{}/fm1.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/fm1.f", BASELINE_DIR));
     assert_eq!(output.len(), correct.len());
     assert!(is_within_margin(&output, &correct, RESULT_MARGIN));
 }
@@ -11,7 +11,7 @@ fn test_l1() {
 #[test]
 fn test_l2() {
     let output = run_l2(&TEST_NETWORK).unwrap();
-    let correct = f32::read_from_file(&format!("{}/fm2.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/fm2.f", BASELINE_DIR));
     assert_eq!(output.len(), correct.len());
     assert!(is_within_margin(&output, &correct, RESULT_MARGIN));
 }
@@ -19,7 +19,7 @@ fn test_l2() {
 #[test]
 fn test_l3() {
     let output = run_l3(&TEST_NETWORK).unwrap();
-    let correct = f32::read_from_file(&format!("{}/fc3.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", BASELINE_DIR));
     assert_eq!(output.len(), correct.len());
     assert!(is_within_margin(&output, &correct, RESULT_MARGIN));
 }
@@ -27,7 +27,7 @@ fn test_l3() {
 #[test]
 fn test_l4() {
     let output = run_l4(&TEST_NETWORK);
-    let correct = f32::read_from_file(&format!("{}/fc4.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/fc4.f", BASELINE_DIR));
     assert_eq!(output.len(), correct.len());
     assert!(is_within_margin(&output, &correct, RESULT_MARGIN));
 }
@@ -35,7 +35,7 @@ fn test_l4() {
 #[test]
 fn test_l5() {
     let output = run_l5(&TEST_NETWORK);
-    let correct = f32::read_from_file(&format!("{}/out5.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/out5.f", BASELINE_DIR));
     assert_eq!(output.len(), correct.len());
     assert!(is_within_margin(&output, &correct, RESULT_MARGIN));
 }
@@ -64,7 +64,7 @@ fn run_l2(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
         f32::read_bin_from_file(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR)),
     );
 
-    let input_data = f32::read_from_file(&format!("{}/fm1.f", BASELINE_DIR));
+    let input_data = f32::read_lines_from_file(&format!("{}/fm1.f", BASELINE_DIR));
     let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "conv_relu_2", &input_data)?;
     // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
     run_kernel_wait(&kernel, &queue)?;
@@ -78,7 +78,7 @@ fn run_l3(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
         f32::read_bin_from_file(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR)),
     );
 
-    let input_data = f32::read_from_file(&format!("{}/fm2.f", BASELINE_DIR));
+    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", BASELINE_DIR));
     let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "mtx_mulf", &input_data)?;
     // Enqueue the kernel for the 3rd layer (Convolution)
     run_kernel_wait(&kernel, &queue)?;
@@ -93,7 +93,7 @@ fn run_l4(params: &NetworkParams) -> Vec<f32> {
         f32::read_bin_from_file(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR)),
     );
 
-    let input_data = f32::read_from_file(&format!("{}/fc3.f", BASELINE_DIR));
+    let input_data = f32::read_lines_from_file(&format!("{}/fc3.f", BASELINE_DIR));
     mtxmul_relu(&input_data, &layer)
 }
 
@@ -104,6 +104,6 @@ fn run_l5(params: &NetworkParams) -> Vec<f32> {
         f32::read_bin_from_file(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR)),
     );
 
-    let input_data = f32::read_from_file(&format!("{}/fc4.f", BASELINE_DIR));
+    let input_data = f32::read_lines_from_file(&format!("{}/fc4.f", BASELINE_DIR));
     mtxmul_softmax(&input_data, &layer)
 }

@@ -1,10 +1,10 @@
+#![allow(dead_code)]
 use image;
 use image::{GenericImage, Pixel};
 use std::io;
 use std::fs::*;
 use std::path::*;
 use rusty_cnn::*;
-use rusty_cnn::geometry::*;
 use super::class::Class;
 
 pub fn load_jpeg<P>(file: P) -> Vec<f32>
@@ -50,6 +50,7 @@ where
     Ok(dirs)
 }
 
+/// Lists out the full filepaths to all files in the target directory.
 pub fn list_files<P>(dir: P) -> io::Result<Vec<String>>
 where
     P: AsRef<Path>,
@@ -65,21 +66,16 @@ where
     Ok(files)
 }
 
-pub fn load_test_data<P, F, T>(
+pub fn load_test_data<P, LoadF, T>(
     dir: P,
     class_dirs: &[String],
-    load_fun: F,
-    input_shape: &ImageGeometry,
+    load_fun: LoadF,
 ) -> Vec<(Vec<T>, Class)>
 where
     P: AsRef<Path>,
-    F: Fn(&String) -> Vec<T>,
+    LoadF: Fn(&String) -> Vec<T>,
     T: Coeff,
 {
-    let conv1_filter_shape = PaddedSquare::from_side(CLASSIC_HYPER_PARAMS.conv_1_filter_side);
-    let padded_image_shape = input_shape.with_filter_padding(&conv1_filter_shape);
-    let padding = padded_image_shape.padding();
-
     class_dirs
         .iter()
         .flat_map(|class_dir| {
@@ -89,22 +85,34 @@ where
                 .iter()
                 .map(|ref file_name| {
                     (
-                        // TODO: can be shortened
-                        // Load input as a vector of float in the network format
-                        with_edge_padding_by_channel(
-                            load_fun(&dir.as_ref()
-                                .join(class_dir)
-                                .join(file_name)
-                                .to_str()
-                                .unwrap()
-                                .to_owned()),
-                            &input_shape,
-                            padding,
-                        ) as Vec<T>,
+                        load_fun(&dir.as_ref()
+                            .join(class_dir)
+                            .join(file_name)
+                            .to_str()
+                            .unwrap()
+                            .to_owned()),
                         class_dir.parse::<Class>().unwrap(),
                     )
                 })
                 .collect::<Vec<(Vec<T>, Class)>>()
         })
         .collect::<Vec<(Vec<T>, Class)>>()
+}
+
+pub fn convert_all_bin_to_f(dir: &str) {
+    let files = list_files(dir).unwrap();
+    // Read and re-write files
+    for file in files {
+        let full_path_name = format!("{}/{}", dir, file);
+        let full_path = Path::new(&full_path_name);
+        let ext = full_path.extension().unwrap().to_str().unwrap();
+
+        // Read
+        let data = f32::read_bin_from_file(&full_path_name);
+
+        let new_name = full_path.to_str().unwrap().replace(&ext, "f");
+        // Write them back as f32 (.f)
+        f32::write_lines_into_file(&new_name, &data);
+    }
+    return;
 }

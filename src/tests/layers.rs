@@ -109,3 +109,48 @@ fn run_l5(params: &NetworkParams) -> Vec<f32> {
     let input_data = f32::read_lines_from_file(&format!("{}/fc4.f", BASELINE_DIR));
     softmax(&layer.mtx_mul(&input_data))
 }
+
+// Test that Maxpool + ReLU produces the correct output
+#[test]
+fn test_mxp() {
+    let in_img = f32::read_csv_from_file("src/tests/in/img-4x4_mono-norm.csv");
+    const SIDE: usize = 4;
+    let in_shape = ImageGeometry::new(SIDE, 1);
+
+    // Make sure the input image matches with the assumed input shape
+    assert_eq!(in_shape.num_elems(), in_img.len());
+
+    let mxp = MaxpoolLayer::new(in_shape, 2);
+
+    // Run mxp on GPU
+    let (queue, program, _context) = cl::init(&["test/mxp.cl"]).unwrap();
+
+    let (in_buf, out_buf) = mxp.create_io_bufs(
+        flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
+        flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
+        &queue,
+    ).unwrap();
+    let mxp_krn = Kernel::new("MaxPool", &program)
+        .unwrap()
+        .queue(queue.clone())
+        .gws(SpatialDims::Three(SIDE, SIDE, 1))
+        .lws(SpatialDims::Three(SIDE, SIDE, 1))
+        .arg_buf(&in_buf)
+        .arg_buf(&out_buf);
+    let gpu_out = unsafe {
+        cl::map_to_buf(&in_buf, &in_img).unwrap();
+        mxp_krn.cmd().queue(&queue).enq().unwrap();
+        queue.finish().unwrap();
+        cl::read_buf(&out_buf).unwrap()
+    };
+
+    // Run maxpool on CPU
+    let cpu_out = mxp.compute(&in_img);
+
+    // Verify match between confirmed correct output and GPU and CPU outputs
+    let correct = f32::read_csv_from_file("src/tests/out/img-4x4_mono-norm-mxp2.csv");
+    assert!(is_within_margin(&gpu_out, &correct, RESULT_MARGIN));
+    assert!(is_within_margin(&cpu_out, &correct, RESULT_MARGIN));
+}
+
+// TODO: test that VConv + HConv + MXP produces similar output as ordinary Conv

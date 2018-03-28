@@ -61,9 +61,30 @@ impl ReadBinFromFile for f32 {
 
         // TODO: specify BufReader with correct buffer capacity
         // Iterate the file into f32s
+        // f32 = 4 bytes
         let len_f32s = metadata.len() * 4;
         let mut floats: Vec<f32> = Vec::with_capacity(len_f32s as usize + 1);
         while let Ok(f) = reader.read_f32::<LittleEndian>() {
+            floats.push(f);
+        }
+        floats
+    }
+}
+
+impl ReadBinFromFile for f64 {
+    fn read_bin_from_file(filename: &str) -> Vec<f64> {
+        let metadata =
+            std::fs::metadata(&filename).expect(&format!("file not found '{}'", filename));
+
+        let f = File::open(filename).expect(&format!("file not found '{}'", filename));
+        let mut reader = BufReader::new(f);
+
+        // TODO: specify BufReader with correct buffer capacity
+        // Iterate the file into f64s
+        // f64 = 8 bytes
+        let len_f64s = metadata.len() * 8;
+        let mut floats: Vec<f64> = Vec::with_capacity(len_f64s as usize + 1);
+        while let Ok(f) = reader.read_f64::<LittleEndian>() {
             floats.push(f);
         }
         floats
@@ -79,6 +100,19 @@ impl WriteLinesIntoFile for f32 {
 
         for f in f32s {
             write!(file, "{}\n", f).expect("unable to write f32 to file");
+        }
+    }
+}
+
+impl WriteLinesIntoFile for f64 {
+    fn write_lines_into_file(filename: &str, f64s: &[f64]) {
+        let path: &Path = Path::new(filename);
+        let parent: &Path = path.parent().unwrap();
+        create_dir_all(parent).unwrap();
+        let mut file = File::create(filename).expect("unable to create file");
+
+        for f in f64s {
+            write!(file, "{}\n", f).expect("unable to write f64 to file");
         }
     }
 }

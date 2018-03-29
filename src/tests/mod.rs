@@ -11,6 +11,7 @@ use env_logger;
 use num_traits::{Float, Num, NumAssignOps, NumRef};
 
 const RESULT_MARGIN: f32 = 0.000002f32;
+const COARSE_RESULT_MARGIN: f32 = 0.0035f32;
 const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
 lazy_static!{
     static ref TEST_NETWORK: NetworkParams = NetworkParams::new(CLASSIC_HYPER_PARAMS);

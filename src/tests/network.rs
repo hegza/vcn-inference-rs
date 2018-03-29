@@ -13,7 +13,14 @@ fn test_sepconv() {
     assert_eq!(output.len(), 4);
     // TODO: verify output correctness
     //let correct = f32::read_lines_from_file(&format!("{}/out5.f", BASELINE_DIR));
-    //assert!(is_within_margin(&output, &correct, RESULT_MARGIN));
+    let correct = f32::read_lines_from_file("input/baseline/sepconv-f32-xcorr/f32/out.f");
+
+    assert!(
+        is_within_margin(&output, &correct, COARSE_RESULT_MARGIN),
+        "output is not within margin of correct: {:?} != {:?}",
+        output,
+        correct
+    );
 }
 
 fn run_classic() -> Vec<f32> {

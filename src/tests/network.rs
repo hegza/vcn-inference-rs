@@ -32,7 +32,7 @@ fn run_sepconv() -> Vec<f32> {
     // Initialize OpenCL
     let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
 
-    let net = SepconvNetwork::<f32>::new(&program, &queue);
-    let input_data = f32::read_bin_from_file("input/baseline/sepconv-f32-xcorr-all-layers/in.bin");
+    let net = SepconvNetwork::<f32>::new(&program, &queue, true);
+    let input_data = f32::read_bin_from_file("input/baseline/sepconv-f32-xcorr/in-le.bin");
     net.predict(&input_data, &queue)
 }

@@ -99,7 +99,10 @@ where
         .collect::<Vec<(Vec<T>, Class)>>()
 }
 
-pub fn convert_all_bin_to_f(dir: &str) {
+pub fn convert_all_bin_to_f<T>(dir: &str)
+where
+    T: ReadBinFromFile + WriteLinesIntoFile,
+{
     let files = list_files(dir).unwrap();
     // Read and re-write files
     for file in files {
@@ -108,11 +111,11 @@ pub fn convert_all_bin_to_f(dir: &str) {
         let ext = full_path.extension().unwrap().to_str().unwrap();
 
         // Read
-        let data = f32::read_bin_from_file(&full_path_name);
+        let data = T::read_bin_from_file(&full_path_name);
 
         let new_name = full_path.to_str().unwrap().replace(&ext, "f");
-        // Write them back as f32 (.f)
-        f32::write_lines_into_file(&new_name, &data);
+        // Write them back as T (.f)
+        T::write_lines_into_file(&new_name, &data);
     }
     return;
 }

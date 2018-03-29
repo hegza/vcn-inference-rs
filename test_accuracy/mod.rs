@@ -19,42 +19,70 @@ use geometry::*;
 
 const INPUT_IMG_DIR: &str = "input/images";
 
+const TEST_CLASSIC: bool = true;
+const TEST_SEPCONV: bool = true;
+const CLASSIC_SINGLE_SHOT: bool = false;
+const SEPCONV_SINGLE_SHOT: bool = false;
+
 pub fn main() {
     env_logger::init();
 
     // Figure out the existing classes for the network based on directory names
     let class_dir_names = list_dirs(INPUT_IMG_DIR).unwrap();
 
-    debug!("Loading input images for original network...");
-    let load_fun = |file: &String| -> Vec<f32> { load_jpeg_with_padding(file) };
-    let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
+    if TEST_CLASSIC {
+        debug!("Loading input images for original network...");
 
-    // Initialize OpenCL and the network
-    let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
-    let net = ClassicNetwork::<f32>::new(&program, &queue);
+        let load_fun = |file: &String| -> Vec<f32> { load_jpeg_with_padding(file) };
+        let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
+        if CLASSIC_SINGLE_SHOT {
+            test_data = test_data
+                .into_iter()
+                .take(1)
+                .collect::<Vec<(Vec<f32>, Class)>>();
+        }
 
-    // Make classifications and measure accuracy using the original network
-    let accuracy = measure_accuracy(&net, &test_data, queue.clone());
-    println!("original network accuracy:");
-    println!("{}", accuracy);
+        // Initialize OpenCL and the network
+        let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
+        let net = ClassicNetwork::<f32>::new(&program, &queue);
 
-    /*
-    debug!("Loading input images for sep-conv network...");
-    let load_fun = |file: &String| -> Vec<f32> { load_jpeg(file) };
-    let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
+        // Make classifications and measure accuracy using the original network
+        let (correct, total) = measure_accuracy(&net, &test_data, queue.clone());
+        let accuracy = correct as f32 / total as f32;
+        println!("original network accuracy:");
+        println!("{} ({}/{})", accuracy, correct, total);
+    }
 
-    // Initialize OpenCL and the sep-conv network
-    let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
-    let net = SepconvNetwork::<f32>::new(&program, &queue);
+    if TEST_SEPCONV {
+        debug!("Loading input images for sep-conv network...");
 
-    // Make classifications and measure accuracy using the sep-conv network
-    let accuracy = measure_accuracy(&net, &test_data, queue.clone());
-    println!("sep-conv network accuracy:");
-    println!("{}", accuracy);
-*/
+        let load_fun = |file: &String| -> Vec<f32> { load_jpeg(file) };
+        let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
+        if SEPCONV_SINGLE_SHOT {
+            test_data = test_data
+                .into_iter()
+                .take(1)
+                .collect::<Vec<(Vec<f32>, Class)>>();
+        }
+
+        // Initialize OpenCL and the sep-conv network
+        let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
+        let net = SepconvNetwork::<f32>::new(&program, &queue, false);
+
+        // Make classifications and measure accuracy using the sep-conv network
+        let (correct, total) = measure_accuracy(&net, &test_data, queue.clone());
+        let accuracy = correct as f32 / total as f32;
+        println!("sep-conv network accuracy:");
+        println!("{} ({}/{})", accuracy, correct, total);
+    }
 }
 
-fn measure_accuracy<F, P>(predictor: &P, test_data: &[(Vec<F>, Class)], queue: Queue) -> f32
+/// Returns (num_correct, num_total)
+fn measure_accuracy<F, P>(
+    predictor: &P,
+    test_data: &[(Vec<F>, Class)],
+    queue: Queue,
+) -> (usize, usize)
 where
     F: CoeffFloat,
     P: Predict<F>,
@@ -86,7 +114,7 @@ where
     }
 
     // Measure accuracy
-    num_correct as f32 / num_total as f32
+    (num_correct, num_total)
 }
 
 fn idx_to_class(idx: usize) -> Class {

@@ -1,6 +1,9 @@
 use super::*;
 use ocl::SpatialDims;
 use geometry::*;
+use ndarray::Array;
+use ndarray::ShapeBuilder; // Needed for .strides() method
+use ndarray::arr2;
 
 const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     side: 96,
@@ -250,56 +253,61 @@ where
             if self.write_debug {
                 queue.finish().unwrap();
                 let b = cl::read_buf(&self.conv1_mid_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/f32/vcr1-out.f", &b);
+                T::write_lines_into_file("output/sepconv/vcr1-out.f", &b);
             }
 
             self.krn_h_conv1.cmd().queue(&queue).enq().unwrap();
             if self.write_debug {
                 queue.finish().unwrap();
                 let b = cl::read_buf(&self.conv1_out_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/f32/hcr1-out.f", &b);
+                T::write_lines_into_file("output/sepconv/hcr1-out.f", &b);
             }
             self.krn_max_pool1.cmd().queue(&queue).enq().unwrap();
             if self.write_debug {
                 queue.finish().unwrap();
                 let b = cl::read_buf(&self.mxp1_out_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/f32/mxp1-out.f", &b);
+                T::write_lines_into_file("output/sepconv/mxp1-out.f", &b);
             }
             self.krn_v_conv2.cmd().queue(&queue).enq().unwrap();
             if self.write_debug {
                 queue.finish().unwrap();
                 let b = cl::read_buf(&self.conv2_mid_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/f32/vcr2-out.f", &b);
+                T::write_lines_into_file("output/sepconv/vcr2-out.f", &b);
             }
 
             self.krn_h_conv2.cmd().queue(&queue).enq().unwrap();
             if self.write_debug {
                 queue.finish().unwrap();
                 let b = cl::read_buf(&self.conv2_out_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/f32/hcr2-out.f", &b);
+                T::write_lines_into_file("output/sepconv/hcr2-out.f", &b);
             }
 
             self.krn_max_pool2.cmd().queue(&queue).enq().unwrap();
             if self.write_debug {
                 queue.finish().unwrap();
                 let b = cl::read_buf(&self.mxp2_out_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/f32/mxp2-out.f", &b);
+                T::write_lines_into_file("output/sepconv/mxp2-out.f", &b);
             }
 
             // TODO: move the reordering to the kernel or get new ..weights? from Mir
-            // Load the buffer from GPU from max-pool output
-            // (fms, y, x); strides == (24*24, 24, 1) -> (24, 1, 24*24)
-            // TODO: flatten/reorder the GPU buffer xyz -> zxy
-            /*
-            let flattened = Array::from_shape_vec(
-                (32, 24, 24).strides((24, 1, 24 * 24)),
-                cl::read_buf(&self.mxp2_out_buf).unwrap(),
-            ).unwrap()
-                .into_raw_vec();
+            // Load the buffer from max-pool output from GPU
+            const MP2_OUT_SIDE: usize = 24;
+            const MP2_OUT_NUM_FM: usize = 32;
+            let buf = cl::read_buf(&self.mxp2_out_buf).unwrap();
+            let mut mxp2_out =
+                Array::from_shape_vec((MP2_OUT_NUM_FM, MP2_OUT_SIDE, MP2_OUT_SIDE), buf).unwrap();
+            // xyz -> zxy (C-order)
+            mxp2_out.swap_axes(2, 0);
+            mxp2_out.swap_axes(0, 1);
+            let flattened = mxp2_out.iter().cloned().collect::<Vec<T>>();
+
+            // Write the flattened buffer to a file
+            if self.write_debug {
+                T::write_lines_into_file("output/sepconv/fc3-flat-in.f", &flattened);
+            }
 
             // Re-upload the buffer back to the GPU for use in dense 3
             self.mxp2_out_buf.write(&flattened).enq().unwrap();
-            */
 
             self.krn_dense3.cmd().queue(&queue).enq().unwrap();
         }

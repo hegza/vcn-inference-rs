@@ -330,18 +330,18 @@ where
         queue.finish().unwrap();
 
         let dense3_out = relu(&unsafe { cl::read_buf(&self.dense3_out_buf).unwrap() });
-        T::write_lines_into_file("output/sepconv/f32/fc3-out.f", &dense3_out);
+        T::write_lines_into_file("output/sepconv/fc3-out.f", &dense3_out);
 
         // Run the 4th layer (fully-connected)
         let dense4_out = relu(&self.dense4.mtx_mul(&dense3_out));
-        T::write_lines_into_file("output/sepconv/f32/fc4-out.f", &dense4_out);
+        T::write_lines_into_file("output/sepconv/fc4-out.f", &dense4_out);
 
         // Run the 5th layer (fully-connected)
         let dense5_out = self.dense5.mtx_mul(&dense4_out);
-        T::write_lines_into_file("output/sepconv/f32/fc5-out.f", &dense5_out);
+        T::write_lines_into_file("output/sepconv/fc5-out.f", &dense5_out);
         let result = softmax(&dense5_out);
 
-        f32::write_lines_into_file("output/sepconv/f32/out.f", &result);
+        f32::write_lines_into_file("output/sepconv/out.f", &result);
         result
     }
 }

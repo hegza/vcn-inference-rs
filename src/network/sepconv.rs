@@ -53,20 +53,14 @@ where
     dense5: DenseLayer<T>,
 
     // TEMP
-    conv1_mid_buf: Buffer<T>,
-    conv1_out_buf: Buffer<T>,
-    conv2_mid_buf: Buffer<T>,
-    conv2_out_buf: Buffer<T>,
-    mxp1_out_buf: Buffer<T>,
     mxp2_out_buf: Buffer<T>,
-    write_debug: bool,
 }
 
 impl<T> SepconvNetwork<T>
 where
     T: CoeffFloat + ReadCsvFromFile,
 {
-    pub fn new(program: &Program, queue: &Queue, write_debug: bool) -> SepconvNetwork<T> {
+    pub fn new(program: &Program, queue: &Queue) -> SepconvNetwork<T> {
         let p = SEPCONV_HYPER_PARAMS.clone();
 
         // Load the weights for the convolutional layers
@@ -121,16 +115,13 @@ where
         let d3_wgts_buf = dense3.create_wgts_buf(&queue).unwrap();
 
         // Allocate memory on-device for the I/O buffers
-        let intermediary_flags = match write_debug {
-            false => flags::MEM_READ_WRITE,
-            true => flags::MEM_READ_WRITE | flags::MEM_ALLOC_HOST_PTR,
-        };
+        let intermediary_flags = flags::MEM_READ_WRITE;
         let in_buf = vconv1
             .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
             .unwrap();
         let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue).unwrap();
         let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue).unwrap();
-        let mxp1_out_buf = mxp1.create_out_buf(intermediary_flags, &queue).unwrap();
+        let mxp1_out_buf: Buffer<T> = mxp1.create_out_buf(intermediary_flags, &queue).unwrap();
         let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, &queue).unwrap();
         let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, &queue).unwrap();
         let mxp2_out_buf = mxp2.create_out_buf(intermediary_flags, &queue).unwrap();
@@ -239,13 +230,7 @@ where
             dense3_out_buf,
             dense4,
             dense5,
-            conv1_mid_buf,
-            conv1_out_buf,
-            conv2_mid_buf,
-            conv2_out_buf,
-            mxp1_out_buf,
             mxp2_out_buf,
-            write_debug,
         }
     }
 }
@@ -256,71 +241,31 @@ where
 {
     // Maps the input buffer, and runs the network, returning the result.
     fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<f32> {
-        unsafe {
-            if self.write_debug {
-                T::write_lines_into_file("output/sepconv/in.f", input_data);
-            }
-
+        let buf = unsafe {
             cl::map_to_buf(&self.in_buf, &input_data).unwrap();
 
-            // HACK: finish after every phase to make sure that everything works; remove after implementing accuracy test
             self.krn_v_conv1.cmd().queue(&queue).enq().unwrap();
-            if self.write_debug {
-                queue.finish().unwrap();
-                let b = cl::read_buf(&self.conv1_mid_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/vcr1-out.f", &b);
-            }
-
             self.krn_h_conv1.cmd().queue(&queue).enq().unwrap();
-            if self.write_debug {
-                queue.finish().unwrap();
-                let b = cl::read_buf(&self.conv1_out_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/hcr1-out.f", &b);
-            }
             self.krn_max_pool1.cmd().queue(&queue).enq().unwrap();
-            if self.write_debug {
-                queue.finish().unwrap();
-                let b = cl::read_buf(&self.mxp1_out_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/mxp1-out.f", &b);
-            }
             self.krn_v_conv2.cmd().queue(&queue).enq().unwrap();
-            if self.write_debug {
-                queue.finish().unwrap();
-                let b = cl::read_buf(&self.conv2_mid_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/vcr2-out.f", &b);
-            }
-
             self.krn_h_conv2.cmd().queue(&queue).enq().unwrap();
-            if self.write_debug {
-                queue.finish().unwrap();
-                let b = cl::read_buf(&self.conv2_out_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/hcr2-out.f", &b);
-            }
-
             self.krn_max_pool2.cmd().queue(&queue).enq().unwrap();
-            if self.write_debug {
-                queue.finish().unwrap();
-                let b = cl::read_buf(&self.mxp2_out_buf).unwrap();
-                T::write_lines_into_file("output/sepconv/mxp2-out.f", &b);
-            }
 
             // TODO: move the reordering to the kernel or get new ..weights? from Mir
             // Load the buffer from max-pool output from GPU
-            const MP2_OUT_SIDE: usize = 24;
-            const MP2_OUT_NUM_FM: usize = 32;
-            let buf = cl::read_buf(&self.mxp2_out_buf).unwrap();
-            let mut mxp2_out =
-                Array::from_shape_vec((MP2_OUT_NUM_FM, MP2_OUT_SIDE, MP2_OUT_SIDE), buf).unwrap();
-            // xyz -> zxy (C-order)
-            mxp2_out.swap_axes(2, 0);
-            mxp2_out.swap_axes(0, 1);
-            let flattened = mxp2_out.iter().cloned().collect::<Vec<T>>();
+            cl::read_buf(&self.mxp2_out_buf).unwrap()
+        };
 
-            // Write the flattened buffer to a file
-            if self.write_debug {
-                T::write_lines_into_file("output/sepconv/fc3-flat-in.f", &flattened);
-            }
+        // Re-order the values from WxHxD to DxWxH (C-order)
+        const MP2_OUT_SIDE: usize = 24;
+        const MP2_OUT_NUM_FM: usize = 32;
+        let mut mxp2_out =
+            Array::from_shape_vec((MP2_OUT_NUM_FM, MP2_OUT_SIDE, MP2_OUT_SIDE), buf).unwrap();
+        mxp2_out.swap_axes(2, 0);
+        mxp2_out.swap_axes(0, 1);
+        let flattened = mxp2_out.iter().cloned().collect::<Vec<T>>();
 
+        unsafe {
             // Re-upload the buffer back to the GPU for use in dense 3
             self.mxp2_out_buf.write(&flattened).enq().unwrap();
 
@@ -329,19 +274,16 @@ where
         // Wait for all on-device calculations to finish
         queue.finish().unwrap();
 
+        // Load the 3rd layer from the GPU and Run ReLU on it
         let dense3_out = relu(&unsafe { cl::read_buf(&self.dense3_out_buf).unwrap() });
-        T::write_lines_into_file("output/sepconv/fc3-out.f", &dense3_out);
 
         // Run the 4th layer (fully-connected)
         let dense4_out = relu(&self.dense4.mtx_mul(&dense3_out));
-        T::write_lines_into_file("output/sepconv/fc4-out.f", &dense4_out);
 
         // Run the 5th layer (fully-connected)
         let dense5_out = self.dense5.mtx_mul(&dense4_out);
-        T::write_lines_into_file("output/sepconv/fc5-out.f", &dense5_out);
         let result = softmax(&dense5_out);
 
-        f32::write_lines_into_file("output/sepconv/out.f", &result);
         result
     }
 }

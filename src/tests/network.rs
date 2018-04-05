@@ -11,8 +11,6 @@ fn test_classic() {
 fn test_sepconv() {
     let output = run_sepconv();
     assert_eq!(output.len(), 4);
-    // TODO: verify output correctness
-    //let correct = f32::read_lines_from_file(&format!("{}/out5.f", BASELINE_DIR));
     let correct = f32::read_lines_from_file("input/baseline/sepconv-f32-xcorr/f32/out.f");
 
     assert!(
@@ -39,7 +37,7 @@ fn run_sepconv() -> Vec<f32> {
     // Initialize OpenCL
     let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
 
-    let net = SepconvNetwork::<f32>::new(&program, &queue, true);
+    let net = SepconvNetwork::<f32>::new(&program, &queue);
     let input_data = f32::read_bin_from_file("input/baseline/sepconv-f32-xcorr/in.bin");
     net.predict(&input_data, &queue)
 }

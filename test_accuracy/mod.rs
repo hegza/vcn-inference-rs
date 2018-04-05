@@ -23,7 +23,6 @@ const TEST_CLASSIC: bool = true;
 const TEST_SEPCONV: bool = true;
 const CLASSIC_SINGLE_SHOT: bool = false;
 const SEPCONV_SINGLE_SHOT: bool = false;
-const SEPCONV_WRITE_FILES: bool = false;
 
 pub fn main() {
     env_logger::init();
@@ -68,7 +67,7 @@ pub fn main() {
 
         // Initialize OpenCL and the sep-conv network
         let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
-        let net = SepconvNetwork::<f32>::new(&program, &queue, SEPCONV_WRITE_FILES);
+        let net = SepconvNetwork::<f32>::new(&program, &queue);
 
         // Make classifications and measure accuracy using the sep-conv network
         let (correct, total) = measure_accuracy(&net, &test_data, queue.clone());

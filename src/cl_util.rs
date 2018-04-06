@@ -18,7 +18,18 @@ pub fn init(kernel_files: &[&str]) -> ocl::Result<(Queue, Program, Context)> {
     debug!("Available OpenCL devices: {:?}.", device_names);
 
     let device = Device::first(platform)?;
-    info!("Using device \"{}\".", device.name().unwrap());
+    info!(
+        "Using {} \"{}\".",
+        match device.info(DeviceInfo::Type).unwrap() {
+            DeviceInfoResult::Type(t) => match t {
+                flags::DeviceType::CPU => "CPU",
+                flags::DeviceType::GPU => "GPU",
+                _ => "unknown device type",
+            },
+            _ => panic!("ocl did not return the expected type"),
+        },
+        device.name().unwrap()
+    );
 
     let context = Context::builder()
         .platform(platform)

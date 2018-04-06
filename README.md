@@ -13,3 +13,7 @@ logging on linux:
 - all: `export RUST_LOG=warn,rusty_cnn=trace`
 - high-level: `export RUST_LOG=warn,rusty_cnn=info`
 
+## Bonus
+Run clippy to find things I might've missed. Requires cargo clippy subcommand.
+`cargo +nightly clippy`
+

@@ -11,7 +11,6 @@ pub fn load_jpeg<P>(file: P) -> Vec<f32>
 where
     P: AsRef<Path>,
 {
-    // TODO: find out local min + max
     let img = image::open(file).unwrap();
     let num_pixels = (img.width() * img.height()) as usize;
     const UMAX: f32 = 255f32;
@@ -21,9 +20,9 @@ where
     let mut green_channel = Vec::with_capacity(num_pixels);
     for pixel in img.pixels() {
         let rgb = pixel.2.to_rgb();
-        let r = rgb[0] as f32 / UMAX + UMIN;
-        let g = rgb[1] as f32 / UMAX + UMIN;
-        let b = rgb[2] as f32 / UMAX + UMIN;
+        let r = f32::from(rgb[0]) / UMAX + UMIN;
+        let g = f32::from(rgb[1]) / UMAX + UMIN;
+        let b = f32::from(rgb[2]) / UMAX + UMIN;
         red_channel.push(r);
         blue_channel.push(g);
         green_channel.push(b);
@@ -83,7 +82,7 @@ where
             list_files(dir.as_ref().join(class_dir))
                 .unwrap()
                 .iter()
-                .map(|ref file_name| {
+                .map(|file_name| {
                     (
                         load_fun(&dir.as_ref()
                             .join(class_dir)

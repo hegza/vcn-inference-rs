@@ -1,5 +1,4 @@
 // TODO: figure out the cnn.h dependency thing
-// TODO: split into one kernel per file
 #include "cnn.h"
 
 __kernel void conv_relu_1(

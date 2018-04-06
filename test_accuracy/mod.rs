@@ -47,7 +47,7 @@ pub fn main() {
         let net = ClassicNetwork::<f32>::new(&program, &queue);
 
         // Make classifications and measure accuracy using the original network
-        let (correct, total) = measure_accuracy(&net, &test_data, queue.clone());
+        let (correct, total) = measure_accuracy(&net, &test_data, &queue);
         let accuracy = correct as f32 / total as f32;
         println!("original network accuracy:");
         println!("{} ({}/{})", accuracy, correct, total);
@@ -70,7 +70,7 @@ pub fn main() {
         let net = SepconvNetwork::<f32>::new(&program, &queue);
 
         // Make classifications and measure accuracy using the sep-conv network
-        let (correct, total) = measure_accuracy(&net, &test_data, queue.clone());
+        let (correct, total) = measure_accuracy(&net, &test_data, &queue);
         let accuracy = correct as f32 / total as f32;
         println!("sep-conv network accuracy:");
         println!("{} ({}/{})", accuracy, correct, total);
@@ -81,7 +81,7 @@ pub fn main() {
 fn measure_accuracy<F, P>(
     predictor: &P,
     test_data: &[(Vec<F>, Class)],
-    queue: Queue,
+    queue: &Queue,
 ) -> (usize, usize)
 where
     F: CoeffFloat,
@@ -90,7 +90,7 @@ where
     let mut num_correct = 0;
     let mut num_total = 0;
     for &(ref input_image, ref correct) in test_data.iter() {
-        let result = predictor.predict(&input_image, &queue);
+        let result = predictor.predict(input_image, queue);
         //println!("{:?}", &result);
         let idx_of_correct = result
             .iter()
@@ -128,7 +128,7 @@ fn idx_to_class(idx: usize) -> Class {
     }
 }
 
-fn load_jpeg_with_padding(file: &String) -> Vec<f32> {
+fn load_jpeg_with_padding(file: &str) -> Vec<f32> {
     let input_shape = ImageGeometry::new(
         CLASSIC_HYPER_PARAMS.source_side,
         CLASSIC_HYPER_PARAMS.num_source_channels,
@@ -139,5 +139,5 @@ fn load_jpeg_with_padding(file: &String) -> Vec<f32> {
     let padding = padded_image_shape.padding();
 
     // Load input as a vector of floats in the network format
-    with_edge_padding_by_channel(load_jpeg(file), &input_shape, padding)
+    with_edge_padding_by_channel(&load_jpeg(file), &input_shape, padding)
 }

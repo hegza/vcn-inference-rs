@@ -11,7 +11,7 @@ pub const CLASSIC_HYPER_PARAMS: ClassicHyperParams = ClassicHyperParams {
     fully_connected_const: 100,
     num_output_classes: 4,
 };
-pub const WEIGHTS_DIR: &'static str = "input/weights";
+pub const WEIGHTS_DIR: &str = "input/weights";
 
 pub struct ClassicNetwork<T>
 where
@@ -45,26 +45,27 @@ where
         );
 
         // Allocate read-only memory for the weights of the 1st three layers
-        let conv1_wgts_buf = conv1.create_wgts_buf(&queue).unwrap();
-        let conv2_wgts_buf = conv2.create_wgts_buf(&queue).unwrap();
-        let dense3_wgts_buf = dense3.create_wgts_buf(&queue).unwrap();
+        let conv1_wgts_buf = conv1.create_wgts_buf(queue).unwrap();
+        let conv2_wgts_buf = conv2.create_wgts_buf(queue).unwrap();
+        let dense3_wgts_buf = dense3.create_wgts_buf(queue).unwrap();
 
         // Allocate read-only memory for the input geometry on device with host-accessible pointer for
         // writing input from file
+        let intermediary_flags = flags::MEM_READ_WRITE;
         let in_buf = conv1
-            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
+            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, queue)
             .unwrap();
         // Allocate read-write memory for the 1st feature map on device
-        let fm1_buf = conv2.create_in_buf(flags::MEM_READ_WRITE, &queue).unwrap();
+        let fm1_buf = conv2.create_in_buf(intermediary_flags, queue).unwrap();
         // Allocate read-write memory for the 2nd feature map on device
-        let fm2_buf = conv2.create_out_buf(flags::MEM_READ_WRITE, &queue).unwrap();
+        let fm2_buf = conv2.create_out_buf(intermediary_flags, queue).unwrap();
         // Allocate write-only memory for the dense (3rd) layer output on device with host pointer for reading
         let dense3_out_buf = dense3
-            .create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
+            .create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, queue)
             .unwrap();
 
         // Create the kernel for the 1st layer (Convolution + ReLU)
-        let conv_relu1 = Kernel::builder().program(&program).name("conv_relu_1")
+        let conv_relu1 = Kernel::builder().program(program).name("conv_relu_1")
             .queue(queue.clone())
             .global_work_size(conv1.gws_hint())
             // Input
@@ -74,7 +75,7 @@ where
             .arg(&conv1_wgts_buf).build().unwrap();
 
         // Create the kernel for the 2nd layer (Convolution + ReLU)
-        let conv_relu2 = Kernel::builder().program(&program).name("conv_relu_2")
+        let conv_relu2 = Kernel::builder().program(program).name("conv_relu_2")
             .queue(queue.clone())
             .global_work_size(conv2.gws_hint())
             // Input
@@ -84,7 +85,7 @@ where
             .arg(&conv2_wgts_buf).build().unwrap();
 
         // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
-        let dense3_kernel = Kernel::builder().program(&program).name("mtx_mulf")
+        let dense3_kernel = Kernel::builder().program(program).name("mtx_mulf")
             .queue(queue.clone())
             .global_work_size(dense3.gws_hint())
             // Input
@@ -106,9 +107,9 @@ where
             dense3_kernel,
             dense3_out_buf,
             in_buf,
-            input_shape: conv1.input_shape().clone(),
-            dense4: dense4,
-            dense5: dense5,
+            input_shape: *conv1.input_shape(),
+            dense4,
+            dense5,
         }
     }
     pub fn input_shape(&self) -> &ImageGeometry {
@@ -123,7 +124,7 @@ where
     /// Maps the input buffer, and runs the network, returning the result.
     fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<f32> {
         unsafe {
-            cl::map_to_buf(&self.in_buf, &input_data).unwrap();
+            cl::map_to_buf(&self.in_buf, input_data).unwrap();
 
             // Enqueue the kernel for the 1st layer (Convolution + ReLU)
             self.conv_relu1.cmd().queue(&queue).enq().unwrap();
@@ -221,9 +222,8 @@ pub fn create_standalone_kernel<L: ClWeightedLayer<T>, T: Coeff>(
 
     // Write the weights and input to the global memory of the device
     wgts_buf.write(layer.weights()).enq().unwrap();
-    // TODO: It's maybe not fair to do this inside the kernel initialization
     unsafe {
-        cl::map_to_buf(&in_buf, &input_data).unwrap();
+        cl::map_to_buf(&in_buf, input_data).unwrap();
     }
     queue.finish().unwrap();
 

@@ -57,13 +57,12 @@ impl ReadBinFromFile for f32 {
             std::fs::metadata(&filename).expect(&format!("file not found '{}'", filename));
 
         let f = File::open(filename).expect(&format!("file not found '{}'", filename));
-        let mut reader = BufReader::new(f);
-
-        // TODO: specify BufReader with correct buffer capacity
-        // Iterate the file into f32s
         // f32 = 4 bytes
-        let len_f32s = metadata.len() * 4;
-        let mut floats: Vec<f32> = Vec::with_capacity(len_f32s as usize + 1);
+        let len_f32s = metadata.len() as usize * 4;
+        let mut reader = BufReader::with_capacity(len_f32s, f);
+
+        let mut floats: Vec<f32> = Vec::with_capacity(len_f32s + 1);
+        // Iterate the file into f32s
         while let Ok(f) = reader.read_f32::<LittleEndian>() {
             floats.push(f);
         }
@@ -77,13 +76,12 @@ impl ReadBinFromFile for f64 {
             std::fs::metadata(&filename).expect(&format!("file not found '{}'", filename));
 
         let f = File::open(filename).expect(&format!("file not found '{}'", filename));
-        let mut reader = BufReader::new(f);
-
-        // TODO: specify BufReader with correct buffer capacity
-        // Iterate the file into f64s
         // f64 = 8 bytes
-        let len_f64s = metadata.len() * 8;
-        let mut floats: Vec<f64> = Vec::with_capacity(len_f64s as usize + 1);
+        let len_f64s = metadata.len() as usize * 8;
+        let mut reader = BufReader::with_capacity(len_f64s, f);
+
+        // Iterate the file into f64s
+        let mut floats: Vec<f64> = Vec::with_capacity(len_f64s + 1);
         while let Ok(f) = reader.read_f64::<LittleEndian>() {
             floats.push(f);
         }
@@ -212,11 +210,7 @@ fn split_in_three_mut<T>(
 }
 
 /// `data` is a vector of Ts that's organized into channels.
-pub fn with_edge_padding_by_channel<T>(
-    data: Vec<T>,
-    shape: &ImageGeometry,
-    padding: usize,
-) -> Vec<T>
+pub fn with_edge_padding_by_channel<T>(data: &[T], shape: &ImageGeometry, padding: usize) -> Vec<T>
 where
     T: Zero + ReadBinFromFile + Copy,
 {
@@ -274,10 +268,10 @@ where
     let image_shape = padded_image_shape.unpadded();
     let padding = padded_image_shape.padding();
 
-    with_edge_padding_by_channel(image, &image_shape, padding)
+    with_edge_padding_by_channel(&image, &image_shape, padding)
 }
 
 pub fn duration_between(start: Instant, end: Instant) -> f64 {
     let duration = end.duration_since(start);
-    duration.as_secs() as f64 + duration.subsec_nanos() as f64 * 0.000000001f64
+    duration.as_secs() as f64 + f64::from(duration.subsec_nanos()) * 0.000_000_001f64
 }

@@ -155,5 +155,3 @@ fn test_mxp() {
     assert!(is_within_margin(&gpu_out, &correct, RESULT_MARGIN));
     assert!(is_within_margin(&cpu_out, &correct, RESULT_MARGIN));
 }
-
-// TODO: test that VConv + HConv + MXP produces similar output as ordinary Conv

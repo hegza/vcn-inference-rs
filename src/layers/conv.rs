@@ -40,8 +40,8 @@ where
         );
         ConvLayer {
             weights,
-            input_shape: input_shape.clone(),
-            output_shape: output_shape.clone(),
+            input_shape: *input_shape,
+            output_shape: *output_shape,
         }
     }
 

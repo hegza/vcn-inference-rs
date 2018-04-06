@@ -33,7 +33,7 @@ pub fn init(kernel_files: &[&str]) -> ocl::Result<(Queue, Program, Context)> {
 
     let context = Context::builder()
         .platform(platform)
-        .devices(device.clone())
+        .devices(device)
         .build()?;
 
     let mut program = Program::builder();

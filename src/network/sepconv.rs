@@ -34,7 +34,7 @@ struct SepconvHyperParams {
     pub mp1_block_dim: usize,
     pub mp2_block_dim: usize,
 }
-pub const WEIGHTS_DIR: &'static str = "input/weights/sepconv-96-97";
+pub const WEIGHTS_DIR: &str = "input/weights/sepconv-96-97";
 
 pub struct SepconvNetwork<T>
 where
@@ -108,27 +108,30 @@ where
         );
 
         // Allocate read-only memory on-device for the weights buffers
-        let v1_wgts_buf = vconv1.create_wgts_buf(&queue).unwrap();
-        let h1_wgts_buf = hconv1.create_wgts_buf(&queue).unwrap();
-        let v2_wgts_buf = vconv2.create_wgts_buf(&queue).unwrap();
-        let h2_wgts_buf = hconv2.create_wgts_buf(&queue).unwrap();
-        let d3_wgts_buf = dense3.create_wgts_buf(&queue).unwrap();
+        let v1_wgts_buf = vconv1.create_wgts_buf(queue).unwrap();
+        let h1_wgts_buf = hconv1.create_wgts_buf(queue).unwrap();
+        let v2_wgts_buf = vconv2.create_wgts_buf(queue).unwrap();
+        let h2_wgts_buf = hconv2.create_wgts_buf(queue).unwrap();
+        let d3_wgts_buf = dense3.create_wgts_buf(queue).unwrap();
 
         // Allocate memory on-device for the I/O buffers
         let intermediary_flags = flags::MEM_READ_WRITE;
         let in_buf = vconv1
-            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
+            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, queue)
             .unwrap();
-        let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue).unwrap();
-        let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue).unwrap();
-        let mxp1_out_buf: Buffer<T> = mxp1.create_out_buf(intermediary_flags, &queue).unwrap();
-        let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, &queue).unwrap();
-        let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, &queue).unwrap();
-        let mxp2_out_buf = mxp2.create_out_buf(intermediary_flags, &queue).unwrap();
+        let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, queue).unwrap();
+        let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, queue).unwrap();
+        let mxp1_out_buf: Buffer<T> = mxp1.create_out_buf(intermediary_flags, queue).unwrap();
+        let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, queue).unwrap();
+        let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, queue).unwrap();
+        // HACK: needs to be ALLOC_HOST_PTR to allow for rearranging the weights on the CPU
+        let mxp2_out_buf =
+            mxp2.create_out_buf(flags::MEM_READ_WRITE | flags::MEM_ALLOC_HOST_PTR, queue)
+                .unwrap();
         let dense3_out_buf = cl::create_buffer::<T>(
             dense3.num_out(),
             flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
-            &queue,
+            queue,
         ).unwrap();
 
         // Write buffers to device
@@ -137,12 +140,10 @@ where
         v2_wgts_buf.write(vconv2.weights()).enq().unwrap();
         h2_wgts_buf.write(hconv2.weights()).enq().unwrap();
         d3_wgts_buf.write(dense3.weights()).enq().unwrap();
-        // HACK:
-        queue.finish().unwrap();
 
         // Create kernels
         let krn_v_conv1 = Kernel::builder()
-            .program(&program)
+            .program(program)
             .name("colConv")
             .queue(queue.clone())
             .global_work_size(vconv1.gws_hint())
@@ -156,7 +157,7 @@ where
             .arg(&v1_wgts_buf)
             .build()
             .unwrap();
-        let krn_h_conv1 = Kernel::builder().program(&program).name("rowConv")
+        let krn_h_conv1 = Kernel::builder().program(program).name("rowConv")
             .queue(queue.clone())
             .global_work_size(hconv1.gws_hint())
             // NOTE: my desktop GPU cannot handle the full dimension (p.side*p.rows_blockdim_y*1 = 384)
@@ -164,7 +165,7 @@ where
             .arg(&conv1_mid_buf)
             .arg(&conv1_out_buf)
             .arg(&h1_wgts_buf).build().unwrap();
-        let krn_max_pool1 = Kernel::builder().program(&program).name("MaxPool1")
+        let krn_max_pool1 = Kernel::builder().program(program).name("MaxPool1")
             .queue(queue.clone())
             .global_work_size(mxp1.gws_hint())
             // TODO: my desktop GPU cannot handle the full dimension (p.mp1_block_dim*p.mp1_block_dim*1 = 384), find a way to use 256 instead (without segfaults :P)
@@ -173,7 +174,7 @@ where
             .arg(&mxp1_out_buf).build().unwrap();
         let krn_v_conv2 = Kernel::builder()
             .name("colConv2")
-            .program(&program)
+            .program(program)
             .queue(queue.clone())
             .global_work_size(vconv2.gws_hint())
             .local_work_size(SpatialDims::Three(
@@ -188,7 +189,7 @@ where
             .unwrap();
         let krn_h_conv2 = Kernel::builder()
             .name("rowConv2")
-            .program(&program)
+            .program(program)
             .queue(queue.clone())
             .global_work_size(hconv2.gws_hint())
             .local_work_size(SpatialDims::Three(p.side / 2, p.rows_blockdim_y, 1))
@@ -199,7 +200,7 @@ where
             .unwrap();
         let krn_max_pool2 = Kernel::builder()
             .name("MaxPool2")
-            .program(&program)
+            .program(program)
             .queue(queue.clone())
             .global_work_size(mxp2.gws_hint())
             .local_work_size(SpatialDims::Three(p.mp2_block_dim, p.mp2_block_dim, 1))
@@ -209,7 +210,7 @@ where
             .unwrap();
         let krn_dense3 = Kernel::builder()
             .name("mtx_mulf")
-            .program(&program)
+            .program(program)
             .queue(queue.clone())
             .global_work_size(dense3.gws_hint())
             .arg(&mxp2_out_buf)
@@ -219,7 +220,7 @@ where
             .unwrap();
 
         SepconvNetwork {
-            in_buf: in_buf,
+            in_buf,
             krn_v_conv1,
             krn_h_conv1,
             krn_max_pool1,
@@ -242,16 +243,16 @@ where
     // Maps the input buffer, and runs the network, returning the result.
     fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<f32> {
         let buf = unsafe {
-            cl::map_to_buf(&self.in_buf, &input_data).unwrap();
+            cl::map_to_buf(&self.in_buf, input_data).unwrap();
 
-            self.krn_v_conv1.cmd().queue(&queue).enq().unwrap();
-            self.krn_h_conv1.cmd().queue(&queue).enq().unwrap();
-            self.krn_max_pool1.cmd().queue(&queue).enq().unwrap();
-            self.krn_v_conv2.cmd().queue(&queue).enq().unwrap();
-            self.krn_h_conv2.cmd().queue(&queue).enq().unwrap();
-            self.krn_max_pool2.cmd().queue(&queue).enq().unwrap();
+            self.krn_v_conv1.cmd().queue(queue).enq().unwrap();
+            self.krn_h_conv1.cmd().queue(queue).enq().unwrap();
+            self.krn_max_pool1.cmd().queue(queue).enq().unwrap();
+            self.krn_v_conv2.cmd().queue(queue).enq().unwrap();
+            self.krn_h_conv2.cmd().queue(queue).enq().unwrap();
+            self.krn_max_pool2.cmd().queue(queue).enq().unwrap();
 
-            // TODO: move the reordering to the kernel or get new ..weights? from Mir
+            // TODO: move the reordering to a kernel or get new ..weights? from Mir
             // Load the buffer from max-pool output from GPU
             cl::read_buf(&self.mxp2_out_buf).unwrap()
         };
@@ -269,7 +270,7 @@ where
             // Re-upload the buffer back to the GPU for use in dense 3
             self.mxp2_out_buf.write(&flattened).enq().unwrap();
 
-            self.krn_dense3.cmd().queue(&queue).enq().unwrap();
+            self.krn_dense3.cmd().queue(queue).enq().unwrap();
         }
         // Wait for all on-device calculations to finish
         queue.finish().unwrap();
@@ -282,8 +283,7 @@ where
 
         // Run the 5th layer (fully-connected)
         let dense5_out = self.dense5.mtx_mul(&dense4_out);
-        let result = softmax(&dense5_out);
 
-        result
+        softmax(&dense5_out)
     }
 }

@@ -217,7 +217,7 @@ pub fn create_standalone_kernel<L: Layer<T>, T: Num + OclPrm>(
     input_data: &[T],
 ) -> ocl::Result<(Kernel, Buffer<T>, Queue)> {
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init()?;
+    let (queue, program, _context) = cl::init("original_kernels.cl")?;
 
     let wgts_buf = cl::create_buffer::<T>(layer.num_weights(), flags::MEM_READ_ONLY, &queue)?;
     let in_buf = cl::create_buffer::<T>(

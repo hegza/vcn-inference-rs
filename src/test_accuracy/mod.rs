@@ -33,7 +33,7 @@ pub fn main() {
     debug!("Initializing network...");
 
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init().unwrap();
+    let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
 
     // Initialize the network
     let net = Network::<f32>::new(&program, &queue).unwrap();

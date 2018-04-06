@@ -13,7 +13,7 @@ const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
 /// Benchmark writing of input to device memory.
 fn net_buf_write_benchmark(c: &mut Criterion) {
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init().unwrap();
+    let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
 
     let net = Network::<f32>::new(&program, &queue).unwrap();
 
@@ -29,7 +29,7 @@ fn net_buf_write_benchmark(c: &mut Criterion) {
 /// Benchmark full-network computations.
 fn net_comp_benchmark(c: &mut Criterion) {
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init().unwrap();
+    let (queue, program, _context) = cl::init("original_kernels.cl").unwrap();
 
     let net = Network::<f32>::new(&program, &queue).unwrap();
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(

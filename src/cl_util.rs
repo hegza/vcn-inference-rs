@@ -2,14 +2,18 @@
 use util::*;
 use ocl;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
+use ocl::enums::*;
+
+const KERNEL_PATH: &str = "kernel";
 
 /// Define which platform and device(s) to use. Create a context, queue, and program.
-pub fn init() -> ocl::Result<(Queue, Program, Context)> {
-    let kernel_sources = read_file("kernel/original_kernels.cl");
+pub fn init(kernel_file: &str) -> ocl::Result<(Queue, Program, Context)> {
+    let kernel_sources = read_file(&format!("{}/{}", KERNEL_PATH, kernel_file));
 
     // The platform is the thing that's provided by whatever vendor.
     let platform = Platform::default();
-    let device_names: Vec<String> = Device::list(&platform, None)?
+    let devices = Device::list_all(&platform)?;
+    let device_names: Vec<String> = devices
         .iter()
         .map(|&device| device.name())
         .collect();

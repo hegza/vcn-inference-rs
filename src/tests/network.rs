@@ -9,7 +9,7 @@ fn test_network() {
 
 fn run_network() -> ocl::Result<Vec<f32>> {
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init()?;
+    let (queue, program, _context) = cl::init("original_kernels.cl")?;
 
     let net = Network::<f32>::new(&program, &queue).unwrap();
     let input_data = read_image_with_padding_from_bin_in_channels(

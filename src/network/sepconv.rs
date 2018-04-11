@@ -58,20 +58,20 @@ where
 
 impl<T> SepconvNetwork<T>
 where
-    T: CoeffFloat + ReadCsvFromFile,
+    T: CoeffFloat + ReadCsv,
 {
     pub fn new(program: &Program, queue: &Queue) -> SepconvNetwork<T> {
         let p = SEPCONV_HYPER_PARAMS.clone();
 
         // Load the weights for the convolutional layers
-        let v1_wgts = T::read_csv_from_file(&format!("{}/vcr1-f32.csv", WEIGHTS_DIR));
-        let h1_wgts = T::read_csv_from_file(&format!("{}/hcr1-f32.csv", WEIGHTS_DIR));
-        let v2_wgts = T::read_csv_from_file(&format!("{}/vcr2-f32.csv", WEIGHTS_DIR));
-        let h2_wgts = T::read_csv_from_file(&format!("{}/hcr2-f32.csv", WEIGHTS_DIR));
+        let v1_wgts = T::read_csv(&format!("{}/vcr1-f32.csv", WEIGHTS_DIR));
+        let h1_wgts = T::read_csv(&format!("{}/hcr1-f32.csv", WEIGHTS_DIR));
+        let v2_wgts = T::read_csv(&format!("{}/vcr2-f32.csv", WEIGHTS_DIR));
+        let h2_wgts = T::read_csv(&format!("{}/hcr2-f32.csv", WEIGHTS_DIR));
         // Load the weights for the dense layers
-        let dense3_wgts = T::read_csv_from_file(&format!("{}/fc3-f32.csv", WEIGHTS_DIR));
-        let dense4_wgts = T::read_csv_from_file(&format!("{}/fc4-f32.csv", WEIGHTS_DIR));
-        let dense5_wgts = T::read_csv_from_file(&format!("{}/fc5-f32.csv", WEIGHTS_DIR));
+        let dense3_wgts = T::read_csv(&format!("{}/fc3-f32.csv", WEIGHTS_DIR));
+        let dense4_wgts = T::read_csv(&format!("{}/fc4-f32.csv", WEIGHTS_DIR));
+        let dense5_wgts = T::read_csv(&format!("{}/fc5-f32.csv", WEIGHTS_DIR));
 
         let in_shape = ImageGeometry::new(p.side, p.num_channels);
         let vconv1 = VConvLayer::new(p.kernel_len, in_shape, p.kernel_split, v1_wgts);

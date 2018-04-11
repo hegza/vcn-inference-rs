@@ -113,7 +113,7 @@ fn run_l5(params: &NetworkParams) -> Vec<f32> {
 // Test that Maxpool + ReLU produces the correct output
 #[test]
 fn test_mxp() {
-    let in_img = f32::read_csv_from_file("src/tests/in/img-4x4_mono-norm.csv");
+    let in_img = f32::read_csv("src/tests/in/img-4x4_mono-norm.csv");
     const SIDE: usize = 4;
     let in_shape = ImageGeometry::new(SIDE, 1);
 
@@ -151,7 +151,7 @@ fn test_mxp() {
     let cpu_out = mxp.compute(&in_img);
 
     // Verify match between confirmed correct output and GPU and CPU outputs
-    let correct = f32::read_csv_from_file("src/tests/out/img-4x4_mono-norm-mxp2.csv");
+    let correct = f32::read_csv("src/tests/out/img-4x4_mono-norm-mxp2.csv");
     assert!(is_within_margin(&gpu_out, &correct, RESULT_MARGIN));
     assert!(is_within_margin(&cpu_out, &correct, RESULT_MARGIN));
 }

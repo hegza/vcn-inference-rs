@@ -42,13 +42,13 @@ pub trait ReadLinesFromFile: Sized {
     fn read_lines_from_file(filename: &str) -> Vec<Self>;
 }
 
-pub trait ReadCsvFromFile: Sized {
-    fn read_csv_from_file(filename: &str) -> Vec<Self>;
+pub trait ReadCsv: Sized {
+    fn read_csv(filename: &str) -> Vec<Self>;
 }
 
-pub trait WriteCsvIntoFile: Sized {
+pub trait WriteCsv: Sized {
     /// Writes a slice of Selfs into a csv file
-    fn write_csv_into_file(filename: &str, buf: &[Self]);
+    fn write_csv(filename: &str, buf: &[Self]);
 }
 
 impl ReadBinFromFile for f32 {
@@ -115,12 +115,12 @@ impl WriteLinesIntoFile for f64 {
     }
 }
 
-impl<T> ReadCsvFromFile for T
+impl<T> ReadCsv for T
 where
     T: Num + FromStr,
     <T as FromStr>::Err: Debug,
 {
-    fn read_csv_from_file(filename: &str) -> Vec<T> {
+    fn read_csv(filename: &str) -> Vec<T> {
         let file = File::open(filename).expect(&format!("unable to read file '{}'", filename));
         let chars = BufReader::new(file)
             .lines()
@@ -135,12 +135,12 @@ where
     }
 }
 
-impl<T> WriteCsvIntoFile for T
+impl<T> WriteCsv for T
 where
     T: Num + FromStr + std::fmt::Display,
     <T as FromStr>::Err: Debug,
 {
-    fn write_csv_into_file(filename: &str, buf: &[T]) {
+    fn write_csv(filename: &str, buf: &[T]) {
         let path: &Path = Path::new(filename);
         let parent: &Path = path.parent().unwrap();
         create_dir_all(parent).unwrap();

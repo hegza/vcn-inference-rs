@@ -26,23 +26,23 @@ where
         output_shape: &ImageGeometry,
         weights: Vec<T>,
     ) -> ConvLayer<T> {
-        trace!(
-            "Create conv-layer with filter-elems: {:?}, input-shape: {:?}, output-shape: {:?}, weights-size: {}.",
-            num_filter_elems,
-            input_shape,
-            output_shape,
-            weights.len()
-        );
         // Make sure that the weight count is correct
         debug_assert_eq!(
             num_filter_elems * input_shape.channels() * output_shape.channels(),
             weights.len()
         );
-        ConvLayer {
+        let layer = ConvLayer {
             weights,
             input_shape: *input_shape,
             output_shape: *output_shape,
-        }
+        };
+        debug!(
+            "Create convolution layer with input: {}, output: {}, weights: {}.",
+            layer.num_in(),
+            layer.num_out(),
+            layer.num_weights()
+        );
+        layer
     }
 
     pub fn input_shape(&self) -> &ImageGeometry {

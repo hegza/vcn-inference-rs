@@ -41,11 +41,11 @@ where
     T: Coeff,
 {
     pub in_buf: Buffer<T>,
-    krn_v_conv1: Kernel,
-    krn_h_conv1: Kernel,
+    krn_vconv1: Kernel,
+    krn_hconv1: Kernel,
     krn_max_pool1: Kernel,
-    krn_v_conv2: Kernel,
-    krn_h_conv2: Kernel,
+    krn_vconv2: Kernel,
+    krn_hconv2: Kernel,
     krn_max_pool2: Kernel,
     krn_dense3: Kernel,
     dense3_out_buf: Buffer<T>,
@@ -139,7 +139,7 @@ where
         d3_wgts_buf.write(dense3.weights()).enq().unwrap();
 
         // Create kernels
-        let krn_v_conv1 = Kernel::builder()
+        let krn_vconv1 = Kernel::builder()
             .program(program)
             .name("colConv")
             .queue(queue.clone())
@@ -154,7 +154,7 @@ where
             .arg(&v1_wgts_buf)
             .build()
             .unwrap();
-        let krn_h_conv1 = Kernel::builder().program(program).name("rowConv")
+        let krn_hconv1 = Kernel::builder().program(program).name("rowConv")
             .queue(queue.clone())
             .global_work_size(hconv1.gws_hint())
             // NOTE: my desktop GPU cannot handle the full dimension (p.side*p.rows_blockdim_y*1 = 384)
@@ -169,7 +169,7 @@ where
             .local_work_size(SpatialDims::Three(p.mp1_block_dim, p.mp1_block_dim, 1))
             .arg(&conv1_out_buf)
             .arg(&mxp1_out_buf).build().unwrap();
-        let krn_v_conv2 = Kernel::builder()
+        let krn_vconv2 = Kernel::builder()
             .name("colConv2")
             .program(program)
             .queue(queue.clone())
@@ -184,7 +184,7 @@ where
             .arg(&v2_wgts_buf)
             .build()
             .unwrap();
-        let krn_h_conv2 = Kernel::builder()
+        let krn_hconv2 = Kernel::builder()
             .name("rowConv2")
             .program(program)
             .queue(queue.clone())
@@ -218,11 +218,11 @@ where
 
         SepconvNetwork {
             in_buf,
-            krn_v_conv1,
-            krn_h_conv1,
+            krn_vconv1,
+            krn_hconv1,
             krn_max_pool1,
-            krn_v_conv2,
-            krn_h_conv2,
+            krn_vconv2,
+            krn_hconv2,
             krn_max_pool2,
             krn_dense3,
             dense3_out_buf,
@@ -242,11 +242,11 @@ where
         unsafe {
             cl::map_to_buf(&self.in_buf, input_data).unwrap();
 
-            self.krn_v_conv1.cmd().queue(queue).enq().unwrap();
-            self.krn_h_conv1.cmd().queue(queue).enq().unwrap();
+            self.krn_vconv1.cmd().queue(queue).enq().unwrap();
+            self.krn_hconv1.cmd().queue(queue).enq().unwrap();
             self.krn_max_pool1.cmd().queue(queue).enq().unwrap();
-            self.krn_v_conv2.cmd().queue(queue).enq().unwrap();
-            self.krn_h_conv2.cmd().queue(queue).enq().unwrap();
+            self.krn_vconv2.cmd().queue(queue).enq().unwrap();
+            self.krn_hconv2.cmd().queue(queue).enq().unwrap();
             self.krn_max_pool2.cmd().queue(queue).enq().unwrap();
             self.krn_dense3.cmd().queue(queue).enq().unwrap();
         }

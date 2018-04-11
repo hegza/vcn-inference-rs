@@ -11,16 +11,18 @@ pub struct MaxpoolLayer {
 
 impl MaxpoolLayer {
     pub fn new(in_shape: ImageGeometry, stride: usize) -> MaxpoolLayer {
-        trace!(
-            "Create maxpool({})-layer with input-shape: {:?}.",
-            stride,
-            in_shape
-        );
-        let out_shape = ImageGeometry::new(in_shape.side() / 2, in_shape.channels());
-        MaxpoolLayer {
+        let out_shape = ImageGeometry::new(in_shape.side() / stride, in_shape.channels());
+        let layer = MaxpoolLayer {
             in_shape,
             out_shape,
-        }
+        };
+        debug!(
+            "Create max-pool ({}) with input: {}, output: {}.",
+            stride,
+            layer.num_in(),
+            layer.num_out()
+        );
+        layer
     }
 
     pub fn input_shape(&self) -> &ImageGeometry {

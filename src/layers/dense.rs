@@ -19,19 +19,21 @@ where
 {
     /// Creates a descriptor of a fully-connected layer
     pub fn new(input_dim: usize, output_dim: usize, weights: Vec<T>) -> DenseLayer<T> {
-        trace!(
-            "Create dense-layer with input-size: {}, output-size: {}, weights-size: {}.",
-            input_dim,
-            output_dim,
-            weights.len()
-        );
         // Make sure that the weight count is correct
         debug_assert_eq!(input_dim * output_dim, weights.len());
-        DenseLayer {
+        let layer = DenseLayer {
             weights,
             num_in: input_dim,
             num_out: output_dim,
-        }
+        };
+        debug!(
+            "Create dense layer with input: {}, output: {}, weights: {}.",
+            layer.num_in(),
+            layer.num_out(),
+            layer.num_weights()
+        );
+
+        layer
     }
 }
 

@@ -10,7 +10,7 @@ where
     T: Coeff,
 {
     fn create_in_buf(&self, flags: flags::MemFlags, queue: &Queue) -> OclResult<Buffer<T>> {
-        debug!(
+        trace!(
             "ClLayer::create_in_buf with {} elements. Flags: {:?}.",
             self.num_in(),
             flags
@@ -18,7 +18,7 @@ where
         cl::create_buffer::<T>(self.num_in(), flags, queue)
     }
     fn create_out_buf(&self, flags: flags::MemFlags, queue: &Queue) -> OclResult<Buffer<T>> {
-        debug!(
+        trace!(
             "ClLayer::create_out_buf with {} elements. Flags: {:?}.",
             self.num_in(),
             flags
@@ -44,7 +44,7 @@ where
 {
     /// Create a read-only buffer on-device for weights
     fn create_wgts_buf(&self, queue: &Queue) -> OclResult<Buffer<T>> {
-        debug!(
+        trace!(
             "ClLayer::create_wgts_buf with {} elements. Flags: {:?}.",
             self.num_in(),
             flags::MEM_READ_ONLY

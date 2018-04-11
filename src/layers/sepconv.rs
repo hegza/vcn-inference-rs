@@ -24,19 +24,19 @@ where
         num_out_channels: usize,
         weights: Vec<T>,
     ) -> VConvLayer<T> {
-        trace!(
-            "Create v-conv-layer with filter_len: {:?}, in_shape: {:?}, num_out_channels: {:?}, weights-size: {}.",
-            filter_len,
-            in_shape,
-            num_out_channels,
-            weights.len()
-        );
-        VConvLayer(SepconvLayer::new(
+        let layer = VConvLayer(SepconvLayer::new(
             filter_len,
             in_shape,
             num_out_channels,
             weights,
-        ))
+        ));
+        debug!(
+            "Create vertical (columns) convolution with input: {}, output: {}, weights: {}.",
+            layer.num_in(),
+            layer.num_out(),
+            layer.num_weights()
+        );
+        layer
     }
 }
 
@@ -50,19 +50,19 @@ where
         num_out_channels: usize,
         weights: Vec<T>,
     ) -> HConvLayer<T> {
-        trace!(
-            "Create h-conv-layer with filter_len: {:?}, in_shape: {:?}, num_out_channels: {:?}, weights-size: {}.",
-            filter_len,
-            in_shape,
-            num_out_channels,
-            weights.len()
-        );
-        HConvLayer(SepconvLayer::new(
+        let layer = HConvLayer(SepconvLayer::new(
             filter_len,
             in_shape,
             num_out_channels,
             weights,
-        ))
+        ));
+        debug!(
+            "Create horizontal (rows) convolution with input: {}, output: {}, weights: {}.",
+            layer.num_in(),
+            layer.num_out(),
+            layer.num_weights()
+        );
+        layer
     }
 }
 impl<T> Deref for VConvLayer<T>

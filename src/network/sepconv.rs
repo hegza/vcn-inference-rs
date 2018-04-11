@@ -51,9 +51,6 @@ where
     dense3_out_buf: Buffer<T>,
     dense4: DenseLayer<T>,
     dense5: DenseLayer<T>,
-
-    // TEMP
-    mxp2_out_buf: Buffer<T>,
 }
 
 impl<T> SepconvNetwork<T>
@@ -69,7 +66,7 @@ where
         let v2_wgts = T::read_csv(&format!("{}/vcr2-f32.csv", WEIGHTS_DIR));
         let h2_wgts = T::read_csv(&format!("{}/hcr2-f32.csv", WEIGHTS_DIR));
         // Load the weights for the dense layers
-        let dense3_wgts = T::read_csv(&format!("{}/fc3-f32.csv", WEIGHTS_DIR));
+        let dense3_wgts = T::read_csv(&format!("{}/fc3-f32-nchw.csv", WEIGHTS_DIR));
         let dense4_wgts = T::read_csv(&format!("{}/fc4-f32.csv", WEIGHTS_DIR));
         let dense5_wgts = T::read_csv(&format!("{}/fc5-f32.csv", WEIGHTS_DIR));
 
@@ -125,7 +122,7 @@ where
         let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, queue).unwrap();
         let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, queue).unwrap();
         // HACK: needs to be ALLOC_HOST_PTR to allow for rearranging the weights on the CPU
-        let mxp2_out_buf =
+        let mxp2_out_buf: Buffer<T> =
             mxp2.create_out_buf(flags::MEM_READ_WRITE | flags::MEM_ALLOC_HOST_PTR, queue)
                 .unwrap();
         let dense3_out_buf = cl::create_buffer::<T>(
@@ -231,7 +228,6 @@ where
             dense3_out_buf,
             dense4,
             dense5,
-            mxp2_out_buf,
         }
     }
 }
@@ -242,7 +238,8 @@ where
 {
     // Maps the input buffer, and runs the network, returning the result.
     fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<f32> {
-        let buf = unsafe {
+        /*let buf = */
+        unsafe {
             cl::map_to_buf(&self.in_buf, input_data).unwrap();
 
             self.krn_v_conv1.cmd().queue(queue).enq().unwrap();
@@ -251,27 +248,9 @@ where
             self.krn_v_conv2.cmd().queue(queue).enq().unwrap();
             self.krn_h_conv2.cmd().queue(queue).enq().unwrap();
             self.krn_max_pool2.cmd().queue(queue).enq().unwrap();
-
-            // TODO: move the reordering to a kernel or get new ..weights? from Mir
-            // Load the buffer from max-pool output from GPU
-            cl::read_buf(&self.mxp2_out_buf).unwrap()
-        };
-
-        // Re-order the values from WxHxD to DxWxH (C-order)
-        const MP2_OUT_SIDE: usize = 24;
-        const MP2_OUT_NUM_FM: usize = 32;
-        let mut mxp2_out =
-            Array::from_shape_vec((MP2_OUT_NUM_FM, MP2_OUT_SIDE, MP2_OUT_SIDE), buf).unwrap();
-        mxp2_out.swap_axes(2, 0);
-        mxp2_out.swap_axes(0, 1);
-        let flattened = mxp2_out.iter().cloned().collect::<Vec<T>>();
-
-        unsafe {
-            // Re-upload the buffer back to the GPU for use in dense 3
-            self.mxp2_out_buf.write(&flattened).enq().unwrap();
-
             self.krn_dense3.cmd().queue(queue).enq().unwrap();
         }
+
         // Wait for all on-device calculations to finish
         queue.finish().unwrap();
 

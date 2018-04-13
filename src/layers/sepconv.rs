@@ -65,6 +65,7 @@ where
         layer
     }
 }
+
 impl<T> Deref for VConvLayer<T>
 where
     T: Coeff,

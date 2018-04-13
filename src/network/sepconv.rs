@@ -139,72 +139,54 @@ where
         d3_wgts_buf.write(dense3.weights()).enq().unwrap();
 
         // Create kernels
-        let krn_vconv1 = Kernel::builder()
-            .program(program)
-            .name("colConv")
-            .queue(queue.clone())
-            .global_work_size(vconv1.gws_hint())
-            .local_work_size(SpatialDims::Three(
-                p.columns_blockdim_x,
-                p.columns_blockdim_y,
-                1,
-            ))
-            .arg(&in_buf)
-            .arg(&conv1_mid_buf)
-            .arg(&v1_wgts_buf)
-            .build()
-            .unwrap();
-        let krn_hconv1 = Kernel::builder().program(program).name("rowConv")
-            .queue(queue.clone())
-            .global_work_size(hconv1.gws_hint())
-            // NOTE: my desktop GPU cannot handle the full dimension (p.side*p.rows_blockdim_y*1 = 384)
-            .local_work_size(SpatialDims::Three(p.side, p.rows_blockdim_y, 1))
-            .arg(&conv1_mid_buf)
-            .arg(&conv1_out_buf)
-            .arg(&h1_wgts_buf).build().unwrap();
-        let krn_max_pool1 = Kernel::builder().program(program).name("MaxPool1")
-            .queue(queue.clone())
-            .global_work_size(mxp1.gws_hint())
+        let b = ClKernelBuilder::new(program, queue.clone());
+        let krn_vconv1 = b.build_iow_kernel(
+            "colConv",
+            vconv1.gws_hint(),
+            SpatialDims::Three(p.columns_blockdim_x, p.columns_blockdim_y, 1),
+            &in_buf,        // In
+            &conv1_mid_buf, // Out
+            &v1_wgts_buf,   // Weights
+        );
+        let krn_hconv1 = b.build_iow_kernel(
+            "rowConv",
+            hconv1.gws_hint(),
+            SpatialDims::Three(p.side, p.rows_blockdim_y, 1),
+            &conv1_mid_buf, // In
+            &conv1_out_buf, // Out
+            &h1_wgts_buf,   // Weights
+        );
+        let krn_max_pool1 = b.build_io_kernel(
+            "MaxPool1",
+            mxp1.gws_hint(),
             // TODO: my desktop GPU cannot handle the full dimension (p.mp1_block_dim*p.mp1_block_dim*1 = 384), find a way to use 256 instead (without segfaults :P)
-            .local_work_size(SpatialDims::Three(p.mp1_block_dim, p.mp1_block_dim, 1))
-            .arg(&conv1_out_buf)
-            .arg(&mxp1_out_buf).build().unwrap();
-        let krn_vconv2 = Kernel::builder()
-            .name("colConv2")
-            .program(program)
-            .queue(queue.clone())
-            .global_work_size(vconv2.gws_hint())
-            .local_work_size(SpatialDims::Three(
-                p.columns2_blockdim_x,
-                p.columns_blockdim_y,
-                1,
-            ))
-            .arg(&mxp1_out_buf)
-            .arg(&conv2_mid_buf)
-            .arg(&v2_wgts_buf)
-            .build()
-            .unwrap();
-        let krn_hconv2 = Kernel::builder()
-            .name("rowConv2")
-            .program(program)
-            .queue(queue.clone())
-            .global_work_size(hconv2.gws_hint())
-            .local_work_size(SpatialDims::Three(p.side / 2, p.rows_blockdim_y, 1))
-            .arg(&conv2_mid_buf)
-            .arg(&conv2_out_buf)
-            .arg(&h2_wgts_buf)
-            .build()
-            .unwrap();
-        let krn_max_pool2 = Kernel::builder()
-            .name("MaxPool2")
-            .program(program)
-            .queue(queue.clone())
-            .global_work_size(mxp2.gws_hint())
-            .local_work_size(SpatialDims::Three(p.mp2_block_dim, p.mp2_block_dim, 1))
-            .arg(&conv2_out_buf)
-            .arg(&mxp2_out_buf)
-            .build()
-            .unwrap();
+            SpatialDims::Three(p.mp1_block_dim, p.mp1_block_dim, 1),
+            &conv1_out_buf, // In
+            &mxp1_out_buf,  // Out
+        );
+        let krn_vconv2 = b.build_iow_kernel(
+            "colConv2",
+            vconv2.gws_hint(),
+            SpatialDims::Three(p.columns2_blockdim_x, p.columns_blockdim_y, 1),
+            &mxp1_out_buf,  // In
+            &conv2_mid_buf, // Out
+            &v2_wgts_buf,   // Weights
+        );
+        let krn_hconv2 = b.build_iow_kernel(
+            "rowConv2",
+            hconv2.gws_hint(),
+            SpatialDims::Three(p.side / 2, p.rows_blockdim_y, 1),
+            &conv2_mid_buf, // In
+            &conv2_out_buf, // Out
+            &h2_wgts_buf,   // Weights
+        );
+        let krn_max_pool2 = b.build_io_kernel(
+            "MaxPool2",
+            mxp2.gws_hint(),
+            SpatialDims::Three(p.mp2_block_dim, p.mp2_block_dim, 1),
+            &conv2_out_buf, // In
+            &mxp2_out_buf,  // Out
+        );
         let krn_dense3 = Kernel::builder()
             .name("mtx_mulf")
             .program(program)

@@ -4,6 +4,7 @@ use super::*;
 use ocl::Result as OclResult;
 use ocl::*;
 use cl_util as cl;
+use ocl::builders::KernelBuilder;
 
 pub trait ClLayer<T>: Layer
 where
@@ -93,4 +94,92 @@ impl<T> ClLayer<T> for MaxpoolLayer
 where
     T: Coeff,
 {
+}
+
+// TODO: this could be split into a multi-tier builder
+pub struct ClKernelBuilder<'p> {
+    program: &'p Program,
+    queue: Queue,
+}
+
+impl<'p> ClKernelBuilder<'p> {
+    pub fn new(program: &Program, queue: Queue) -> ClKernelBuilder {
+        ClKernelBuilder { program, queue }
+    }
+    pub fn build_io_kernel<T>(
+        &self,
+        kernel_name: &str,
+        global_work_size: SpatialDims,
+        local_work_size: SpatialDims,
+        in_buf: &Buffer<T>,
+        out_buf: &Buffer<T>,
+    ) -> Kernel
+    where
+        T: OclPrm,
+    {
+        self.kernel_builder(kernel_name, global_work_size, local_work_size)
+            .arg(in_buf)
+            .arg(out_buf)
+            .build()
+            .unwrap()
+    }
+    pub fn build_iow_kernel<T>(
+        &self,
+        kernel_name: &str,
+        global_work_size: SpatialDims,
+        local_work_size: SpatialDims,
+        in_buf: &Buffer<T>,
+        out_buf: &Buffer<T>,
+        wgts_buf: &Buffer<T>,
+    ) -> Kernel
+    where
+        T: OclPrm,
+    {
+        self.kernel_builder(kernel_name, global_work_size, local_work_size)
+            .arg(in_buf)
+            .arg(out_buf)
+            .arg(wgts_buf)
+            .build()
+            .unwrap()
+    }
+    fn kernel_builder(
+        &self,
+        kernel_name: &str,
+        global_work_size: SpatialDims,
+        local_work_size: SpatialDims,
+    ) -> KernelBuilder {
+        debug!(
+            "Create kernel {}, gws: {:?} = {}, lws: {:?} = {}.",
+            kernel_name,
+            global_work_size,
+            global_work_size.to_len(),
+            local_work_size,
+            local_work_size.to_len()
+        );
+
+        // HACK: check that there are no work-group overshoots, do not panic to get more diagnostic info from OpenCL
+        use ocl::enums::{DeviceInfo, DeviceInfoResult};
+        let platform = Platform::default();
+        let device = Device::first(platform).unwrap();
+        if let DeviceInfoResult::MaxWorkGroupSize(max_wgs) =
+            device.info(DeviceInfo::MaxWorkGroupSize).unwrap()
+        {
+            if max_wgs < local_work_size.to_len() {
+                error!(
+                    "local work size is larger than maximum work-group-size: {} > {}",
+                    local_work_size.to_len(),
+                    max_wgs
+                );
+            }
+        }
+
+        let mut builder = KernelBuilder::new();
+        builder
+            .program(self.program)
+            .name(kernel_name)
+            .queue(self.queue.clone())
+            .global_work_size(global_work_size)
+            .local_work_size(local_work_size);
+        builder
+    }
 }

@@ -1,7 +1,8 @@
+// HACK: should be based passed in as a flag (cnn.h for classic, sepconv.h for sepconv)
 #include "cnn.h"
 
 // `restrict` makes sure OpenCL knows that the pointers must not overlap
-__kernel void mtx_mulf(__global float* restrict B, __global float* restrict c_mul,
+__kernel void mtx_mul_f32(__global float* restrict B, __global float* restrict c_mul,
                        __global float* restrict A) {
 
     const int Mdim = MAGIC;

@@ -1,29 +1,20 @@
-#include "cnn.h"
+#define ROWS_BLOCKDIM_X 96
+#define ROWS_2_BLOCKDIM_X 48
+#define ROWS_2_BLOCKDIM_Y 4
 
-#define WIDTH 96
-#define HEIGHT 96
+#define COLUMNS_BLOCKDIM_X 32
+#define COLUMNS_BLOCKDIM_Y 8
 
-//Fixed parameters
-#define ROWS_BLOCKDIM_X  96
-#define ROWS_BLOCKDIM_Y  4
-#define ROWS_2_BLOCKDIM_X  48
-#define ROWS_2_BLOCKDIM_Y  4
-
-#define COLUMNS_BLOCKDIM_X  32
-#define COLUMNS_BLOCKDIM_Y  8
-
-#define COLUMNS_2_BLOCKDIM_X  16
-#define COLUMNS_2_BLOCKDIM_Y  8
+#define COLUMNS_2_BLOCKDIM_X 16
+#define COLUMNS_2_BLOCKDIM_Y 8
 
 #define KERNEL_RADIUS 2
 #define KERNEL_LENGTH (2 * KERNEL_RADIUS + 1)
 #define C1 3
 #define C2 7
 #define C3 32
-#define MP1_BLOCK_DIM 32
-#define MP2_BLOCK_DIM 16
 
-__kernel void rowConv(__global float *d_Src, __global float *d_Dst, __constant float *c_rowKernel) {
+__kernel void row_conv(__global float *d_Src, __global float *d_Dst, __constant float *c_rowKernel) {
 
     __local float l_data[ROWS_BLOCKDIM_Y][ROWS_BLOCKDIM_X + KERNEL_RADIUS * 2];
 
@@ -67,7 +58,7 @@ __kernel void rowConv(__global float *d_Src, __global float *d_Dst, __constant f
     d_Dst[dst_idx] = sum;
 }
 
-__kernel void colConv(__global float *d_Src, __global float *d_Dst, __constant float *c_colKernel) {
+__kernel void col_conv(__global float *d_Src, __global float *d_Dst, __constant float *c_colKernel) {
 
     __local float l_data[COLUMNS_BLOCKDIM_Y + KERNEL_RADIUS * 2][COLUMNS_BLOCKDIM_X];
     const int lix = get_local_id(0);
@@ -141,7 +132,7 @@ __kernel void colConv(__global float *d_Src, __global float *d_Dst, __constant f
     d_Dst[dst_idx] = sum;
 }
 
-__kernel void rowConv2(__global float *d_Src, __global float *d_Dst,
+__kernel void row_conv_2(__global float *d_Src, __global float *d_Dst,
                        __constant float *c_row2Kernel) {
 
     __local float l_data[ROWS_2_BLOCKDIM_Y][ROWS_2_BLOCKDIM_X + KERNEL_RADIUS * 2];
@@ -187,7 +178,7 @@ __kernel void rowConv2(__global float *d_Src, __global float *d_Dst,
     d_Dst[dst_idx] = sum;
 }
 
-__kernel void colConv2(__global float *d_Src, __global float *d_Dst,
+__kernel void col_conv_2(__global float *d_Src, __global float *d_Dst,
                        __constant float *c_col2Kernel) {
 
     __local float l_data[COLUMNS_2_BLOCKDIM_Y + KERNEL_RADIUS * 2][COLUMNS_2_BLOCKDIM_X];
@@ -260,73 +251,4 @@ __kernel void colConv2(__global float *d_Src, __global float *d_Dst,
     }
 
     d_Dst[dst_idx] = sum;
-}
-
-// Update test_mxp.cl if changed
-__kernel void MaxPool1(__global const float *src, __global float *dst) {
-    dst += get_group_id(0) * get_local_size(0) / 2 +
-           get_group_id(1) * WIDTH / 2 * get_local_size(1) / 2 +
-           get_group_id(2) * WIDTH / 2 * WIDTH / 2;
-    src += get_group_id(0) * get_local_size(0) + get_group_id(1) * get_local_size(1) * WIDTH +
-           get_group_id(2) * WIDTH * HEIGHT;
-
-    __local float sh_data[MP1_BLOCK_DIM][MP1_BLOCK_DIM];
-
-    sh_data[get_local_id(1)][get_local_id(0)] = src[get_local_id(1) * WIDTH + get_local_id(0)];
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (get_local_id(0) < MP1_BLOCK_DIM / 2 && get_local_id(1) < MP1_BLOCK_DIM / 2) {
-
-        float locMax = sh_data[get_local_id(1) * 2][get_local_id(0) * 2];
-
-        if (locMax < sh_data[get_local_id(1) * 2][get_local_id(0) * 2 + 1])
-            locMax = sh_data[get_local_id(1) * 2][get_local_id(0) * 2 + 1];
-
-        if (locMax < sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2])
-            locMax = sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2];
-
-        if (locMax < sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1])
-            locMax = sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1];
-
-        // With ReLU
-        dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax > 0? locMax : 0;
-        // Without ReLU
-        //dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax;
-    }
-}
-
-//<<< (3,3,32) , (16,16) >>>
-__kernel void MaxPool2(__global const float *src, __global float *dst) {
-
-    dst += get_group_id(0) * get_local_size(0) / 2 +
-           get_group_id(1) * WIDTH / 4 * get_local_size(1) / 2 +
-           get_group_id(2) * WIDTH / 4 * HEIGHT / 4;
-    src += get_group_id(0) * get_local_size(0) + get_group_id(1) * get_local_size(1) * WIDTH / 2 +
-           get_group_id(2) * WIDTH / 2 * HEIGHT / 2;
-
-    __local float sh_data[MP2_BLOCK_DIM][MP2_BLOCK_DIM];
-
-    sh_data[get_local_id(1)][get_local_id(0)] = src[get_local_id(1) * WIDTH / 2 + get_local_id(0)];
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    if (get_local_id(0) < MP2_BLOCK_DIM / 2 && get_local_id(1) < MP2_BLOCK_DIM / 2) {
-
-        float locMax = sh_data[get_local_id(1) * 2][get_local_id(0) * 2];
-
-        if (locMax < sh_data[get_local_id(1) * 2][get_local_id(0) * 2 + 1])
-            locMax = sh_data[get_local_id(1) * 2][get_local_id(0) * 2 + 1];
-
-        if (locMax < sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2])
-            locMax = sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2];
-
-        if (locMax < sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1])
-            locMax = sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1];
-
-        // With ReLU
-        dst[get_local_id(1) * WIDTH / 4 + get_local_id(0)] = locMax > 0 ? locMax : 0;
-        // Without ReLU
-        //dst[get_local_id(1) * WIDTH / 4 + get_local_id(0)] = locMax;
-    }
 }

@@ -36,7 +36,11 @@ where
     /// finished running. Note that you must call upload_buffers before the network is run.
     pub fn new() -> ClassicNetwork<T> {
         // Initialize OpenCL
-        let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
+        let (queue, program, _context) = cl::init(
+            &["conv_relu.cl", "mtx_mul.cl"],
+            &[],
+            ocl::Platform::default(),
+        ).unwrap();
 
         // Create the network representation from network hyper-parameters
         let layers = create_layers(CLASSIC_HYPER_PARAMS.clone());
@@ -89,7 +93,7 @@ where
             .arg(&conv2_wgts_buf).build().unwrap();
 
         // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
-        let dense3_kernel = Kernel::builder().program(&program).name("mtx_mulf")
+        let dense3_kernel = Kernel::builder().program(&program).name("mtx_mul_f32")
             .queue(queue.clone())
             .global_work_size(dense3.gws_hint())
             // Input
@@ -208,7 +212,11 @@ pub fn create_standalone_kernel<L: ClWeightedLayer<T>, T: Coeff>(
     input_data: &[T],
 ) -> ocl::Result<(Kernel, Buffer<T>, Queue)> {
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
+    let (queue, program, _context) = cl::init(
+        &["conv_relu.cl", "mtx_mul.cl"],
+        &[],
+        ocl::Platform::default(),
+    ).unwrap();
 
     let wgts_buf = layer.create_wgts_buf(&queue)?;
     let (in_buf, out_buf) = layer.create_io_bufs(

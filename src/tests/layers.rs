@@ -81,7 +81,7 @@ fn run_l3(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
     );
 
     let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", BASELINE_DIR));
-    let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "mtx_mulf", &input_data)?;
+    let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "mtx_mul_f32", &input_data)?;
     // Enqueue the kernel for the 3rd layer (Convolution)
     run_kernel_wait(&kernel, &queue)?;
     // Run relu on CPU
@@ -123,7 +123,8 @@ fn test_mxp() {
     let mxp = MaxpoolLayer::new(in_shape, 2);
 
     // Run mxp on GPU
-    let (queue, program, _context) = cl::init(&["test/mxp.cl"]).unwrap();
+    let (queue, program, _context) =
+        cl::init(&["test/mxp.cl"], &[], ocl::Platform::default()).unwrap();
 
     let (in_buf, out_buf) = mxp.create_io_bufs(
         flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
@@ -132,7 +133,7 @@ fn test_mxp() {
     ).unwrap();
     let mxp_krn = Kernel::builder()
         .program(&program)
-        .name("MaxPool")
+        .name("max_pool")
         .queue(queue.clone())
         .global_work_size(SpatialDims::Three(SIDE, SIDE, 1))
         .local_work_size(SpatialDims::Three(SIDE, SIDE, 1))

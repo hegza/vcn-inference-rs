@@ -47,7 +47,7 @@ fn bench_layer3(dense3: DenseLayer<f32>, c: &mut Criterion) {
         "{}/fm2.f",
         BASELINE_DIR
     )));
-    let (kernel, _, queue) = create_standalone_kernel(&dense3, "mtx_mulf", &input_data).unwrap();
+    let (kernel, _, queue) = create_standalone_kernel(&dense3, "mtx_mul_f32", &input_data).unwrap();
     c.bench_function("layer 3 kernel comp", move |b| {
         b.iter(|| run_kernel_wait(&kernel, &queue).unwrap())
     });

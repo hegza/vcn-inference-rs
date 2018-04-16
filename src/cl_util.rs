@@ -4,13 +4,16 @@ use ocl;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
 use ocl::enums::*;
 
+const PROFILING: bool = true;
 const KERNEL_PATH: &str = "src/cl";
 
 /// Define which platform and device(s) to use. Create a context, queue, and program.
-pub fn init(kernel_files: &[&str]) -> ocl::Result<(Queue, Program, Context)> {
-    // The platform is the thing that's provided by whatever vendor.
-    let platform = Platform::default();
-    let devices = Device::list_all(&platform)?;
+pub fn init(
+    kernel_files: &[&str],
+    addt_cmplr_defs: &[(&str, i32)],
+    platform: Platform,
+) -> ocl::Result<(Queue, Program, Context)> {
+    let devices = ocl::Device::list_all(&platform).unwrap();
     let device_names: Vec<String> = devices
         .iter()
         .map(|&device| device.name().unwrap())
@@ -18,19 +21,7 @@ pub fn init(kernel_files: &[&str]) -> ocl::Result<(Queue, Program, Context)> {
     debug!("Available OpenCL devices: {:?}.", device_names);
 
     let device = Device::first(platform)?;
-    let device_type = match device.info(DeviceInfo::Type)? {
-        DeviceInfoResult::Type(t) => match t {
-            flags::DeviceType::CPU => "CPU",
-            flags::DeviceType::GPU => "GPU",
-            _ => "unknown device type",
-        },
-        _ => panic!("ocl did not return the expected type"),
-    };
-    info!("Using {} \"{}\".", device_type, device.name().unwrap());
-    debug!(
-        "Maximum work-item-sizes: {}",
-        device.info(DeviceInfo::MaxWorkItemSizes)?
-    );
+    describe_device(&device)?;
 
     let context = Context::builder()
         .platform(platform)
@@ -42,6 +33,10 @@ pub fn init(kernel_files: &[&str]) -> ocl::Result<(Queue, Program, Context)> {
         .devices(device)
         .cmplr_opt("-I./src/cl")
         .cmplr_opt("-cl-std=CL1.2");
+    // Input the user-defined compiler definitions
+    addt_cmplr_defs.iter().for_each(|&(name, val)| {
+        program.cmplr_def(name, val);
+    });
     // Input the kernel source files
     kernel_files.iter().for_each(|&src| {
         program.src_file(&format!("{}/{}", KERNEL_PATH, src));
@@ -49,11 +44,11 @@ pub fn init(kernel_files: &[&str]) -> ocl::Result<(Queue, Program, Context)> {
     let program = program.build(&context)?;
 
     // Create the queue for the default device
-    let queue = Queue::new(
-        &context,
-        device,
-        Some(flags::CommandQueueProperties::PROFILING_ENABLE),
-    )?;
+    let profile_flag = match PROFILING {
+        true => Some(flags::CommandQueueProperties::PROFILING_ENABLE),
+        false => None,
+    };
+    let queue = Queue::new(&context, device, profile_flag)?;
 
     Ok((queue, program, context))
 }
@@ -91,5 +86,22 @@ pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<
     }
 
     mem_map.unmap().enq()?;
+    Ok(())
+}
+
+fn describe_device(device: &Device) -> ocl::Result<()> {
+    let device_type = match device.info(DeviceInfo::Type)? {
+        DeviceInfoResult::Type(t) => match t {
+            flags::DeviceType::CPU => "CPU",
+            flags::DeviceType::GPU => "GPU",
+            _ => "unknown device type",
+        },
+        _ => panic!("ocl did not return the expected type"),
+    };
+    info!("Using {} \"{}\".", device_type, device.name()?);
+    debug!(
+        "Maximum work-item-sizes: {}",
+        device.info(DeviceInfo::MaxWorkItemSizes)?
+    );
     Ok(())
 }

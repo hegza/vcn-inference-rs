@@ -6,8 +6,9 @@ use ndarray::ShapeBuilder; // Needed for .strides() method
 use ndarray::arr2;
 
 const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
+    // TODO: revisit the names here
     side: 96,
-    rows_blockdim_y: 4,
+    hconv_blockdim_y: 4,
     columns_blockdim_x: 32,
     columns_blockdim_y: 8,
     columns2_blockdim_x: 16,
@@ -23,7 +24,7 @@ const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
 #[derive(Clone, Debug)]
 struct SepconvHyperParams {
     pub side: usize,
-    pub rows_blockdim_y: usize,
+    pub hconv_blockdim_y: usize,
     pub columns_blockdim_x: usize,
     pub columns_blockdim_y: usize,
     pub columns2_blockdim_x: usize,
@@ -59,9 +60,40 @@ where
     T: CoeffFloat + ReadCsv,
 {
     pub fn new() -> SepconvNetwork<T> {
-        let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
-
         let p = SEPCONV_HYPER_PARAMS.clone();
+
+        // Detect overflow of local-work-size (limit: 256)
+        let platform = ocl::Platform::default();
+        let device = ocl::Device::first(platform).unwrap();
+        let (hconv1_blockdim_y, mxp1_block_dim) = match device
+            .info(ocl::enums::DeviceInfo::MaxWorkGroupSize)
+            .unwrap()
+        {
+            ocl::enums::DeviceInfoResult::MaxWorkGroupSize(max_wgs) => {
+                // Max-work-size is enough for all the calculations here
+                if max_wgs > 256 {
+                    (p.hconv_blockdim_y, p.mp1_block_dim)
+                }
+                // HACK: Max-work-size is not enough, use halved dimensions for hconv1 and mxp 1
+                else {
+                    warn!("Device max-work-size is less than 256. Implementation will use halved dimensions for horizontal convolution #1 and max pool #1.");
+                    (p.hconv_blockdim_y / 2, p.mp1_block_dim / 2)
+                }
+            }
+            e => panic!("ocl library returned invalid enum {:?}", e),
+        };
+
+        let (queue, program, _context) = cl::init(
+            &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
+            &[
+                ("WIDTH", p.side as i32),
+                ("HEIGHT", p.side as i32),
+                ("MP1_BLOCK_DIM", mxp1_block_dim as i32),
+                ("MP2_BLOCK_DIM", p.mp2_block_dim as i32),
+                ("ROWS_BLOCKDIM_Y", hconv1_blockdim_y as i32),
+            ],
+            platform,
+        ).expect(COMPILE_ERR_MSG);
 
         // Load the weights for the convolutional layers
         let v1_wgts = T::read_csv(&format!("{}/vcr1-f32.csv", WEIGHTS_DIR));
@@ -144,7 +176,7 @@ where
         // Create kernels
         let b = ClKernelBuilder::new(&program, queue.clone());
         let krn_vconv1 = b.build_iow_kernel(
-            "colConv",
+            "col_conv",
             vconv1.gws_hint(),
             SpatialDims::Three(p.columns_blockdim_x, p.columns_blockdim_y, 1),
             &in_buf,        // In
@@ -152,23 +184,23 @@ where
             &v1_wgts_buf,   // Weights
         );
         let krn_hconv1 = b.build_iow_kernel(
-            "rowConv",
+            "row_conv",
             hconv1.gws_hint(),
-            SpatialDims::Three(p.side, p.rows_blockdim_y, 1),
+            SpatialDims::Three(p.side, hconv1_blockdim_y, 1),
             &conv1_mid_buf, // In
             &conv1_out_buf, // Out
             &h1_wgts_buf,   // Weights
         );
         let krn_max_pool1 = b.build_io_kernel(
-            "MaxPool1",
+            "max_pool_1",
             mxp1.gws_hint(),
             // TODO: my desktop GPU cannot handle the full dimension (p.mp1_block_dim*p.mp1_block_dim*1 = 384), find a way to use 256 instead (without segfaults :P)
-            SpatialDims::Three(p.mp1_block_dim, p.mp1_block_dim, 1),
+            SpatialDims::Three(mxp1_block_dim, mxp1_block_dim, 1),
             &conv1_out_buf, // In
             &mxp1_out_buf,  // Out
         );
         let krn_vconv2 = b.build_iow_kernel(
-            "colConv2",
+            "col_conv_2",
             vconv2.gws_hint(),
             SpatialDims::Three(p.columns2_blockdim_x, p.columns_blockdim_y, 1),
             &mxp1_out_buf,  // In
@@ -176,22 +208,22 @@ where
             &v2_wgts_buf,   // Weights
         );
         let krn_hconv2 = b.build_iow_kernel(
-            "rowConv2",
+            "row_conv_2",
             hconv2.gws_hint(),
-            SpatialDims::Three(p.side / 2, p.rows_blockdim_y, 1),
+            SpatialDims::Three(p.side / 2, p.hconv_blockdim_y, 1),
             &conv2_mid_buf, // In
             &conv2_out_buf, // Out
             &h2_wgts_buf,   // Weights
         );
         let krn_max_pool2 = b.build_io_kernel(
-            "MaxPool2",
+            "max_pool_2",
             mxp2.gws_hint(),
             SpatialDims::Three(p.mp2_block_dim, p.mp2_block_dim, 1),
             &conv2_out_buf, // In
             &mxp2_out_buf,  // Out
         );
         let krn_dense3 = Kernel::builder()
-            .name("mtx_mulf")
+            .name("mtx_mul_f32")
             .program(&program)
             .queue(queue.clone())
             .global_work_size(dense3.gws_hint())
@@ -254,3 +286,5 @@ where
         softmax(&dense5_out)
     }
 }
+
+const COMPILE_ERR_MSG: &str = "unable to compile program. It's possible that not all hyper parameters were passed in as compiler definitions. See OpenCL error-message for more info.";

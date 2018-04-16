@@ -2,8 +2,8 @@
 #define HEIGHT 4
 #define MP1_BLOCK_DIM 32
 
-// Based on MaxPool1 from sepconv.cl with minor non-breaking modifications
-__kernel void MaxPool(__global const float *src, __global float *dst) {
+// Based on max_pool_1 from sepconv.cl with minor non-breaking modifications
+__kernel void max_pool(__global const float *src, __global float *dst) {
     dst += get_group_id(0) * get_local_size(0) / 2 +
            get_group_id(1) * WIDTH / 2 * get_local_size(1) / 2 +
            get_group_id(2) * WIDTH / 2 * WIDTH / 2;

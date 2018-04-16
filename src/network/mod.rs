@@ -9,5 +9,5 @@ pub use geometry::ImageGeometry;
 
 /// A trait for networks that are able to create a prediction distribution
 pub trait Predict<T> {
-    fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<f32>;
+    fn predict(&self, input_data: &[T]) -> Vec<f32>;
 }

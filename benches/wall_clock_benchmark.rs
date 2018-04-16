@@ -4,7 +4,6 @@ extern crate rusty_cnn;
 
 use criterion::Criterion;
 use rusty_cnn::*;
-use rusty_cnn::cl_util as cl;
 use rusty_cnn::geometry::{ImageGeometry, PaddedSquare};
 
 const SAMPLE_SIZE: usize = 10;
@@ -30,11 +29,8 @@ fn net_wall_benchmark(c: &mut Criterion) {
 
     c.bench_function("network wall", move |b| {
         b.iter(|| {
-            // Initialize OpenCL
-            let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
-
-            let net = ClassicNetwork::<f32>::new(&program, &queue);
-            net.predict(&input_data, &queue)
+            let net = ClassicNetwork::<f32>::new();
+            net.predict(&input_data)
         })
     });
 }

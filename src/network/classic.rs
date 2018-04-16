@@ -17,6 +17,7 @@ pub struct ClassicNetwork<T>
 where
     T: Coeff,
 {
+    queue: Queue,
     pub in_buf: Buffer<T>,
     input_shape: ImageGeometry,
     conv_relu1: Kernel,
@@ -33,7 +34,10 @@ where
 {
     /// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have
     /// finished running. Note that you must call upload_buffers before the network is run.
-    pub fn new(program: &Program, queue: &Queue) -> ClassicNetwork<T> {
+    pub fn new() -> ClassicNetwork<T> {
+        // Initialize OpenCL
+        let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
+
         // Create the network representation from network hyper-parameters
         let layers = create_layers(CLASSIC_HYPER_PARAMS.clone());
         let (conv1, conv2, dense3, dense4, dense5) = (
@@ -45,27 +49,27 @@ where
         );
 
         // Allocate read-only memory for the weights of the 1st three layers
-        let conv1_wgts_buf = conv1.create_wgts_buf(queue).unwrap();
-        let conv2_wgts_buf = conv2.create_wgts_buf(queue).unwrap();
-        let dense3_wgts_buf = dense3.create_wgts_buf(queue).unwrap();
+        let conv1_wgts_buf = conv1.create_wgts_buf(&queue).unwrap();
+        let conv2_wgts_buf = conv2.create_wgts_buf(&queue).unwrap();
+        let dense3_wgts_buf = dense3.create_wgts_buf(&queue).unwrap();
 
         // Allocate read-only memory for the input geometry on device with host-accessible pointer for
         // writing input from file
         let intermediary_flags = flags::MEM_READ_WRITE;
         let in_buf = conv1
-            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, queue)
+            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
             .unwrap();
         // Allocate read-write memory for the 1st feature map on device
-        let fm1_buf = conv2.create_in_buf(intermediary_flags, queue).unwrap();
+        let fm1_buf = conv2.create_in_buf(intermediary_flags, &queue).unwrap();
         // Allocate read-write memory for the 2nd feature map on device
-        let fm2_buf = conv2.create_out_buf(intermediary_flags, queue).unwrap();
+        let fm2_buf = conv2.create_out_buf(intermediary_flags, &queue).unwrap();
         // Allocate write-only memory for the dense (3rd) layer output on device with host pointer for reading
         let dense3_out_buf = dense3
-            .create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, queue)
+            .create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
             .unwrap();
 
         // Create the kernel for the 1st layer (Convolution + ReLU)
-        let conv_relu1 = Kernel::builder().program(program).name("conv_relu_1")
+        let conv_relu1 = Kernel::builder().program(&program).name("conv_relu_1")
             .queue(queue.clone())
             .global_work_size(conv1.gws_hint())
             // Input
@@ -75,7 +79,7 @@ where
             .arg(&conv1_wgts_buf).build().unwrap();
 
         // Create the kernel for the 2nd layer (Convolution + ReLU)
-        let conv_relu2 = Kernel::builder().program(program).name("conv_relu_2")
+        let conv_relu2 = Kernel::builder().program(&program).name("conv_relu_2")
             .queue(queue.clone())
             .global_work_size(conv2.gws_hint())
             // Input
@@ -85,7 +89,7 @@ where
             .arg(&conv2_wgts_buf).build().unwrap();
 
         // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
-        let dense3_kernel = Kernel::builder().program(program).name("mtx_mulf")
+        let dense3_kernel = Kernel::builder().program(&program).name("mtx_mulf")
             .queue(queue.clone())
             .global_work_size(dense3.gws_hint())
             // Input
@@ -102,6 +106,7 @@ where
         // Wait until all commands have finished running before returning.
         queue.finish().unwrap();
         ClassicNetwork {
+            queue,
             conv_relu1,
             conv_relu2,
             dense3_kernel,
@@ -122,19 +127,20 @@ where
     T: CoeffFloat,
 {
     /// Maps the input buffer, and runs the network, returning the result.
-    fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<f32> {
+    fn predict(&self, input_data: &[T]) -> Vec<f32> {
+        let q = &self.queue;
         unsafe {
             cl::map_to_buf(&self.in_buf, input_data).unwrap();
 
             // Enqueue the kernel for the 1st layer (Convolution + ReLU)
-            self.conv_relu1.cmd().queue(&queue).enq().unwrap();
+            self.conv_relu1.cmd().queue(q).enq().unwrap();
             // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
-            self.conv_relu2.cmd().queue(&queue).enq().unwrap();
+            self.conv_relu2.cmd().queue(q).enq().unwrap();
             // Enqueue the 3rd layer (fully-connected)
-            self.dense3_kernel.cmd().queue(&queue).enq().unwrap();
+            self.dense3_kernel.cmd().queue(q).enq().unwrap();
         }
         // Wait for all on-device calculations to finish
-        queue.finish().unwrap();
+        q.finish().unwrap();
 
         let dense3_out = relu(&unsafe { cl::read_buf(&self.dense3_out_buf).unwrap() });
 

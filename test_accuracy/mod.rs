@@ -11,10 +11,8 @@ mod class;
 mod util;
 
 use rusty_cnn::*;
-use cl_util as cl;
 use util::*;
 use class::Class;
-use ocl::Queue;
 use geometry::*;
 
 const INPUT_IMG_DIR: &str = "input/images";
@@ -43,11 +41,10 @@ pub fn main() {
         }
 
         // Initialize OpenCL and the network
-        let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mulf.cl"]).unwrap();
-        let net = ClassicNetwork::<f32>::new(&program, &queue);
+        let net = ClassicNetwork::<f32>::new();
 
         // Make classifications and measure accuracy using the original network
-        let (correct, total) = measure_accuracy(&net, &test_data, &queue);
+        let (correct, total) = measure_accuracy(&net, &test_data);
         let accuracy = correct as f32 / total as f32;
         println!("original network accuracy:");
         println!("{} ({}/{})", accuracy, correct, total);
@@ -66,11 +63,10 @@ pub fn main() {
         }
 
         // Initialize OpenCL and the sep-conv network
-        let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
-        let net = SepconvNetwork::<f32>::new(&program, &queue);
+        let net = SepconvNetwork::<f32>::new();
 
         // Make classifications and measure accuracy using the sep-conv network
-        let (correct, total) = measure_accuracy(&net, &test_data, &queue);
+        let (correct, total) = measure_accuracy(&net, &test_data);
         let accuracy = correct as f32 / total as f32;
         println!("sep-conv network accuracy:");
         println!("{} ({}/{})", accuracy, correct, total);
@@ -78,11 +74,7 @@ pub fn main() {
 }
 
 /// Returns (num_correct, num_total)
-fn measure_accuracy<F, P>(
-    predictor: &P,
-    test_data: &[(Vec<F>, Class)],
-    queue: &Queue,
-) -> (usize, usize)
+fn measure_accuracy<F, P>(predictor: &P, test_data: &[(Vec<F>, Class)]) -> (usize, usize)
 where
     F: CoeffFloat,
     P: Predict<F>,
@@ -90,7 +82,7 @@ where
     let mut num_correct = 0;
     let mut num_total = 0;
     for &(ref input_image, ref correct) in test_data.iter() {
-        let result = predictor.predict(input_image, queue);
+        let result = predictor.predict(input_image);
         //println!("{:?}", &result);
         let idx_of_correct = result
             .iter()

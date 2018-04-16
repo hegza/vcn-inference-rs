@@ -40,6 +40,7 @@ pub struct SepconvNetwork<T>
 where
     T: Coeff,
 {
+    queue: Queue,
     pub in_buf: Buffer<T>,
     krn_vconv1: Kernel,
     krn_hconv1: Kernel,
@@ -57,7 +58,9 @@ impl<T> SepconvNetwork<T>
 where
     T: CoeffFloat + ReadCsv,
 {
-    pub fn new(program: &Program, queue: &Queue) -> SepconvNetwork<T> {
+    pub fn new() -> SepconvNetwork<T> {
+        let (queue, program, _context) = cl::init(&["sepconv.cl", "mtx_mulf.cl"]).unwrap();
+
         let p = SEPCONV_HYPER_PARAMS.clone();
 
         // Load the weights for the convolutional layers
@@ -105,30 +108,30 @@ where
         );
 
         // Allocate read-only memory on-device for the weights buffers
-        let v1_wgts_buf = vconv1.create_wgts_buf(queue).unwrap();
-        let h1_wgts_buf = hconv1.create_wgts_buf(queue).unwrap();
-        let v2_wgts_buf = vconv2.create_wgts_buf(queue).unwrap();
-        let h2_wgts_buf = hconv2.create_wgts_buf(queue).unwrap();
-        let d3_wgts_buf = dense3.create_wgts_buf(queue).unwrap();
+        let v1_wgts_buf = vconv1.create_wgts_buf(&queue).unwrap();
+        let h1_wgts_buf = hconv1.create_wgts_buf(&queue).unwrap();
+        let v2_wgts_buf = vconv2.create_wgts_buf(&queue).unwrap();
+        let h2_wgts_buf = hconv2.create_wgts_buf(&queue).unwrap();
+        let d3_wgts_buf = dense3.create_wgts_buf(&queue).unwrap();
 
         // Allocate memory on-device for the I/O buffers
         let intermediary_flags = flags::MEM_READ_WRITE;
         let in_buf = vconv1
-            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, queue)
+            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
             .unwrap();
-        let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, queue).unwrap();
-        let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, queue).unwrap();
-        let mxp1_out_buf: Buffer<T> = mxp1.create_out_buf(intermediary_flags, queue).unwrap();
-        let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, queue).unwrap();
-        let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, queue).unwrap();
+        let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue).unwrap();
+        let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue).unwrap();
+        let mxp1_out_buf: Buffer<T> = mxp1.create_out_buf(intermediary_flags, &queue).unwrap();
+        let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, &queue).unwrap();
+        let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, &queue).unwrap();
         // HACK: needs to be ALLOC_HOST_PTR to allow for rearranging the weights on the CPU
         let mxp2_out_buf: Buffer<T> =
-            mxp2.create_out_buf(flags::MEM_READ_WRITE | flags::MEM_ALLOC_HOST_PTR, queue)
+            mxp2.create_out_buf(flags::MEM_READ_WRITE | flags::MEM_ALLOC_HOST_PTR, &queue)
                 .unwrap();
         let dense3_out_buf = cl::create_buffer::<T>(
             dense3.num_out(),
             flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
-            queue,
+            &queue,
         ).unwrap();
 
         // Write buffers to device
@@ -139,7 +142,7 @@ where
         d3_wgts_buf.write(dense3.weights()).enq().unwrap();
 
         // Create kernels
-        let b = ClKernelBuilder::new(program, queue.clone());
+        let b = ClKernelBuilder::new(&program, queue.clone());
         let krn_vconv1 = b.build_iow_kernel(
             "colConv",
             vconv1.gws_hint(),
@@ -189,7 +192,7 @@ where
         );
         let krn_dense3 = Kernel::builder()
             .name("mtx_mulf")
-            .program(program)
+            .program(&program)
             .queue(queue.clone())
             .global_work_size(dense3.gws_hint())
             .arg(&mxp2_out_buf)
@@ -199,6 +202,7 @@ where
             .unwrap();
 
         SepconvNetwork {
+            queue,
             in_buf,
             krn_vconv1,
             krn_hconv1,
@@ -219,22 +223,24 @@ where
     T: CoeffFloat + WriteLinesIntoFile,
 {
     // Maps the input buffer, and runs the network, returning the result.
-    fn predict(&self, input_data: &[T], queue: &Queue) -> Vec<f32> {
+    fn predict(&self, input_data: &[T]) -> Vec<f32> {
+        let q = &self.queue;
+
         /*let buf = */
         unsafe {
             cl::map_to_buf(&self.in_buf, input_data).unwrap();
 
-            self.krn_vconv1.cmd().queue(queue).enq().unwrap();
-            self.krn_hconv1.cmd().queue(queue).enq().unwrap();
-            self.krn_max_pool1.cmd().queue(queue).enq().unwrap();
-            self.krn_vconv2.cmd().queue(queue).enq().unwrap();
-            self.krn_hconv2.cmd().queue(queue).enq().unwrap();
-            self.krn_max_pool2.cmd().queue(queue).enq().unwrap();
-            self.krn_dense3.cmd().queue(queue).enq().unwrap();
+            self.krn_vconv1.cmd().queue(q).enq().unwrap();
+            self.krn_hconv1.cmd().queue(q).enq().unwrap();
+            self.krn_max_pool1.cmd().queue(q).enq().unwrap();
+            self.krn_vconv2.cmd().queue(q).enq().unwrap();
+            self.krn_hconv2.cmd().queue(q).enq().unwrap();
+            self.krn_max_pool2.cmd().queue(q).enq().unwrap();
+            self.krn_dense3.cmd().queue(q).enq().unwrap();
         }
 
         // Wait for all on-device calculations to finish
-        queue.finish().unwrap();
+        q.finish().unwrap();
 
         // Load the 3rd layer from the GPU and Run ReLU on it
         let dense3_out = relu(&unsafe { cl::read_buf(&self.dense3_out_buf).unwrap() });

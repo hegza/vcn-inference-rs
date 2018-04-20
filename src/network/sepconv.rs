@@ -1,11 +1,9 @@
 use super::*;
 use ocl::SpatialDims;
 use geometry::*;
-use ndarray::Array;
-use ndarray::ShapeBuilder; // Needed for .strides() method
-use ndarray::arr2;
+use ndarray::{Array, ShapeBuilder, arr2};
 
-const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
+pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     // TODO: revisit the names here
     side: 96,
     hconv_blockdim_y: 4,
@@ -22,7 +20,7 @@ const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
 };
 
 #[derive(Clone, Debug)]
-struct SepconvHyperParams {
+pub struct SepconvHyperParams {
     pub side: usize,
     pub hconv_blockdim_y: usize,
     pub columns_blockdim_x: usize,
@@ -59,43 +57,19 @@ impl<T> SepconvNetwork<T>
 where
     T: CoeffFloat + ReadCsv,
 {
-    pub fn new() -> SepconvNetwork<T> {
-        let p = SEPCONV_HYPER_PARAMS.clone();
-
-        // Detect overflow of local-work-size (limit: 256)
-        let platform = ocl::Platform::default();
-        let device = ocl::Device::first(platform).unwrap();
-        let (hconv1_blockdim_y, mxp1_block_dim) = match device
-            .info(ocl::enums::DeviceInfo::MaxWorkGroupSize)
-            .unwrap()
-        {
-            ocl::enums::DeviceInfoResult::MaxWorkGroupSize(max_wgs) => {
-                // Max-work-size is enough for all the calculations here
-                if max_wgs > 256 {
-                    (p.hconv_blockdim_y, p.mp1_block_dim)
-                }
-                // HACK: Max-work-size is not enough, use halved dimensions for hconv1 and mxp 1
-                else {
-                    warn!("Device max-work-size is less than 256. Implementation will use halved dimensions for horizontal convolution #1 and max pool #1.");
-                    (p.hconv_blockdim_y / 2, p.mp1_block_dim / 2)
-                }
-            }
-            e => panic!("ocl library returned invalid enum {:?}", e),
-        };
-
-        let (queue, program, _context) = cl::init(
-            &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
-            &[
-                ("WIDTH", p.side as i32),
-                ("HEIGHT", p.side as i32),
-                ("MP1_BLOCK_DIM", mxp1_block_dim as i32),
-                ("MP2_BLOCK_DIM", p.mp2_block_dim as i32),
-                ("ROWS_BLOCKDIM_Y", hconv1_blockdim_y as i32),
-                ("INJECT_RELU_AFTER_MXP", 1 as i32),
-            ],
-            platform,
-        ).expect(COMPILE_ERR_MSG);
-
+    pub fn create_layers(
+        p: &SepconvHyperParams,
+    ) -> (
+        VConvLayer<T>,
+        HConvLayer<T>,
+        MaxpoolLayer,
+        VConvLayer<T>,
+        HConvLayer<T>,
+        MaxpoolLayer,
+        DenseLayer<T>,
+        DenseLayer<T>,
+        DenseLayer<T>,
+    ) {
         // Load the weights for the convolutional layers
         let v1_wgts = T::read_csv(&format!("{}/vcr1-f32.csv", WEIGHTS_DIR));
         let h1_wgts = T::read_csv(&format!("{}/hcr1-f32.csv", WEIGHTS_DIR));
@@ -139,6 +113,57 @@ where
             CLASSIC_HYPER_PARAMS.num_output_classes,
             dense5_wgts,
         );
+        (
+            vconv1,
+            hconv1,
+            mxp1,
+            vconv2,
+            hconv2,
+            mxp2,
+            dense3,
+            dense4,
+            dense5,
+        )
+    }
+    pub fn new() -> SepconvNetwork<T> {
+        let p = SEPCONV_HYPER_PARAMS.clone();
+
+        // Detect overflow of local-work-size (limit: 256)
+        let platform = ocl::Platform::default();
+        let device = ocl::Device::first(platform).unwrap();
+        let (hconv1_blockdim_y, mxp1_block_dim) = match device
+            .info(ocl::enums::DeviceInfo::MaxWorkGroupSize)
+            .unwrap()
+        {
+            ocl::enums::DeviceInfoResult::MaxWorkGroupSize(max_wgs) => {
+                // Max-work-size is enough for all the calculations here
+                if max_wgs > 256 {
+                    (p.hconv_blockdim_y, p.mp1_block_dim)
+                }
+                // HACK: Max-work-size is not enough, use halved dimensions for hconv1 and mxp 1
+                else {
+                    warn!("Device max-work-size is less than 256. Implementation will use halved dimensions for horizontal convolution #1 and max pool #1.");
+                    (p.hconv_blockdim_y / 2, p.mp1_block_dim / 2)
+                }
+            }
+            e => panic!("ocl library returned invalid enum {:?}", e),
+        };
+
+        let (queue, program, _context) = cl::init(
+            &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
+            &[
+                ("WIDTH", p.side as i32),
+                ("HEIGHT", p.side as i32),
+                ("MP1_BLOCK_DIM", mxp1_block_dim as i32),
+                ("MP2_BLOCK_DIM", p.mp2_block_dim as i32),
+                ("ROWS_BLOCKDIM_Y", hconv1_blockdim_y as i32),
+                ("INJECT_RELU_AFTER_MXP", 1 as i32),
+            ],
+            platform,
+        ).expect(COMPILE_ERR_MSG);
+
+        let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3, dense4, dense5) =
+            SepconvNetwork::create_layers(&p);
 
         // Allocate read-only memory on-device for the weights buffers
         let v1_wgts_buf = vconv1.create_wgts_buf(&queue).unwrap();

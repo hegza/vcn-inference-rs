@@ -32,6 +32,44 @@ impl<T> ClassicNetwork<T>
 where
     T: CoeffFloat + ReadBinFromFile,
 {
+    pub fn create_layers(params: &ClassicHyperParams) -> Layers<T> {
+        let params = NetworkParams::new(params.clone());
+        // Create a representation of the 1st convolutional layer with weights from a file
+        let conv1 = params.create_conv(
+            1,
+            T::read_bin_from_file(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR)),
+        );
+        // Create a representation of the 2nd convolutional layer with weights from a file
+        let conv2 = params.create_conv(
+            2,
+            T::read_bin_from_file(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR)),
+        );
+        // Create the representations of the fully-connected layers
+        let dense3 = params.create_dense(
+            3,
+            T::read_bin_from_file(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR)),
+        );
+        let dense4 = params.create_dense(
+            4,
+            T::read_bin_from_file(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR)),
+        );
+        let dense5 = params.create_dense(
+            5,
+            T::read_bin_from_file(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR)),
+        );
+
+        // Verify that I/O dimensions match between layers
+        verify_network_dimensions(&[&conv1, &conv2, &dense3, &dense4, &dense5]);
+
+        Layers {
+            conv1,
+            conv2,
+            dense3,
+            dense4,
+            dense5,
+        }
+    }
+
     /// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have
     /// finished running. Note that you must call upload_buffers before the network is run.
     pub fn new() -> ClassicNetwork<T> {
@@ -43,7 +81,7 @@ where
         ).unwrap();
 
         // Create the network representation from network hyper-parameters
-        let layers = create_layers(CLASSIC_HYPER_PARAMS.clone());
+        let layers = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
         let (conv1, conv2, dense3, dense4, dense5) = (
             layers.conv1,
             layers.conv2,
@@ -153,47 +191,6 @@ where
 
         // Run the 5th layer (fully-connected)
         softmax(&self.dense5.mtx_mul(&dense4_out))
-    }
-}
-
-pub fn create_layers<T>(params: ClassicHyperParams) -> Layers<T>
-where
-    T: Coeff + ReadBinFromFile,
-{
-    let params = NetworkParams::new(params);
-    // Create a representation of the 1st convolutional layer with weights from a file
-    let conv1 = params.create_conv(
-        1,
-        T::read_bin_from_file(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR)),
-    );
-    // Create a representation of the 2nd convolutional layer with weights from a file
-    let conv2 = params.create_conv(
-        2,
-        T::read_bin_from_file(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR)),
-    );
-    // Create the representations of the fully-connected layers
-    let dense3 = params.create_dense(
-        3,
-        T::read_bin_from_file(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR)),
-    );
-    let dense4 = params.create_dense(
-        4,
-        T::read_bin_from_file(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR)),
-    );
-    let dense5 = params.create_dense(
-        5,
-        T::read_bin_from_file(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR)),
-    );
-
-    // Verify that I/O dimensions match between layers
-    verify_network_dimensions(&[&conv1, &conv2, &dense3, &dense4, &dense5]);
-
-    Layers {
-        conv1,
-        conv2,
-        dense3,
-        dense4,
-        dense5,
     }
 }
 

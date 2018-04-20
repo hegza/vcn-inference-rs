@@ -1,4 +1,4 @@
-// TODO: ifdef INJECT_RELU_AFTER_MXP
+// Compile with -D INJECT_RELU_AFTER_MXP for ReLU
 
 // Update test_mxp.cl if this is changed
 __kernel void max_pool_1(__global const float *src, __global float *dst) {
@@ -27,10 +27,11 @@ __kernel void max_pool_1(__global const float *src, __global float *dst) {
         if (locMax < sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1])
             locMax = sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1];
 
-        // With ReLU
+#ifdef INJECT_RELU_AFTER_MXP
         dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax > 0? locMax : 0;
-        // Without ReLU
-        //dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax;
+#else
+        dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax;
+#endif
     }
 }
 
@@ -61,9 +62,10 @@ __kernel void max_pool_2(__global const float *src, __global float *dst) {
         if (locMax < sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1])
             locMax = sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1];
 
-        // With ReLU
+#ifdef INJECT_RELU_AFTER_MXP
         dst[get_local_id(1) * WIDTH / 4 + get_local_id(0)] = locMax > 0 ? locMax : 0;
-        // Without ReLU
-        //dst[get_local_id(1) * WIDTH / 4 + get_local_id(0)] = locMax;
+#else
+        dst[get_local_id(1) * WIDTH / 4 + get_local_id(0)] = locMax;
+#endif
     }
 }

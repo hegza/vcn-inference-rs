@@ -91,6 +91,7 @@ where
                 ("MP1_BLOCK_DIM", mxp1_block_dim as i32),
                 ("MP2_BLOCK_DIM", p.mp2_block_dim as i32),
                 ("ROWS_BLOCKDIM_Y", hconv1_blockdim_y as i32),
+                ("INJECT_RELU_AFTER_MXP", 1 as i32),
             ],
             platform,
         ).expect(COMPILE_ERR_MSG);

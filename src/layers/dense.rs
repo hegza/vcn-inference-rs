@@ -4,6 +4,7 @@ use std::ops::Deref;
 use ocl::SpatialDims;
 
 /// A complete descriptor for a fully-connected layer
+#[derive(Clone)]
 pub struct DenseLayer<T>
 where
     T: Coeff,

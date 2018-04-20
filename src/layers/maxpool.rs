@@ -4,6 +4,7 @@ use super::*;
 use std::ops::Deref;
 use ocl::SpatialDims;
 
+#[derive(Clone)]
 pub struct MaxpoolLayer {
     in_shape: ImageGeometry,
     out_shape: ImageGeometry,

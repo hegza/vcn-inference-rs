@@ -5,11 +5,13 @@ use std::ops::Deref;
 use ocl::SpatialDims;
 
 /// A complete descriptor for the vertical (column) component of a separable convolutional layer
+#[derive(Clone)]
 pub struct VConvLayer<T>(SepconvLayer<T>)
 where
     T: Coeff;
 
 /// A complete descriptor for the horizontal (row) component of a separable convolutional layer
+#[derive(Clone)]
 pub struct HConvLayer<T>(SepconvLayer<T>)
 where
     T: Coeff;
@@ -88,6 +90,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct SepconvLayer<T>
 where
     T: Coeff,

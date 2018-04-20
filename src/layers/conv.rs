@@ -5,6 +5,7 @@ use std::ops::Deref;
 use ocl::SpatialDims;
 
 /// A complete descriptor for a convolutional layer
+#[derive(Clone)]
 pub struct ConvLayer<T>
 where
     T: Coeff,

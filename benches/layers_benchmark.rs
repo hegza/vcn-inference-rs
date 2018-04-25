@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate criterion;
+extern crate ndarray;
 extern crate ocl;
 extern crate rusty_cnn;
 
@@ -20,6 +21,7 @@ fn per_layer_benchmark(c: &mut Criterion) {
     bench_layer2(net.conv2, c);
     bench_layer3_cl_gpu(net.dense3.clone(), c);
     bench_layer3_cl_cpu(net.dense3.clone(), c);
+    bench_layer3_host_ndarray(net.dense3.clone(), c);
     bench_layer3_host(net.dense3, c);
     bench_layer4(net.dense4, c);
     bench_layer5(net.dense5, c);
@@ -161,6 +163,22 @@ fn bench_layer3_host(dense3: DenseLayer<f32>, c: &mut Criterion) {
     )));
     c.bench_function("layer 3 - host mtxmul", move |b| {
         b.iter(|| dense3.mtx_mul(&input_data))
+    });
+}
+
+fn bench_layer3_host_ndarray(dense3: DenseLayer<f32>, cr: &mut Criterion) {
+    use ndarray::*;
+    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
+        "{}/orig-f32-all-layers/fm2.f",
+        BASELINE_DIR
+    )));
+    let m = dense3.num_out();
+    let n = dense3.num_in();
+    let a = Array2::<f32>::from_shape_vec((m, n), dense3.weights().clone()).unwrap();
+    let k = 1;
+    let b = Array2::<f32>::from_shape_vec((n, k), input_data).unwrap();
+    cr.bench_function("layer 3 - host ndarray mtxmul", move |be| {
+        be.iter(|| a.dot(&b))
     });
 }
 

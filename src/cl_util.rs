@@ -5,7 +5,7 @@ use ocl::builders::*;
 use ocl::enums::*;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
 
-const PROFILING: bool = true;
+const PROFILING: bool = false;
 const KERNEL_PATH: &str = "src/cl";
 
 /// Define which platform and device(s) to use. Create a context, queue, and program.

@@ -226,7 +226,7 @@ pub fn create_standalone_kernel<L: ClWeightedLayer<T>, T: Coeff>(
     Ok((kernel, out_buf, queue))
 }
 
-/// Creates a standalone kernel for benchmarking on CPU. Uploads input data. Returns only after all commands have finished. Note that profiling is turned on by default.
+/// Creates a standalone kernel for benchmarking on CPU. Uploads input data. Returns only after all commands have finished. Note that profiling is turned off by default.
 pub fn create_standalone_kernel_cpu<L: ClWeightedLayer<T>, T: Coeff>(
     layer: &L,
     kernel_func: &str,
@@ -254,7 +254,7 @@ pub fn create_standalone_kernel_cpu<L: ClWeightedLayer<T>, T: Coeff>(
     let program = program.build(&context)?;
 
     // Create the queue for the default device
-    const PROFILING: bool = true;
+    const PROFILING: bool = false;
     let profile_flag = match PROFILING {
         true => Some(flags::CommandQueueProperties::PROFILING_ENABLE),
         false => None,

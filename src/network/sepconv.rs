@@ -163,10 +163,7 @@ where
         let mxp1_out_buf: Buffer<T> = mxp1.create_out_buf(intermediary_flags, &queue).unwrap();
         let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, &queue).unwrap();
         let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, &queue).unwrap();
-        // HACK: needs to be ALLOC_HOST_PTR to allow for rearranging the weights on the CPU
-        let mxp2_out_buf: Buffer<T> =
-            mxp2.create_out_buf(flags::MEM_READ_WRITE | flags::MEM_ALLOC_HOST_PTR, &queue)
-                .unwrap();
+        let mxp2_out_buf: Buffer<T> = mxp2.create_out_buf(intermediary_flags, &queue).unwrap();
         let dense3_out_buf = dense3
             .create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
             .unwrap();

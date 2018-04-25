@@ -18,7 +18,8 @@ fn per_layer_benchmark(c: &mut Criterion) {
 
     bench_layer1(net.conv1, c);
     bench_layer2(net.conv2, c);
-    bench_layer3_cl(net.dense3.clone(), c);
+    bench_layer3_cl_gpu(net.dense3.clone(), c);
+    bench_layer3_cl_cpu(net.dense3.clone(), c);
     bench_layer3_host(net.dense3, c);
     bench_layer4(net.dense4, c);
     bench_layer5(net.dense5, c);
@@ -130,13 +131,25 @@ fn bench_layer2(conv2: ConvLayer<f32>, c: &mut Criterion) {
     });
 }
 
-fn bench_layer3_cl(dense3: DenseLayer<f32>, c: &mut Criterion) {
+fn bench_layer3_cl_gpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
     let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
         "{}/orig-f32-all-layers/fm2.f",
         BASELINE_DIR
     )));
     let (kernel, _, queue) = create_standalone_kernel(&dense3, "mtx_mul_f32", &input_data).unwrap();
-    c.bench_function("layer 3 - cl mtxmul", move |b| {
+    c.bench_function("layer 3 - cl gpu mtxmul", move |b| {
+        b.iter(|| run_kernel_wait(&kernel, &queue).unwrap())
+    });
+}
+
+fn bench_layer3_cl_cpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
+    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
+        "{}/orig-f32-all-layers/fm2.f",
+        BASELINE_DIR
+    )));
+    let (kernel, _, queue) =
+        create_standalone_kernel_cpu(&dense3, "mtx_mul_f32", &input_data).unwrap();
+    c.bench_function("layer 3 - cl cpu mtxmul", move |b| {
         b.iter(|| run_kernel_wait(&kernel, &queue).unwrap())
     });
 }

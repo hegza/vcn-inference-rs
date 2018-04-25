@@ -226,6 +226,67 @@ pub fn create_standalone_kernel<L: ClWeightedLayer<T>, T: Coeff>(
     Ok((kernel, out_buf, queue))
 }
 
+/// Creates a standalone kernel for benchmarking on CPU. Uploads input data. Returns only after all commands have finished. Note that profiling is turned on by default.
+pub fn create_standalone_kernel_cpu<L: ClWeightedLayer<T>, T: Coeff>(
+    layer: &L,
+    kernel_func: &str,
+    input_data: &[T],
+) -> ocl::Result<(Kernel, Buffer<T>, Queue)> {
+    // Custom-initialize OpenCL
+    let platform = ocl::Platform::default();
+    let devices = ocl::Device::list(platform, Some(ocl::flags::DeviceType::CPU))?;
+    let device = devices.first().unwrap();
+
+    let context = ocl::Context::builder()
+        .platform(platform)
+        .devices(device)
+        .build()?;
+
+    let mut program = ocl::Program::builder();
+    program
+        .devices(device)
+        .cmplr_opt("-I./src/cl")
+        .cmplr_opt("-cl-std=CL1.2");
+    // Input the kernel source files
+    const KERNEL_PATH: &str = "src/cl";
+    program.src_file(&format!("{}/conv_relu.cl", KERNEL_PATH));
+    program.src_file(&format!("{}/mtx_mul.cl", KERNEL_PATH));
+    let program = program.build(&context)?;
+
+    // Create the queue for the default device
+    const PROFILING: bool = true;
+    let profile_flag = match PROFILING {
+        true => Some(flags::CommandQueueProperties::PROFILING_ENABLE),
+        false => None,
+    };
+    let queue = Queue::new(&context, *device, profile_flag)?;
+
+    let wgts_buf = layer.create_wgts_buf(&queue);
+    let (in_buf, out_buf) = layer.create_io_bufs(
+        flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
+        flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
+        &queue,
+    );
+
+    let kernel = Kernel::builder().program(&program).name(kernel_func)
+        .queue(queue.clone())
+        .global_work_size(layer.gws_hint())
+        // Input
+        .arg(&in_buf)
+        // Output
+        .arg(&out_buf)
+        .arg(&wgts_buf).build().unwrap();
+
+    // Write the weights and input to the global memory of the device
+    wgts_buf.write(layer.weights()).enq().unwrap();
+    unsafe {
+        cl::map_to_buf(&in_buf, input_data).unwrap();
+    }
+    queue.finish().unwrap();
+
+    Ok((kernel, out_buf, queue))
+}
+
 #[derive(Clone, Debug)]
 pub struct ClassicHyperParams {
     pub source_side: usize,

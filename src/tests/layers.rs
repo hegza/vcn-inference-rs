@@ -129,7 +129,7 @@ fn test_mxp() {
         flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
         flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
         &queue,
-    ).unwrap();
+    );
     let mxp_krn = Kernel::builder()
         .program(&program)
         .name("max_pool")

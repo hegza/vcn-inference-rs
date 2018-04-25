@@ -155,25 +155,15 @@ where
 
         // Allocate memory on-device for the I/O buffers
         let intermediary_flags = flags::MEM_READ_WRITE;
-        let in_buf = vconv1
-            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
-            .unwrap();
-        let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue).unwrap();
-        let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue).unwrap();
-        let mxp1_out_buf: Buffer<T> = mxp1.create_out_buf(intermediary_flags, &queue).unwrap();
-        let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, &queue).unwrap();
-        let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, &queue).unwrap();
-        let mxp2_out_buf: Buffer<T> = mxp2.create_out_buf(intermediary_flags, &queue).unwrap();
-        let dense3_out_buf = dense3
-            .create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
-            .unwrap();
-
-        // Write buffers to device
-        v1_wgts_buf.write(vconv1.weights()).enq().unwrap();
-        h1_wgts_buf.write(hconv1.weights()).enq().unwrap();
-        v2_wgts_buf.write(vconv2.weights()).enq().unwrap();
-        h2_wgts_buf.write(hconv2.weights()).enq().unwrap();
-        d3_wgts_buf.write(dense3.weights()).enq().unwrap();
+        let in_buf = vconv1.create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
+        let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue);
+        let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue);
+        let mxp1_out_buf: Buffer<T> = mxp1.create_out_buf(intermediary_flags, &queue);
+        let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, &queue);
+        let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, &queue);
+        let mxp2_out_buf: Buffer<T> = mxp2.create_out_buf(intermediary_flags, &queue);
+        let dense3_out_buf =
+            dense3.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
 
         // Create kernels
         let b = ClKernelBuilder::new(&program, queue.clone());

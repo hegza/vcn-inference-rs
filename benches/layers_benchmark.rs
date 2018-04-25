@@ -55,14 +55,11 @@ fn bench_sepconv1(c: &mut Criterion) {
 
     // Allocate memory on-device for the I/O buffers
     let intermediary_flags = flags::MEM_READ_WRITE;
-    let in_buf = vconv1
-        .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
-        .unwrap();
-    let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue).unwrap();
-    let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue).unwrap();
+    let in_buf = vconv1.create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
+    let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue);
+    let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue);
     let mxp1_out_buf: Buffer<f32> =
-        mxp1.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
-            .unwrap();
+        mxp1.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
 
     // Write buffers to device
     v1_wgts_buf.write(vconv1.weights()).enq().unwrap();

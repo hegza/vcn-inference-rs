@@ -94,17 +94,14 @@ where
         // Allocate read-only memory for the input geometry on device with host-accessible pointer for
         // writing input from file
         let intermediary_flags = flags::MEM_READ_WRITE;
-        let in_buf = conv1
-            .create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
-            .unwrap();
+        let in_buf = conv1.create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
         // Allocate read-write memory for the 1st feature map on device
-        let fm1_buf = conv2.create_in_buf(intermediary_flags, &queue).unwrap();
+        let fm1_buf = conv2.create_in_buf(intermediary_flags, &queue);
         // Allocate read-write memory for the 2nd feature map on device
-        let fm2_buf = conv2.create_out_buf(intermediary_flags, &queue).unwrap();
+        let fm2_buf = conv2.create_out_buf(intermediary_flags, &queue);
         // Allocate write-only memory for the dense (3rd) layer output on device with host pointer for reading
-        let dense3_out_buf = dense3
-            .create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
-            .unwrap();
+        let dense3_out_buf =
+            dense3.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
 
         // Create the kernel for the 1st layer (Convolution + ReLU)
         let conv_relu1 = Kernel::builder().program(&program).name("conv_relu_1")
@@ -135,11 +132,6 @@ where
             // Output
             .arg(&dense3_out_buf)
             .arg(&dense3_wgts_buf).build().unwrap();
-
-        // Write the weights of the 1st three layers to the global memory of the device
-        conv1_wgts_buf.write(conv1.weights()).enq().unwrap();
-        conv2_wgts_buf.write(conv2.weights()).enq().unwrap();
-        dense3_wgts_buf.write(dense3.weights()).enq().unwrap();
 
         // Wait until all commands have finished running before returning.
         queue.finish().unwrap();
@@ -213,7 +205,7 @@ pub fn create_standalone_kernel<L: ClWeightedLayer<T>, T: Coeff>(
         flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
         flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
         &queue,
-    )?;
+    );
 
     let kernel = Kernel::builder().program(&program).name(kernel_func)
         .queue(queue.clone())

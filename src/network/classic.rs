@@ -74,11 +74,7 @@ where
     /// finished running. Note that you must call upload_buffers before the network is run.
     pub fn new() -> ClassicNetwork<T> {
         // Initialize OpenCL
-        let (queue, program, _context) = cl::init(
-            &["conv_relu.cl", "mtx_mul.cl"],
-            &[],
-            ocl::Platform::default(),
-        ).unwrap();
+        let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 
         // Create the network representation from network hyper-parameters
         let layers = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
@@ -91,9 +87,9 @@ where
         );
 
         // Allocate read-only memory for the weights of the 1st three layers
-        let conv1_wgts_buf = conv1.create_wgts_buf(&queue).unwrap();
-        let conv2_wgts_buf = conv2.create_wgts_buf(&queue).unwrap();
-        let dense3_wgts_buf = dense3.create_wgts_buf(&queue).unwrap();
+        let conv1_wgts_buf = conv1.create_wgts_buf(&queue);
+        let conv2_wgts_buf = conv2.create_wgts_buf(&queue);
+        let dense3_wgts_buf = dense3.create_wgts_buf(&queue);
 
         // Allocate read-only memory for the input geometry on device with host-accessible pointer for
         // writing input from file
@@ -147,6 +143,7 @@ where
 
         // Wait until all commands have finished running before returning.
         queue.finish().unwrap();
+
         ClassicNetwork {
             queue,
             conv_relu1,
@@ -209,13 +206,9 @@ pub fn create_standalone_kernel<L: ClWeightedLayer<T>, T: Coeff>(
     input_data: &[T],
 ) -> ocl::Result<(Kernel, Buffer<T>, Queue)> {
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init(
-        &["conv_relu.cl", "mtx_mul.cl"],
-        &[],
-        ocl::Platform::default(),
-    ).unwrap();
+    let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 
-    let wgts_buf = layer.create_wgts_buf(&queue)?;
+    let wgts_buf = layer.create_wgts_buf(&queue);
     let (in_buf, out_buf) = layer.create_io_bufs(
         flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
         flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,

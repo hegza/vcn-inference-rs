@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 use util::*;
 use ocl;
-use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
+use ocl::builders::*;
 use ocl::enums::*;
+use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
 
 const PROFILING: bool = true;
 const KERNEL_PATH: &str = "src/cl";
@@ -11,8 +12,8 @@ const KERNEL_PATH: &str = "src/cl";
 pub fn init(
     kernel_files: &[&str],
     addt_cmplr_defs: &[(&str, i32)],
-    platform: Platform,
 ) -> ocl::Result<(Queue, Program, Context)> {
+    let platform = ocl::Platform::default();
     let devices = ocl::Device::list_all(&platform).unwrap();
     let device_names: Vec<String> = devices
         .iter()
@@ -87,6 +88,22 @@ pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<
 
     mem_map.unmap().enq()?;
     Ok(())
+}
+
+/// Returns the max work-group-size of the primary OpenCL device.
+pub fn max_wgs(device: Option<Device>) -> usize {
+    let device = match device {
+        Some(d) => d,
+        None => {
+            let platform = Platform::default();
+            Device::first(platform).unwrap()
+        }
+    };
+
+    match device.info(DeviceInfo::MaxWorkGroupSize).unwrap() {
+        DeviceInfoResult::MaxWorkGroupSize(max_wgs) => max_wgs,
+        e => panic!("ocl library returned invalid enum {:?}", e),
+    }
 }
 
 fn describe_device(device: &Device) -> ocl::Result<()> {

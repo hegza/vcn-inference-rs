@@ -1,4 +1,9 @@
-// Compile with -D INJECT_RELU_AFTER_MXP for ReLU
+// Compiled with:
+//  #define WIDTH                   i32
+//  #define HEIGHT                  i32
+//  #define MP1_BLOCK_DIM           i32
+//  #define MP2_BLOCK_DIM           i32
+//  #define INJECT_RELU_AFTER_MXP
 
 // Update test_mxp.cl if this is changed
 __kernel void max_pool_1(__global const float *src, __global float *dst) {

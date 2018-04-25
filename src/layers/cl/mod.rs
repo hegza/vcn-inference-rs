@@ -21,7 +21,7 @@ where
     fn create_out_buf(&self, flags: flags::MemFlags, queue: &Queue) -> OclResult<Buffer<T>> {
         trace!(
             "ClLayer::create_out_buf with {} elements. Flags: {:?}.",
-            self.num_in(),
+            self.num_out(),
             flags
         );
         cl::create_buffer::<T>(self.num_out(), flags, queue)
@@ -44,13 +44,13 @@ where
     T: Coeff,
 {
     /// Create a read-only buffer on-device for weights
-    fn create_wgts_buf(&self, queue: &Queue) -> OclResult<Buffer<T>> {
+    fn create_wgts_buf(&self, queue: &Queue) -> Buffer<T> {
         trace!(
             "ClLayer::create_wgts_buf with {} elements. Flags: {:?}.",
             self.num_in(),
             flags::MEM_READ_ONLY
         );
-        cl::create_buffer::<T>(self.num_weights(), flags::MEM_READ_ONLY, queue)
+        cl::create_buffer::<T>(self.num_weights(), flags::MEM_READ_ONLY, queue).unwrap()
     }
 }
 
@@ -123,6 +123,7 @@ impl<'p> ClKernelBuilder<'p> {
             .build()
             .unwrap()
     }
+    // TODO: the gws-parameter is redundant
     pub fn build_iow_kernel<T>(
         &self,
         kernel_name: &str,
@@ -157,20 +158,15 @@ impl<'p> ClKernelBuilder<'p> {
             local_work_size.to_len()
         );
 
-        // HACK: check that there are no work-group overshoots, do not panic to get more diagnostic info from OpenCL
-        use ocl::enums::{DeviceInfo, DeviceInfoResult};
-        let platform = Platform::default();
-        let device = Device::first(platform).unwrap();
-        if let DeviceInfoResult::MaxWorkGroupSize(max_wgs) =
-            device.info(DeviceInfo::MaxWorkGroupSize).unwrap()
-        {
-            if max_wgs < local_work_size.to_len() {
-                error!(
-                    "local work size is larger than maximum work-group-size: {} > {}",
-                    local_work_size.to_len(),
-                    max_wgs
-                );
-            }
+        // Last minute check that there are no work-group overshoots, do not panic to get more
+        // diagnostic info from OpenCL.
+        let max_wgs = cl::max_wgs(None);
+        if max_wgs < local_work_size.to_len() {
+            error!(
+                "local work size is larger than maximum work-group-size: {} > {}",
+                local_work_size.to_len(),
+                max_wgs
+            );
         }
 
         let mut builder = KernelBuilder::new();

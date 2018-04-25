@@ -1,6 +1,11 @@
+// Compiled with:
+//  #define WIDTH                   i32
+//  #define HEIGHT                  i32
+//  #define ROWS_BLOCKDIM_Y         i32
+//  #define ROWS_2_BLOCKDIM_Y       i32
+
 #define ROWS_BLOCKDIM_X 96
 #define ROWS_2_BLOCKDIM_X 48
-#define ROWS_2_BLOCKDIM_Y 4
 
 #define COLUMNS_BLOCKDIM_X 32
 #define COLUMNS_BLOCKDIM_Y 8

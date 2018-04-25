@@ -5,7 +5,7 @@ extern crate rusty_cnn;
 
 use criterion::Criterion;
 use rusty_cnn::*;
-use ocl::{flags, Buffer, Device, Platform, SpatialDims, enums::*};
+use ocl::{flags, Buffer, SpatialDims};
 use cl_util as cl;
 
 const SAMPLE_SIZE: usize = 150;
@@ -26,8 +26,11 @@ fn per_layer_benchmark(c: &mut Criterion) {
 }
 
 fn bench_sepconv1(c: &mut Criterion) {
-    let p = &SEPCONV_HYPER_PARAMS;
-    // TODO: find common code between SepconvNetwork implementation and this, and refactor
+    let mut p = SEPCONV_HYPER_PARAMS.clone();
+
+    // HACK: Reduce dimensions of overshot layers
+    SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
+
     let (vconv1, hconv1, mxp1, ..) = SepconvNetwork::<f32>::create_layers(&p);
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
         "{}/sepconv-f32-xcorr/in.bin",
@@ -35,37 +38,20 @@ fn bench_sepconv1(c: &mut Criterion) {
     )));
 
     // Init OpenCL
-    let platform = Platform::default();
-    let device = Device::first(platform).unwrap();
-    let (hconv1_blockdim_y, mxp1_block_dim) =
-        match device.info(DeviceInfo::MaxWorkGroupSize).unwrap() {
-            DeviceInfoResult::MaxWorkGroupSize(max_wgs) => {
-                // Max-work-size is enough for all the calculations here
-                if max_wgs > 256 {
-                    (p.hconv_blockdim_y, p.mp1_block_dim)
-                }
-                // HACK: Max-work-size is not enough, use halved dimensions for hconv1 and mxp 1
-                else {
-                    (p.hconv_blockdim_y / 2, p.mp1_block_dim / 2)
-                }
-            }
-            e => panic!("ocl library returned invalid enum {:?}", e),
-        };
     let (queue, program, _context) = cl::init(
         &["sepconv.cl", "max_pool.cl"],
         &[
             ("WIDTH", p.side as i32),
             ("HEIGHT", p.side as i32),
-            ("MP1_BLOCK_DIM", mxp1_block_dim as i32),
+            ("MP1_BLOCK_DIM", p.mp1_block_dim as i32),
             ("MP2_BLOCK_DIM", p.mp2_block_dim as i32),
-            ("ROWS_BLOCKDIM_Y", hconv1_blockdim_y as i32),
+            ("ROWS_BLOCKDIM_Y", p.hconv1_blockdim_y as i32),
             ("INJECT_RELU_AFTER_MXP", 1 as i32),
         ],
-        platform,
     ).expect("cannot init OpenCL");
 
-    let v1_wgts_buf = vconv1.create_wgts_buf(&queue).unwrap();
-    let h1_wgts_buf = hconv1.create_wgts_buf(&queue).unwrap();
+    let v1_wgts_buf = vconv1.create_wgts_buf(&queue);
+    let h1_wgts_buf = hconv1.create_wgts_buf(&queue);
 
     // Allocate memory on-device for the I/O buffers
     let intermediary_flags = flags::MEM_READ_WRITE;
@@ -78,12 +64,16 @@ fn bench_sepconv1(c: &mut Criterion) {
         mxp1.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue)
             .unwrap();
 
+    // Write buffers to device
+    v1_wgts_buf.write(vconv1.weights()).enq().unwrap();
+    h1_wgts_buf.write(hconv1.weights()).enq().unwrap();
+
     // Build OpenCL-kernels
     let b = ClKernelBuilder::new(&program, queue.clone());
     let krn_vconv1 = b.build_iow_kernel(
         "col_conv",
         vconv1.gws_hint(),
-        SpatialDims::Three(p.columns_blockdim_x, p.columns_blockdim_y, 1),
+        SpatialDims::Three(p.vconv1_blockdim_x, p.vconv1_blockdim_y, 1),
         &in_buf,        // In
         &conv1_mid_buf, // Out
         &v1_wgts_buf,   // Weights
@@ -91,7 +81,7 @@ fn bench_sepconv1(c: &mut Criterion) {
     let krn_hconv1 = b.build_iow_kernel(
         "row_conv",
         hconv1.gws_hint(),
-        SpatialDims::Three(p.side, hconv1_blockdim_y, 1),
+        SpatialDims::Three(p.side, p.hconv1_blockdim_y, 1),
         &conv1_mid_buf, // In
         &conv1_out_buf, // Out
         &h1_wgts_buf,   // Weights
@@ -99,7 +89,7 @@ fn bench_sepconv1(c: &mut Criterion) {
     let krn_max_pool1 = b.build_io_kernel(
         "max_pool_1",
         mxp1.gws_hint(),
-        SpatialDims::Three(mxp1_block_dim, mxp1_block_dim, 1),
+        SpatialDims::Three(p.mp1_block_dim, p.mp1_block_dim, 1),
         &conv1_out_buf, // In
         &mxp1_out_buf,  // Out
     );

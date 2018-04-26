@@ -64,10 +64,6 @@ fn bench_sepconv1(c: &mut Criterion) {
     let mxp1_out_buf: Buffer<f32> =
         mxp1.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
 
-    // Write buffers to device
-    v1_wgts_buf.write(vconv1.weights()).enq().unwrap();
-    h1_wgts_buf.write(hconv1.weights()).enq().unwrap();
-
     // Build OpenCL-kernels
     let b = ClKernelBuilder::new(&program, queue.clone());
     let krn_vconv1 = b.build_iow_kernel(

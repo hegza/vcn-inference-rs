@@ -277,8 +277,6 @@ pub fn create_standalone_kernel_cpu<L: ClWeightedLayer<T>, T: Coeff>(
         .arg(&out_buf)
         .arg(&wgts_buf).build().unwrap();
 
-    // Write the weights and input to the global memory of the device
-    wgts_buf.write(layer.weights()).enq().unwrap();
     unsafe {
         cl::map_to_buf(&in_buf, input_data).unwrap();
     }

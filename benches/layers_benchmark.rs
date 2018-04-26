@@ -43,14 +43,7 @@ fn bench_sepconv1(c: &mut Criterion) {
     // Init OpenCL
     let (queue, program, _context) = cl::init(
         &["sepconv.cl", "max_pool.cl"],
-        &[
-            ("WIDTH", p.side as i32),
-            ("HEIGHT", p.side as i32),
-            ("MP1_BLOCK_DIM", p.mp1_block_dim as i32),
-            ("MP2_BLOCK_DIM", p.mp2_block_dim as i32),
-            ("ROWS_BLOCKDIM_Y", p.hconv1_blockdim_y as i32),
-            ("INJECT_RELU_AFTER_MXP", 1 as i32),
-        ],
+        &SepconvNetwork::<f32>::compile_flags(&p),
     ).expect("cannot init OpenCL");
 
     let v1_wgts_buf = vconv1.create_wgts_buf(&queue);

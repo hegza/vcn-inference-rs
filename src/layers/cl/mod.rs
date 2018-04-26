@@ -125,7 +125,6 @@ impl<'p> ClKernelBuilder<'p> {
             .build()
             .unwrap()
     }
-    // TODO: the gws-parameter is redundant
     pub fn build_iow_kernel<T>(
         &self,
         kernel_name: &str,

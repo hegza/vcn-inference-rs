@@ -132,15 +132,7 @@ where
         // Init OpenCL
         let (queue, program, _context) = cl::init(
             &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
-            &[
-                ("WIDTH", p.side as i32),
-                ("HEIGHT", p.side as i32),
-                ("MP1_BLOCK_DIM", p.mp1_block_dim as i32),
-                ("MP2_BLOCK_DIM", p.mp2_block_dim as i32),
-                ("ROWS_BLOCKDIM_Y", p.hconv1_blockdim_y as i32),
-                ("ROWS_2_BLOCKDIM_Y", p.hconv2_blockdim_y as i32),
-                ("INJECT_RELU_AFTER_MXP", 1 as i32),
-            ],
+            &SepconvNetwork::<f32>::compile_flags(&p),
         ).expect(COMPILE_ERR_MSG);
 
         let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3, dense4, dense5) =
@@ -253,6 +245,17 @@ where
             p.mp1_block_dim /= 2;
             warn!("using halved dimension for maxpool 1");
         }
+    }
+    pub fn compile_flags(p: &SepconvHyperParams) -> Vec<(&str, i32)> {
+        vec![
+            ("WIDTH", p.side as i32),
+            ("HEIGHT", p.side as i32),
+            ("MP1_BLOCK_DIM", p.mp1_block_dim as i32),
+            ("MP2_BLOCK_DIM", p.mp2_block_dim as i32),
+            ("ROWS_BLOCKDIM_Y", p.hconv1_blockdim_y as i32),
+            ("ROWS_2_BLOCKDIM_Y", p.hconv2_blockdim_y as i32),
+            ("INJECT_RELU_AFTER_MXP", 1 as i32),
+        ]
     }
 }
 

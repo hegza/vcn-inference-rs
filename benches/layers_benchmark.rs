@@ -62,7 +62,7 @@ fn bench_sepconv1(c: &mut Criterion) {
     let krn_vconv1 = b.build_iow_kernel(
         "col_conv",
         vconv1.gws_hint(),
-        SpatialDims::Three(p.vconv1_blockdim_x, p.vconv1_blockdim_y, 1),
+        SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y),
         &in_buf,        // In
         &conv1_mid_buf, // Out
         &v1_wgts_buf,   // Weights
@@ -70,7 +70,7 @@ fn bench_sepconv1(c: &mut Criterion) {
     let krn_hconv1 = b.build_iow_kernel(
         "row_conv",
         hconv1.gws_hint(),
-        SpatialDims::Three(p.side, p.hconv1_blockdim_y, 1),
+        SpatialDims::Two(p.side, p.hconv1_blockdim_y),
         &conv1_mid_buf, // In
         &conv1_out_buf, // Out
         &h1_wgts_buf,   // Weights
@@ -78,7 +78,7 @@ fn bench_sepconv1(c: &mut Criterion) {
     let krn_max_pool1 = b.build_io_kernel(
         "max_pool_1",
         mxp1.gws_hint(),
-        SpatialDims::Three(p.mp1_block_dim, p.mp1_block_dim, 1),
+        SpatialDims::Two(p.mp1_block_dim, p.mp1_block_dim),
         &conv1_out_buf, // In
         &mxp1_out_buf,  // Out
     );

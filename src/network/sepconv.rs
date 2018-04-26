@@ -162,7 +162,7 @@ where
         let krn_vconv1 = b.build_iow_kernel(
             "col_conv",
             vconv1.gws_hint(),
-            SpatialDims::Three(p.vconv1_blockdim_x, p.vconv1_blockdim_y, 1),
+            SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y),
             &in_buf,        // In
             &conv1_mid_buf, // Out
             &v1_wgts_buf,   // Weights
@@ -170,7 +170,7 @@ where
         let krn_hconv1 = b.build_iow_kernel(
             "row_conv",
             hconv1.gws_hint(),
-            SpatialDims::Three(p.side, p.hconv1_blockdim_y, 1),
+            SpatialDims::Two(p.side, p.hconv1_blockdim_y),
             &conv1_mid_buf, // In
             &conv1_out_buf, // Out
             &h1_wgts_buf,   // Weights
@@ -178,14 +178,14 @@ where
         let krn_max_pool1 = b.build_io_kernel(
             "max_pool_1",
             mxp1.gws_hint(),
-            SpatialDims::Three(p.mp1_block_dim, p.mp1_block_dim, 1),
+            SpatialDims::Two(p.mp1_block_dim, p.mp1_block_dim),
             &conv1_out_buf, // In
             &mxp1_out_buf,  // Out
         );
         let krn_vconv2 = b.build_iow_kernel(
             "col_conv_2",
             vconv2.gws_hint(),
-            SpatialDims::Three(p.vconv2_blockdim_x, p.vconv1_blockdim_y, 1),
+            SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y),
             &mxp1_out_buf,  // In
             &conv2_mid_buf, // Out
             &v2_wgts_buf,   // Weights
@@ -193,7 +193,7 @@ where
         let krn_hconv2 = b.build_iow_kernel(
             "row_conv_2",
             hconv2.gws_hint(),
-            SpatialDims::Three(p.side / 2, p.hconv2_blockdim_y, 1),
+            SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y),
             &conv2_mid_buf, // In
             &conv2_out_buf, // Out
             &h2_wgts_buf,   // Weights
@@ -201,7 +201,7 @@ where
         let krn_max_pool2 = b.build_io_kernel(
             "max_pool_2",
             mxp2.gws_hint(),
-            SpatialDims::Three(p.mp2_block_dim, p.mp2_block_dim, 1),
+            SpatialDims::Two(p.mp2_block_dim, p.mp2_block_dim),
             &conv2_out_buf, // In
             &mxp2_out_buf,  // Out
         );

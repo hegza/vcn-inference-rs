@@ -1,5 +1,5 @@
 use super::*;
-use ocl::{Device, SpatialDims};
+use ocl::{Device, Platform, SpatialDims};
 use geometry::*;
 use ndarray::{Array, ShapeBuilder, arr2};
 use std::ops::Deref;
@@ -16,8 +16,6 @@ pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     num_channels: 3,
     conv_kernel_split: 7,
     num_conv_fms: 32,
-    mp1_block_dim: 32,
-    mp2_block_dim: 16,
     fully_connected_const: 100,
     num_output_classes: 4,
 };
@@ -46,8 +44,6 @@ pub struct SepconvHyperParams {
     pub num_channels: usize,
     pub conv_kernel_split: usize,
     pub num_conv_fms: usize,
-    pub mp1_block_dim: usize,
-    pub mp2_block_dim: usize,
     pub fully_connected_const: usize,
     pub num_output_classes: usize,
 }
@@ -162,9 +158,9 @@ where
             dense3.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
 
         // Create kernels
+        let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
+        let dev_max_wgs = cl::max_wgs(Some(&primary_device));
         let b = ClKernelBuilder::new(&program, queue.clone());
-        let current_device = Device::from(*program.devices().unwrap().first().unwrap());
-        let dev_max_wgs = cl::max_wgs(Some(&current_device));
         let krn_vconv1 = b.build_iow_kernel(
             "col_conv",
             vconv1.gws_hint(),
@@ -184,7 +180,7 @@ where
         let krn_max_pool1 = b.build_io_kernel(
             "max_pool_1",
             mxp1.gws_hint(),
-            mxp2.lws_hint(dev_max_wgs),
+            mxp1.lws_hint(dev_max_wgs),
             &conv1_out_buf, // In
             &mxp1_out_buf,  // Out
         );
@@ -241,23 +237,23 @@ where
         }
     }
     pub fn fix_params_for_default_gpu(p: &mut SepconvHyperParams) {
-        // HACK: Max-work-size is not enough, use halved dimensions for hconv1 and/or mxp 1
+        // HACK: Max-work-size is not enough, use halved dimensions for hconv1
         let max_wgs = cl::max_wgs(None);
         if p.side * p.hconv1_blockdim_y > max_wgs {
             p.hconv1_blockdim_y /= 2;
             warn!("using halved dimension for horizontal convolution 1");
         }
-        if p.mp1_block_dim * p.mp1_block_dim > max_wgs {
-            p.mp1_block_dim /= 2;
-            warn!("using halved dimension for maxpool 1");
-        }
     }
-    pub fn compile_flags(p: &SepconvHyperParams, _layers: &Layers<T>) -> Vec<(&'static str, i32)> {
+    pub fn compile_flags(p: &SepconvHyperParams, layers: &Layers<T>) -> Vec<(&'static str, i32)> {
+        let max_wgs = cl::max_wgs(Some(&PRIMARY_DEVICE));
+        let mxp1_lws = layers.mxp1().lws_hint(max_wgs).to_lens().unwrap()[0];
+        let mxp2_lws = layers.mxp2().lws_hint(max_wgs).to_lens().unwrap()[0];
+
         vec![
             ("WIDTH", p.side as i32),
             ("HEIGHT", p.side as i32),
-            ("MP1_BLOCK_DIM", p.mp1_block_dim as i32),
-            ("MP2_BLOCK_DIM", p.mp2_block_dim as i32),
+            ("MP1_BLOCK_DIM", mxp1_lws as i32),
+            ("MP2_BLOCK_DIM", mxp2_lws as i32),
             ("ROWS_BLOCKDIM_Y", p.hconv1_blockdim_y as i32),
             ("ROWS_2_BLOCKDIM_Y", p.hconv2_blockdim_y as i32),
             ("INJECT_RELU_AFTER_MXP", 1 as i32),
@@ -303,3 +299,23 @@ where
 }
 
 const COMPILE_ERR_MSG: &str = "unable to compile program. It's possible that not all hyper parameters were passed in as compiler definitions. See OpenCL error-message for more info.";
+
+trait SepconvLayers<T>
+where
+    T: Coeff,
+{
+    fn mxp1(&self) -> &MaxpoolLayer;
+    fn mxp2(&self) -> &MaxpoolLayer;
+}
+
+impl<T> SepconvLayers<T> for Layers<T>
+where
+    T: Coeff,
+{
+    fn mxp1(&self) -> &MaxpoolLayer {
+        &self.2
+    }
+    fn mxp2(&self) -> &MaxpoolLayer {
+        &self.5
+    }
+}

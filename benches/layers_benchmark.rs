@@ -6,7 +6,7 @@ extern crate rusty_cnn;
 
 use criterion::Criterion;
 use rusty_cnn::*;
-use ocl::{flags, Buffer, SpatialDims};
+use ocl::{flags, Buffer, Device, SpatialDims};
 use cl_util as cl;
 
 const SAMPLE_SIZE: usize = 150;
@@ -66,6 +66,8 @@ fn bench_sepconv1(c: &mut Criterion) {
         mxp1.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
 
     // Build OpenCL-kernels
+    let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
+    let dev_max_wgs = cl::max_wgs(Some(&primary_device));
     let b = ClKernelBuilder::new(&program, queue.clone());
     let krn_vconv1 = b.build_iow_kernel(
         "col_conv",
@@ -86,7 +88,7 @@ fn bench_sepconv1(c: &mut Criterion) {
     let krn_max_pool1 = b.build_io_kernel(
         "max_pool_1",
         mxp1.gws_hint(),
-        SpatialDims::Two(p.mp1_block_dim, p.mp1_block_dim),
+        mxp1.lws_hint(dev_max_wgs),
         &conv1_out_buf, // In
         &mxp1_out_buf,  // Out
     );
@@ -143,6 +145,8 @@ fn bench_sepconv2(c: &mut Criterion) {
         mxp2.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
 
     // Build OpenCL-kernels
+    let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
+    let dev_max_wgs = cl::max_wgs(Some(&primary_device));
     let b = ClKernelBuilder::new(&program, queue.clone());
     let krn_vconv2 = b.build_iow_kernel(
         "col_conv_2",
@@ -163,7 +167,7 @@ fn bench_sepconv2(c: &mut Criterion) {
     let krn_max_pool2 = b.build_io_kernel(
         "max_pool_2",
         mxp2.gws_hint(),
-        SpatialDims::Two(p.mp2_block_dim, p.mp2_block_dim),
+        mxp2.lws_hint(dev_max_wgs),
         &conv2_out_buf, // In
         &mxp2_out_buf,  // Out
     );
@@ -225,6 +229,8 @@ fn bench_sepconv1and2(c: &mut Criterion) {
         mxp2.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
 
     // Build OpenCL-kernels
+    let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
+    let dev_max_wgs = cl::max_wgs(Some(&primary_device));
     let b = ClKernelBuilder::new(&program, queue.clone());
     let krn_vconv1 = b.build_iow_kernel(
         "col_conv",
@@ -245,7 +251,7 @@ fn bench_sepconv1and2(c: &mut Criterion) {
     let krn_max_pool1 = b.build_io_kernel(
         "max_pool_1",
         mxp1.gws_hint(),
-        SpatialDims::Two(p.mp1_block_dim, p.mp1_block_dim),
+        mxp1.lws_hint(dev_max_wgs),
         &conv1_out_buf, // In
         &mxp1_out_buf,  // Out
     );
@@ -268,7 +274,7 @@ fn bench_sepconv1and2(c: &mut Criterion) {
     let krn_max_pool2 = b.build_io_kernel(
         "max_pool_2",
         mxp2.gws_hint(),
-        SpatialDims::Two(p.mp2_block_dim, p.mp2_block_dim),
+        mxp2.lws_hint(dev_max_wgs),
         &conv2_out_buf, // In
         &mxp2_out_buf,  // Out
     );

@@ -129,14 +129,14 @@ where
         // HACK: Reduce dimensions of overshot layers
         SepconvNetwork::<T>::fix_params_for_default_gpu(&mut p);
 
+        let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3, dense4, dense5) =
+            SepconvNetwork::create_layers(&p);
+
         // Init OpenCL
         let (queue, program, _context) = cl::init(
             &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
             &SepconvNetwork::<f32>::compile_flags(&p),
         ).expect(COMPILE_ERR_MSG);
-
-        let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3, dense4, dense5) =
-            SepconvNetwork::create_layers(&p);
 
         // Allocate read-only memory on-device for the weights buffers
         let v1_wgts_buf = vconv1.create_wgts_buf(&queue);

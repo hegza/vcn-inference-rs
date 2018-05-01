@@ -91,9 +91,9 @@ pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<
 }
 
 /// Returns the max work-group-size of the primary OpenCL device.
-pub fn max_wgs(device: Option<Device>) -> usize {
+pub fn max_wgs(device: Option<&Device>) -> usize {
     let device = match device {
-        Some(d) => d,
+        Some(d) => d.clone(),
         None => {
             let platform = Platform::default();
             Device::first(platform).unwrap()

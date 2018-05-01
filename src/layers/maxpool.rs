@@ -3,6 +3,7 @@ use geometry::*;
 use super::*;
 use std::ops::Deref;
 use ocl::SpatialDims;
+use cl_util as cl;
 
 #[derive(Clone)]
 pub struct MaxpoolLayer {
@@ -48,4 +49,42 @@ impl Layer for MaxpoolLayer {
             self.in_shape.channels(),
         )
     }
+    fn lws_hint(&self, device_max_wgs: usize) -> SpatialDims {
+        // Verify that the device max wgs is a power of two
+        if (device_max_wgs & (device_max_wgs - 1)) != 0 {
+            unimplemented!("device_max_wgs is not a power of two")
+        }
+
+        // Largest possible local-work-size-side on the device is the sqrt of the device_max_wgs
+        let mut lws_side = (device_max_wgs as f64).sqrt() as usize;
+
+        // Find a local-work-size-side as large as possible that it fits with the data
+        while (self.in_shape.side() % lws_side) != 0 {
+            lws_side = lws_side >> 1;
+
+            // Fail if the local-work-size-side becomes too small
+            if lws_side == 1 {
+                panic!("unable to find a power of two for max-pool layer local work group size and it cannot be 1x1")
+            }
+        }
+
+        SpatialDims::Two(lws_side, lws_side)
+    }
+}
+
+#[test]
+fn test_lws_hint() {
+    let mxp1 = MaxpoolLayer::new(ImageGeometry::new(96, 32), 2);
+
+    let lws_hint_1024 = mxp1.lws_hint(1024);
+    assert_eq!(lws_hint_1024, SpatialDims::Two(32, 32));
+    let lws_hint_256 = mxp1.lws_hint(256);
+    assert_eq!(lws_hint_256, SpatialDims::Two(16, 16));
+
+    let mxp2 = MaxpoolLayer::new(ImageGeometry::new(48, 32), 2);
+
+    let lws_hint_1024 = mxp2.lws_hint(1024);
+    assert_eq!(lws_hint_1024, SpatialDims::Two(16, 16));
+    let lws_hint_256 = mxp2.lws_hint(256);
+    assert_eq!(lws_hint_256, SpatialDims::Two(16, 16));
 }

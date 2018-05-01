@@ -51,6 +51,9 @@ where
     fn gws_hint(&self) -> SpatialDims {
         SpatialDims::One(self.num_out)
     }
+    fn lws_hint(&self, _device_max_wgs: usize) -> SpatialDims {
+        unimplemented!()
+    }
 }
 
 impl<T> WeightedLayer<T> for DenseLayer<T>

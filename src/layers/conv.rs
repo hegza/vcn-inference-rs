@@ -71,6 +71,9 @@ where
             self.output_shape.side(),
         )
     }
+    fn lws_hint(&self, _device_max_wgs: usize) -> SpatialDims {
+        unimplemented!()
+    }
 }
 
 impl<T> WeightedLayer<T> for ConvLayer<T>

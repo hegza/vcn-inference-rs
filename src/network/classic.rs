@@ -73,11 +73,12 @@ where
     /// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have
     /// finished running. Note that you must call upload_buffers before the network is run.
     pub fn new() -> ClassicNetwork<T> {
+        // Create the network representation from network hyper-parameters
+        let layers = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
+
         // Initialize OpenCL
         let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 
-        // Create the network representation from network hyper-parameters
-        let layers = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
         let (conv1, conv2, dense3, dense4, dense5) = (
             layers.conv1,
             layers.conv2,

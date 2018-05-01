@@ -13,7 +13,7 @@ pub use self::cl::*;
 pub use self::cpu::*;
 use geometry::*;
 use std::ops::Deref;
-use ocl::{OclPrm, SpatialDims};
+use ocl::{Device, OclPrm, SpatialDims};
 use util::*;
 use num_traits::{Float, NumAssign};
 use math::GenericOps;
@@ -27,8 +27,10 @@ pub trait Layer {
     fn num_in(&self) -> usize;
     /// Gets the number of elements in the output shape
     fn num_out(&self) -> usize;
-    /// The probable optimal global work-group-size -shape of the matching kernel
+    /// The probable optimal global work-group-size-shape of the matching kernel
     fn gws_hint(&self) -> SpatialDims;
+    // The probable optimal local work-group-size-shape of the matching kernel
+    fn lws_hint(&self, device_max_wgs: usize) -> SpatialDims;
 }
 
 pub trait WeightedLayer<T>: Layer {

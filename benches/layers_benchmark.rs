@@ -276,14 +276,14 @@ fn bench_conv1and2(conv1: ConvLayer<f32>, conv2: ConvLayer<f32>, c: &mut Criteri
 
     let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 
-    let wgts_bufs = create_weights_bufs(conv1, conv2);
+    let wgts_bufs = create_weights_bufs(&[&conv1, &conv2], &queue);
     let bufs = create_buffer_chain(&[&conv1, &conv2], &queue);
 
     let mut b = ClKernelChainBuilder::new(&bufs, &wgts_bufs, &program, queue.clone());
 
     // Create the kernels for the first two layers (Convolution + ReLU)
-    let conv_relu1 = b.build_iow_kernel(conv1, "conv_relu_1", LocalWorkSizePolicy::UseDefault);
-    let conv_relu2 = b.build_iow_kernel(conv2, "conv_relu_2", LocalWorkSizePolicy::UseDefault);
+    let conv_relu1 = b.build_iow_kernel(&conv1, "conv_relu_1", LocalWorkSizePolicy::UseDefault);
+    let conv_relu2 = b.build_iow_kernel(&conv2, "conv_relu_2", LocalWorkSizePolicy::UseDefault);
 
     unsafe {
         cl::map_to_buf(&bufs[0], &input_data).unwrap();

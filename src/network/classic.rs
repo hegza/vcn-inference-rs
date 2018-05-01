@@ -22,7 +22,7 @@ where
     input_shape: ImageGeometry,
     conv_relu1: Kernel,
     conv_relu2: Kernel,
-    dense3_kernel: Kernel,
+    krn_dense3: Kernel,
     dense3_out_buf: Buffer<T>,
     dense4: DenseLayer<T>,
     dense5: DenseLayer<T>,
@@ -77,43 +77,44 @@ where
         let (conv1, conv2, dense3, dense4, dense5) = layers;
 
         // Allocate read-only memory for the weights of the 1st three layers
-        let conv1_wgts_buf = conv1.create_wgts_buf(&queue);
-        let conv2_wgts_buf = conv2.create_wgts_buf(&queue);
-        let dense3_wgts_buf = dense3.create_wgts_buf(&queue);
+        let wgts_bufs = create_weights_bufs(&[&conv1, &conv2, &dense3], &queue);
 
         // Allocate read-only memory for the input geometry on device with host-accessible pointer for
         // writing input from file
         let mut bufs = create_buffer_chain(&[&conv1, &conv2, &dense3], &queue);
 
         // Create the kernel for the 1st layer (Convolution + ReLU)
-        let conv_relu1 = Kernel::builder().program(&program).name("conv_relu_1")
-            .queue(queue.clone())
-            .global_work_size(conv1.gws_hint())
-            // Input
-            .arg(&bufs[0])
-            // Output
-            .arg(&bufs[1])
-            .arg(&conv1_wgts_buf).build().unwrap();
+        let conv_relu1 = conv1.create_kernel(
+            "conv_relu_1",
+            &bufs[0],
+            &bufs[1],
+            &wgts_bufs[0],
+            LocalWorkSizePolicy::UseDefault,
+            &program,
+            &queue,
+        );
 
         // Create the kernel for the 2nd layer (Convolution + ReLU)
-        let conv_relu2 = Kernel::builder().program(&program).name("conv_relu_2")
-            .queue(queue.clone())
-            .global_work_size(conv2.gws_hint())
-            // Input
-            .arg(&bufs[1])
-            // Output
-            .arg(&bufs[2])
-            .arg(&conv2_wgts_buf).build().unwrap();
+        let conv_relu2 = conv2.create_kernel(
+            "conv_relu_2",
+            &bufs[1],
+            &bufs[2],
+            &wgts_bufs[1],
+            LocalWorkSizePolicy::UseDefault,
+            &program,
+            &queue,
+        );
 
         // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
-        let dense3_kernel = Kernel::builder().program(&program).name("mtx_mul_f32")
-            .queue(queue.clone())
-            .global_work_size(dense3.gws_hint())
-            // Input
-            .arg(&bufs[2])
-            // Output
-            .arg(&bufs[3])
-            .arg(&dense3_wgts_buf).build().unwrap();
+        let krn_dense3 = dense3.create_kernel(
+            "mtx_mul_f32",
+            &bufs[2],
+            &bufs[3],
+            &wgts_bufs[2],
+            LocalWorkSizePolicy::UseDefault,
+            &program,
+            &queue,
+        );
 
         // Wait until all commands have finished running before returning.
         queue.finish().unwrap();
@@ -127,7 +128,7 @@ where
             queue,
             conv_relu1,
             conv_relu2,
-            dense3_kernel,
+            krn_dense3,
             in_buf,
             dense3_out_buf,
             input_shape: *conv1.input_shape(),
@@ -155,7 +156,7 @@ where
             // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
             self.conv_relu2.cmd().queue(q).enq().unwrap();
             // Enqueue the 3rd layer (fully-connected)
-            self.dense3_kernel.cmd().queue(q).enq().unwrap();
+            self.krn_dense3.cmd().queue(q).enq().unwrap();
         }
         // Wait for all on-device calculations to finish
         q.finish().unwrap();

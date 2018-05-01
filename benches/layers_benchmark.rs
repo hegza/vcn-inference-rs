@@ -28,7 +28,6 @@ fn per_layer_benchmark(c: &mut Criterion) {
     bench_dense3_host(dense3, c);
     bench_dense4(dense4, c);
     bench_dense5(dense5, c);
-    // TODO: make it easier to implement parts of the whole network
     bench_sepconv1(c);
     bench_sepconv2(c);
     bench_sepconv1and2(c);
@@ -54,8 +53,7 @@ fn bench_sepconv1(c: &mut Criterion) {
 
     let (vconv1, hconv1, mxp1, ..) = layers;
 
-    let v1_wgts_buf = vconv1.create_wgts_buf(&queue);
-    let h1_wgts_buf = hconv1.create_wgts_buf(&queue);
+    let wgts_bufs = create_weights_bufs(&[&vconv1, &hconv1], &queue);
 
     // Allocate memory on-device for the I/O buffers
     let bufs = create_buffer_chain(&[&vconv1, &hconv1, &mxp1], &queue);
@@ -63,29 +61,21 @@ fn bench_sepconv1(c: &mut Criterion) {
     // Build OpenCL-kernels
     let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
     let dev_max_wgs = cl::max_wgs(Some(&primary_device));
-    let b = ClKernelBuilder::new(&program, queue.clone());
+    let mut b = ClKernelChainBuilder::<f32>::new(&bufs, &wgts_bufs, &program, queue.clone());
     let krn_vconv1 = b.build_iow_kernel(
+        &vconv1,
         "col_conv",
-        vconv1.gws_hint(),
-        SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y),
-        &bufs[0],     // In
-        &bufs[1],     // Out
-        &v1_wgts_buf, // Weights
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y)),
     );
     let krn_hconv1 = b.build_iow_kernel(
+        &hconv1,
         "row_conv",
-        hconv1.gws_hint(),
-        SpatialDims::Two(p.side, p.hconv1_blockdim_y),
-        &bufs[1],     // In
-        &bufs[2],     // Out
-        &h1_wgts_buf, // Weights
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side, p.hconv1_blockdim_y)),
     );
     let krn_max_pool1 = b.build_io_kernel(
+        &mxp1,
         "max_pool_1",
-        mxp1.gws_hint(),
-        mxp1.lws_hint(dev_max_wgs),
-        &bufs[2], // In
-        &bufs[3], // Out
+        LocalWorkSizePolicy::Infer { dev_max_wgs },
     );
 
     // Map input data to input buffer
@@ -128,8 +118,7 @@ fn bench_sepconv2(c: &mut Criterion) {
 
     let (_, _, _, vconv2, hconv2, mxp2, ..) = layers;
 
-    let v2_wgts_buf = vconv2.create_wgts_buf(&queue);
-    let h2_wgts_buf = hconv2.create_wgts_buf(&queue);
+    let wgts_bufs = create_weights_bufs(&[&vconv2, &hconv2], &queue);
 
     // Allocate memory on-device for the I/O buffers
     let bufs = create_buffer_chain(&[&vconv2, &hconv2, &mxp2], &queue);
@@ -137,29 +126,21 @@ fn bench_sepconv2(c: &mut Criterion) {
     // Build OpenCL-kernels
     let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
     let dev_max_wgs = cl::max_wgs(Some(&primary_device));
-    let b = ClKernelBuilder::new(&program, queue.clone());
+    let mut b = ClKernelChainBuilder::new(&bufs, &wgts_bufs, &program, queue.clone());
     let krn_vconv2 = b.build_iow_kernel(
+        &vconv2,
         "col_conv_2",
-        vconv2.gws_hint(),
-        SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y),
-        &bufs[0],     // In
-        &bufs[1],     // Out
-        &v2_wgts_buf, // Weights
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y)),
     );
     let krn_hconv2 = b.build_iow_kernel(
+        &hconv2,
         "row_conv_2",
-        hconv2.gws_hint(),
-        SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y),
-        &bufs[1],     // In
-        &bufs[2],     // Out
-        &h2_wgts_buf, // Weights
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y)),
     );
     let krn_max_pool2 = b.build_io_kernel(
+        &mxp2,
         "max_pool_2",
-        mxp2.gws_hint(),
-        mxp2.lws_hint(dev_max_wgs),
-        &bufs[2], // In
-        &bufs[3], // Out
+        LocalWorkSizePolicy::Infer { dev_max_wgs },
     );
 
     // Map input data to input buffer
@@ -202,10 +183,7 @@ fn bench_sepconv1and2(c: &mut Criterion) {
 
     let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, ..) = layers;
 
-    let v1_wgts_buf = vconv1.create_wgts_buf(&queue);
-    let h1_wgts_buf = hconv1.create_wgts_buf(&queue);
-    let v2_wgts_buf = vconv2.create_wgts_buf(&queue);
-    let h2_wgts_buf = hconv2.create_wgts_buf(&queue);
+    let wgts_bufs = create_weights_bufs(&[&vconv1, &hconv1, &vconv2, &hconv2], &queue);
 
     // Allocate memory on-device for the I/O buffers
     let bufs = create_buffer_chain(&[&vconv1, &hconv1, &mxp1, &vconv2, &hconv2, &mxp2], &queue);
@@ -213,52 +191,36 @@ fn bench_sepconv1and2(c: &mut Criterion) {
     // Build OpenCL-kernels
     let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
     let dev_max_wgs = cl::max_wgs(Some(&primary_device));
-    let b = ClKernelBuilder::new(&program, queue.clone());
+    let mut b = ClKernelChainBuilder::new(&bufs, &wgts_bufs, &program, queue.clone());
     let krn_vconv1 = b.build_iow_kernel(
+        &vconv1,
         "col_conv",
-        vconv1.gws_hint(),
-        SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y),
-        &bufs[0],     // In
-        &bufs[1],     // Out
-        &v1_wgts_buf, // Weights
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y)),
     );
     let krn_hconv1 = b.build_iow_kernel(
+        &hconv1,
         "row_conv",
-        hconv1.gws_hint(),
-        SpatialDims::Two(p.side, p.hconv1_blockdim_y),
-        &bufs[1],     // In
-        &bufs[2],     // Out
-        &h1_wgts_buf, // Weights
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side, p.hconv1_blockdim_y)),
     );
     let krn_max_pool1 = b.build_io_kernel(
+        &mxp1,
         "max_pool_1",
-        mxp1.gws_hint(),
-        mxp1.lws_hint(dev_max_wgs),
-        &bufs[2], // In
-        &bufs[3], // Out
+        LocalWorkSizePolicy::Infer { dev_max_wgs },
     );
     let krn_vconv2 = b.build_iow_kernel(
+        &vconv2,
         "col_conv_2",
-        vconv2.gws_hint(),
-        SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y),
-        &bufs[3],     // In
-        &bufs[4],     // Out
-        &v2_wgts_buf, // Weights
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y)),
     );
     let krn_hconv2 = b.build_iow_kernel(
+        &hconv2,
         "row_conv_2",
-        hconv2.gws_hint(),
-        SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y),
-        &bufs[4],     // In
-        &bufs[5],     // Out
-        &h2_wgts_buf, // Weights
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y)),
     );
     let krn_max_pool2 = b.build_io_kernel(
+        &mxp2,
         "max_pool_2",
-        mxp2.gws_hint(),
-        mxp2.lws_hint(dev_max_wgs),
-        &bufs[5], // In
-        &bufs[6], // Out
+        LocalWorkSizePolicy::Infer { dev_max_wgs },
     );
 
     // Map input data to input buffer
@@ -312,36 +274,16 @@ fn bench_conv1and2(conv1: ConvLayer<f32>, conv2: ConvLayer<f32>, c: &mut Criteri
         *conv1.input_shape(),
     ));
 
-    // Initialize OpenCL
     let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 
-    // Allocate read-only memory for the weights of the 1st three layers
-    let conv1_wgts_buf = conv1.create_wgts_buf(&queue);
-    let conv2_wgts_buf = conv2.create_wgts_buf(&queue);
-
-    // Allocate read-only memory for the input geometry on device with host-accessible pointer for
-    // writing input from file
+    let wgts_bufs = create_weights_bufs(conv1, conv2);
     let bufs = create_buffer_chain(&[&conv1, &conv2], &queue);
 
-    // Create the kernel for the 1st layer (Convolution + ReLU)
-    let conv_relu1 = ocl::Kernel::builder().program(&program).name("conv_relu_1")
-            .queue(queue.clone())
-            .global_work_size(conv1.gws_hint())
-            // Input
-            .arg(&bufs[0])
-            // Output
-            .arg(&bufs[1])
-            .arg(&conv1_wgts_buf).build().unwrap();
+    let mut b = ClKernelChainBuilder::new(&bufs, &wgts_bufs, &program, queue.clone());
 
-    // Create the kernel for the 2nd layer (Convolution + ReLU)
-    let conv_relu2 = ocl::Kernel::builder().program(&program).name("conv_relu_2")
-            .queue(queue.clone())
-            .global_work_size(conv2.gws_hint())
-            // Input
-            .arg(&bufs[1])
-            // Output
-            .arg(&bufs[2])
-            .arg(&conv2_wgts_buf).build().unwrap();
+    // Create the kernels for the first two layers (Convolution + ReLU)
+    let conv_relu1 = b.build_iow_kernel(conv1, "conv_relu_1", LocalWorkSizePolicy::UseDefault);
+    let conv_relu2 = b.build_iow_kernel(conv2, "conv_relu_2", LocalWorkSizePolicy::UseDefault);
 
     unsafe {
         cl::map_to_buf(&bufs[0], &input_data).unwrap();

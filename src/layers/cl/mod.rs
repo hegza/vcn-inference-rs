@@ -6,6 +6,12 @@ use ocl::*;
 use cl_util as cl;
 use ocl::builders::KernelBuilder;
 
+pub enum LocalWorkSizePolicy {
+    Infer { dev_max_wgs: usize },
+    Specify(SpatialDims),
+    UseDefault,
+}
+
 pub trait ClLayer<T>: Layer
 where
     T: Coeff,
@@ -39,6 +45,107 @@ where
     }
 }
 
+pub trait ClUnweightedLayer<T>: ClLayer<T>
+where
+    T: Coeff,
+{
+    fn create_kernel(
+        &self,
+        kernel_func: &str,
+        in_buf: &Buffer<T>,
+        out_buf: &Buffer<T>,
+        lws: LocalWorkSizePolicy,
+        program: &Program,
+        queue: &Queue,
+    ) -> Kernel {
+        use self::LocalWorkSizePolicy::*;
+        let lws = match lws {
+            Specify(dims) => Some(dims),
+            Infer { dev_max_wgs } => Some(self.lws_hint(dev_max_wgs)),
+            UseDefault => None,
+        };
+        let gws = self.gws_hint();
+
+        debug!(
+            "Create unweighted kernel {}, gws: {:?} = {}.",
+            kernel_func,
+            gws,
+            gws.to_len()
+        );
+
+        let mut builder = KernelBuilder::new();
+        builder
+            .program(program)
+            .name(kernel_func)
+            .queue(queue.clone())
+            .global_work_size(gws)
+            .arg(in_buf)
+            .arg(out_buf);
+        if let Some(lws) = lws {
+            builder.local_work_size(lws);
+            debug!("\tLocal-work-size set as: {:?} = {}.", lws, lws.to_len());
+        }
+        builder.build().unwrap()
+    }
+}
+
+pub trait ClWeightedLayer<T>: WeightedLayer<T> + ClLayer<T>
+where
+    T: Coeff,
+{
+    /// Create a read-only buffer on-device for weights and write the weights
+    fn create_wgts_buf(&self, queue: &Queue) -> Buffer<T> {
+        trace!(
+            "ClLayer::create_wgts_buf with {} elements. Flags: {:?}.",
+            self.num_in(),
+            flags::MEM_READ_ONLY
+        );
+        let buf = cl::create_buffer::<T>(self.num_weights(), flags::MEM_READ_ONLY, queue).unwrap();
+        buf.write(self.weights()).enq().unwrap();
+        buf
+    }
+    fn create_kernel(
+        &self,
+        kernel_func: &str,
+        in_buf: &Buffer<T>,
+        out_buf: &Buffer<T>,
+        wgts_buf: &Buffer<T>,
+        lws: LocalWorkSizePolicy,
+        program: &Program,
+        queue: &Queue,
+    ) -> Kernel {
+        use self::LocalWorkSizePolicy::*;
+        let lws = match lws {
+            Specify(dims) => Some(dims),
+            Infer { dev_max_wgs } => Some(self.lws_hint(dev_max_wgs)),
+            UseDefault => None,
+        };
+        let gws = self.gws_hint();
+
+        debug!(
+            "Create weighted kernel {}, gws: {:?} = {}.",
+            kernel_func,
+            gws,
+            gws.to_len()
+        );
+
+        let mut builder = KernelBuilder::new();
+        builder
+            .program(program)
+            .name(kernel_func)
+            .queue(queue.clone())
+            .global_work_size(gws)
+            .arg(in_buf)
+            .arg(out_buf)
+            .arg(wgts_buf);
+        if let Some(lws) = lws {
+            builder.local_work_size(lws);
+            debug!("\tLocal-work-size set as: {:?} = {}.", lws, lws.to_len());
+        }
+        builder.build().unwrap()
+    }
+}
+
 // Creates a chain of buffers of which the first one is read-only + alloc host-ptr, the ones in between are read-write, and the last one is write-only + alloc host-ptr
 pub fn create_buffer_chain<T>(layers: &[&ClLayer<T>], queue: &Queue) -> Vec<Buffer<T>>
 where
@@ -67,21 +174,14 @@ where
     bufs
 }
 
-pub trait ClWeightedLayer<T>: WeightedLayer<T> + ClLayer<T>
+pub fn create_weights_bufs<T>(layers: &[&ClWeightedLayer<T>], queue: &Queue) -> Vec<Buffer<T>>
 where
     T: Coeff,
 {
-    /// Create a read-only buffer on-device for weights and write the weights
-    fn create_wgts_buf(&self, queue: &Queue) -> Buffer<T> {
-        trace!(
-            "ClLayer::create_wgts_buf with {} elements. Flags: {:?}.",
-            self.num_in(),
-            flags::MEM_READ_ONLY
-        );
-        let buf = cl::create_buffer::<T>(self.num_weights(), flags::MEM_READ_ONLY, queue).unwrap();
-        buf.write(self.weights()).enq().unwrap();
-        buf
-    }
+    layers
+        .iter()
+        .map(|&layer| layer.create_wgts_buf(queue))
+        .collect()
 }
 
 impl<T> ClWeightedLayer<T> for DenseLayer<T>
@@ -138,85 +238,77 @@ where
 {
 }
 
-// TODO: this could be split into a multi-tier builder
-pub struct ClKernelBuilder<'p> {
-    program: &'p Program,
-    queue: Queue,
+impl<T> ClUnweightedLayer<T> for MaxpoolLayer
+where
+    T: Coeff,
+{
 }
 
-impl<'p> ClKernelBuilder<'p> {
-    pub fn new(program: &Program, queue: Queue) -> ClKernelBuilder {
-        ClKernelBuilder { program, queue }
-    }
-    pub fn build_io_kernel<T>(
-        &self,
-        kernel_name: &str,
-        global_work_size: SpatialDims,
-        local_work_size: SpatialDims,
-        in_buf: &Buffer<T>,
-        out_buf: &Buffer<T>,
-    ) -> Kernel
-    where
-        T: OclPrm,
-    {
-        self.kernel_builder(kernel_name, global_work_size, local_work_size)
-            .arg(in_buf)
-            .arg(out_buf)
-            .build()
-            .unwrap()
-    }
-    pub fn build_iow_kernel<T>(
-        &self,
-        kernel_name: &str,
-        global_work_size: SpatialDims,
-        local_work_size: SpatialDims,
-        in_buf: &Buffer<T>,
-        out_buf: &Buffer<T>,
-        wgts_buf: &Buffer<T>,
-    ) -> Kernel
-    where
-        T: OclPrm,
-    {
-        self.kernel_builder(kernel_name, global_work_size, local_work_size)
-            .arg(in_buf)
-            .arg(out_buf)
-            .arg(wgts_buf)
-            .build()
-            .unwrap()
-    }
-    fn kernel_builder(
-        &self,
-        kernel_name: &str,
-        global_work_size: SpatialDims,
-        local_work_size: SpatialDims,
-    ) -> KernelBuilder {
-        debug!(
-            "Create kernel {}, gws: {:?} = {}, lws: {:?} = {}.",
-            kernel_name,
-            global_work_size,
-            global_work_size.to_len(),
-            local_work_size,
-            local_work_size.to_len()
-        );
+pub struct ClKernelChainBuilder<'p, 'b, T>
+where
+    T: Coeff,
+{
+    program: &'p Program,
+    queue: Queue,
+    layer_idx: usize,
+    wgts_idx: usize,
+    io_bufs: &'b [Buffer<T>],
+    wgts_bufs: &'b [Buffer<T>],
+}
 
-        // Last minute check that there are no work-group overshoots, do not panic to get more
-        // diagnostic info from OpenCL.
-        let max_wgs = cl::max_wgs(None);
-        if max_wgs < local_work_size.to_len() {
-            error!(
-                "local work size is larger than maximum work-group-size: {} > {}",
-                local_work_size.to_len(),
-                max_wgs
-            );
+impl<'p, 'b, T> ClKernelChainBuilder<'p, 'b, T>
+where
+    T: Coeff,
+{
+    pub fn new(
+        io_bufs: &'b [Buffer<T>],
+        wgts_bufs: &'b [Buffer<T>],
+        program: &'p Program,
+        queue: Queue,
+    ) -> ClKernelChainBuilder<'p, 'b, T> {
+        ClKernelChainBuilder::<'p, 'b, T> {
+            program,
+            queue,
+            layer_idx: 0,
+            wgts_idx: 0,
+            io_bufs: io_bufs.clone(),
+            wgts_bufs: wgts_bufs.clone(),
         }
-
-        let mut builder = KernelBuilder::new();
-        builder
-            .program(self.program)
-            .name(kernel_name)
-            .queue(self.queue.clone())
-            .global_work_size(global_work_size)
-            .local_work_size(local_work_size);
-        builder
+    }
+    pub fn build_io_kernel(
+        &mut self,
+        layer: &ClUnweightedLayer<T>,
+        kernel_func: &str,
+        lws_policy: LocalWorkSizePolicy,
+    ) -> Kernel {
+        let kernel = layer.create_kernel(
+            kernel_func,
+            &self.io_bufs[self.layer_idx],     // In
+            &self.io_bufs[self.layer_idx + 1], // Out
+            lws_policy,
+            &self.program,
+            &self.queue,
+        );
+        self.layer_idx += 1;
+        kernel
+    }
+    pub fn build_iow_kernel(
+        &mut self,
+        layer: &ClWeightedLayer<T>,
+        kernel_func: &str,
+        lws_policy: LocalWorkSizePolicy,
+    ) -> Kernel {
+        let kernel = layer.create_kernel(
+            kernel_func,
+            &self.io_bufs[self.layer_idx],     // In
+            &self.io_bufs[self.layer_idx + 1], // Out
+            &self.wgts_bufs[self.wgts_idx],    // Weights
+            lws_policy,
+            &self.program,
+            &self.queue,
+        );
+        self.layer_idx += 1;
+        self.wgts_idx += 1;
+        kernel
     }
 }

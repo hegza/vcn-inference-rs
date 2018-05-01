@@ -139,11 +139,7 @@ where
         let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3, dense4, dense5) = layers;
 
         // Allocate read-only memory on-device for the weights buffers
-        let v1_wgts_buf = vconv1.create_wgts_buf(&queue);
-        let h1_wgts_buf = hconv1.create_wgts_buf(&queue);
-        let v2_wgts_buf = vconv2.create_wgts_buf(&queue);
-        let h2_wgts_buf = hconv2.create_wgts_buf(&queue);
-        let d3_wgts_buf = dense3.create_wgts_buf(&queue);
+        let wgts_bufs = create_weights_bufs(&[&vconv1, &hconv1, &vconv2, &hconv2, &dense3], &queue);
 
         // Allocate memory on-device for the I/O buffers
         let mut bufs = create_buffer_chain(
@@ -154,63 +150,73 @@ where
         // Create kernels
         let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
         let dev_max_wgs = cl::max_wgs(Some(&primary_device));
-        let b = ClKernelBuilder::new(&program, queue.clone());
-        let krn_vconv1 = b.build_iow_kernel(
+        let krn_vconv1 = vconv1.create_kernel(
             "col_conv",
-            vconv1.gws_hint(),
-            SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y),
-            &bufs[0],     // In
-            &bufs[1],     // Out
-            &v1_wgts_buf, // Weights
+            &bufs[0],      // In
+            &bufs[1],      // Out
+            &wgts_bufs[0], // Weights
+            LocalWorkSizePolicy::Specify(SpatialDims::Two(
+                p.vconv1_blockdim_x,
+                p.vconv1_blockdim_y,
+            )),
+            &program,
+            &queue,
         );
-        let krn_hconv1 = b.build_iow_kernel(
+        let krn_hconv1 = hconv1.create_kernel(
             "row_conv",
-            hconv1.gws_hint(),
-            SpatialDims::Two(p.side, p.hconv1_blockdim_y),
-            &bufs[1],     // In
-            &bufs[2],     // Out
-            &h1_wgts_buf, // Weights
+            &bufs[1],      // In
+            &bufs[2],      // Out
+            &wgts_bufs[1], // Weights
+            LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side, p.hconv1_blockdim_y)),
+            &program,
+            &queue,
         );
-        let krn_max_pool1 = b.build_io_kernel(
+        let krn_max_pool1 = mxp1.create_kernel(
             "max_pool_1",
-            mxp1.gws_hint(),
-            mxp1.lws_hint(dev_max_wgs),
             &bufs[2], // In
             &bufs[3], // Out
+            LocalWorkSizePolicy::Infer { dev_max_wgs },
+            &program,
+            &queue,
         );
-        let krn_vconv2 = b.build_iow_kernel(
+        let krn_vconv2 = vconv2.create_kernel(
             "col_conv_2",
-            vconv2.gws_hint(),
-            SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y),
-            &bufs[3],     // In
-            &bufs[4],     // Out
-            &v2_wgts_buf, // Weights
+            &bufs[3],      // In
+            &bufs[4],      // Out
+            &wgts_bufs[2], // Weights
+            LocalWorkSizePolicy::Specify(SpatialDims::Two(
+                p.vconv2_blockdim_x,
+                p.vconv1_blockdim_y,
+            )),
+            &program,
+            &queue,
         );
-        let krn_hconv2 = b.build_iow_kernel(
+        let krn_hconv2 = hconv2.create_kernel(
             "row_conv_2",
-            hconv2.gws_hint(),
-            SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y),
-            &bufs[4],     // In
-            &bufs[5],     // Out
-            &h2_wgts_buf, // Weights
+            &bufs[4],      // In
+            &bufs[5],      // Out
+            &wgts_bufs[3], // Weights
+            LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y)),
+            &program,
+            &queue,
         );
-        let krn_max_pool2 = b.build_io_kernel(
+        let krn_max_pool2 = mxp2.create_kernel(
             "max_pool_2",
-            mxp2.gws_hint(),
-            mxp2.lws_hint(dev_max_wgs),
             &bufs[5], // In
             &bufs[6], // Out
+            LocalWorkSizePolicy::Infer { dev_max_wgs },
+            &program,
+            &queue,
         );
-        let krn_dense3 = Kernel::builder()
-            .name("mtx_mul_f32")
-            .program(&program)
-            .queue(queue.clone())
-            .global_work_size(dense3.gws_hint())
-            .arg(&bufs[6])     // In
-            .arg(&bufs[7])     // Out
-            .arg(&d3_wgts_buf) // Weights
-            .build()
-            .unwrap();
+        let krn_dense3 = dense3.create_kernel(
+            "mtx_mul_f32",
+            &bufs[6],
+            &bufs[7],
+            &wgts_bufs[4],
+            LocalWorkSizePolicy::UseDefault,
+            &program,
+            &queue,
+        );
 
         // Wait until all commands have finished running before returning.
         queue.finish().unwrap();

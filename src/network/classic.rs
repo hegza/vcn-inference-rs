@@ -83,24 +83,16 @@ where
 
         // Allocate read-only memory for the input geometry on device with host-accessible pointer for
         // writing input from file
-        let intermediary_flags = flags::MEM_READ_WRITE;
-        let in_buf = conv1.create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
-        // Allocate read-write memory for the 1st feature map on device
-        let fm1_buf = conv2.create_in_buf(intermediary_flags, &queue);
-        // Allocate read-write memory for the 2nd feature map on device
-        let fm2_buf = conv2.create_out_buf(intermediary_flags, &queue);
-        // Allocate write-only memory for the dense (3rd) layer output on device with host pointer for reading
-        let dense3_out_buf =
-            dense3.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
+        let mut bufs = create_buffer_chain(&[&conv1, &conv2, &dense3], &queue);
 
         // Create the kernel for the 1st layer (Convolution + ReLU)
         let conv_relu1 = Kernel::builder().program(&program).name("conv_relu_1")
             .queue(queue.clone())
             .global_work_size(conv1.gws_hint())
             // Input
-            .arg(&in_buf)
+            .arg(&bufs[0])
             // Output
-            .arg(&fm1_buf)
+            .arg(&bufs[1])
             .arg(&conv1_wgts_buf).build().unwrap();
 
         // Create the kernel for the 2nd layer (Convolution + ReLU)
@@ -108,9 +100,9 @@ where
             .queue(queue.clone())
             .global_work_size(conv2.gws_hint())
             // Input
-            .arg(&fm1_buf)
+            .arg(&bufs[1])
             // Output
-            .arg(&fm2_buf)
+            .arg(&bufs[2])
             .arg(&conv2_wgts_buf).build().unwrap();
 
         // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
@@ -118,21 +110,26 @@ where
             .queue(queue.clone())
             .global_work_size(dense3.gws_hint())
             // Input
-            .arg(&fm2_buf)
+            .arg(&bufs[2])
             // Output
-            .arg(&dense3_out_buf)
+            .arg(&bufs[3])
             .arg(&dense3_wgts_buf).build().unwrap();
 
         // Wait until all commands have finished running before returning.
         queue.finish().unwrap();
+
+        // Move and store the first and last buffer
+        let mut buf_drain = bufs.drain(..);
+        let in_buf = buf_drain.next().unwrap();
+        let dense3_out_buf = buf_drain.next_back().unwrap();
 
         ClassicNetwork {
             queue,
             conv_relu1,
             conv_relu2,
             dense3_kernel,
-            dense3_out_buf,
             in_buf,
+            dense3_out_buf,
             input_shape: *conv1.input_shape(),
             dense4,
             dense5,

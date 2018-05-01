@@ -6,7 +6,7 @@ extern crate rusty_cnn;
 
 use criterion::Criterion;
 use rusty_cnn::*;
-use ocl::{flags, Buffer, Device, SpatialDims};
+use ocl::{Device, SpatialDims};
 use cl_util as cl;
 
 const SAMPLE_SIZE: usize = 150;
@@ -58,12 +58,7 @@ fn bench_sepconv1(c: &mut Criterion) {
     let h1_wgts_buf = hconv1.create_wgts_buf(&queue);
 
     // Allocate memory on-device for the I/O buffers
-    let intermediary_flags = flags::MEM_READ_WRITE;
-    let in_buf = vconv1.create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
-    let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue);
-    let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue);
-    let mxp1_out_buf: Buffer<f32> =
-        mxp1.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
+    let bufs = create_buffer_chain(&[&vconv1.0, &hconv1.0, &mxp1], &queue);
 
     // Build OpenCL-kernels
     let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
@@ -73,29 +68,29 @@ fn bench_sepconv1(c: &mut Criterion) {
         "col_conv",
         vconv1.gws_hint(),
         SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y),
-        &in_buf,        // In
-        &conv1_mid_buf, // Out
-        &v1_wgts_buf,   // Weights
+        &bufs[0],     // In
+        &bufs[1],     // Out
+        &v1_wgts_buf, // Weights
     );
     let krn_hconv1 = b.build_iow_kernel(
         "row_conv",
         hconv1.gws_hint(),
         SpatialDims::Two(p.side, p.hconv1_blockdim_y),
-        &conv1_mid_buf, // In
-        &conv1_out_buf, // Out
-        &h1_wgts_buf,   // Weights
+        &bufs[1],     // In
+        &bufs[2],     // Out
+        &h1_wgts_buf, // Weights
     );
     let krn_max_pool1 = b.build_io_kernel(
         "max_pool_1",
         mxp1.gws_hint(),
         mxp1.lws_hint(dev_max_wgs),
-        &conv1_out_buf, // In
-        &mxp1_out_buf,  // Out
+        &bufs[2], // In
+        &bufs[3], // Out
     );
 
     // Map input data to input buffer
     unsafe {
-        cl::map_to_buf(&in_buf, &input_data).unwrap();
+        cl::map_to_buf(&bufs[0], &input_data).unwrap();
     }
 
     // Wait for setup to finish
@@ -137,12 +132,7 @@ fn bench_sepconv2(c: &mut Criterion) {
     let h2_wgts_buf = hconv2.create_wgts_buf(&queue);
 
     // Allocate memory on-device for the I/O buffers
-    let intermediary_flags = flags::MEM_READ_WRITE;
-    let in_buf = vconv2.create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
-    let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, &queue);
-    let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, &queue);
-    let mxp2_out_buf: Buffer<f32> =
-        mxp2.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
+    let bufs = create_buffer_chain(&[&vconv2.0, &hconv2.0, &mxp2], &queue);
 
     // Build OpenCL-kernels
     let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
@@ -152,29 +142,29 @@ fn bench_sepconv2(c: &mut Criterion) {
         "col_conv_2",
         vconv2.gws_hint(),
         SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y),
-        &in_buf,        // In
-        &conv2_mid_buf, // Out
-        &v2_wgts_buf,   // Weights
+        &bufs[0],     // In
+        &bufs[1],     // Out
+        &v2_wgts_buf, // Weights
     );
     let krn_hconv2 = b.build_iow_kernel(
         "row_conv_2",
         hconv2.gws_hint(),
         SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y),
-        &conv2_mid_buf, // In
-        &conv2_out_buf, // Out
-        &h2_wgts_buf,   // Weights
+        &bufs[1],     // In
+        &bufs[2],     // Out
+        &h2_wgts_buf, // Weights
     );
     let krn_max_pool2 = b.build_io_kernel(
         "max_pool_2",
         mxp2.gws_hint(),
         mxp2.lws_hint(dev_max_wgs),
-        &conv2_out_buf, // In
-        &mxp2_out_buf,  // Out
+        &bufs[2], // In
+        &bufs[3], // Out
     );
 
     // Map input data to input buffer
     unsafe {
-        cl::map_to_buf(&in_buf, &input_data).unwrap();
+        cl::map_to_buf(&bufs[0], &input_data).unwrap();
     }
 
     // Wait for setup to finish
@@ -218,15 +208,10 @@ fn bench_sepconv1and2(c: &mut Criterion) {
     let h2_wgts_buf = hconv2.create_wgts_buf(&queue);
 
     // Allocate memory on-device for the I/O buffers
-    let intermediary_flags = flags::MEM_READ_WRITE;
-    let in_buf = vconv1.create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
-    let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue);
-    let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue);
-    let mxp1_out_buf: Buffer<f32> = mxp1.create_out_buf(intermediary_flags, &queue);
-    let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, &queue);
-    let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, &queue);
-    let mxp2_out_buf: Buffer<f32> =
-        mxp2.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
+    let bufs = create_buffer_chain(
+        &[&vconv1.0, &hconv1.0, &mxp1, &vconv2.0, &hconv2.0, &mxp2],
+        &queue,
+    );
 
     // Build OpenCL-kernels
     let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
@@ -236,52 +221,52 @@ fn bench_sepconv1and2(c: &mut Criterion) {
         "col_conv",
         vconv1.gws_hint(),
         SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y),
-        &in_buf,        // In
-        &conv1_mid_buf, // Out
-        &v1_wgts_buf,   // Weights
+        &bufs[0],     // In
+        &bufs[1],     // Out
+        &v1_wgts_buf, // Weights
     );
     let krn_hconv1 = b.build_iow_kernel(
         "row_conv",
         hconv1.gws_hint(),
         SpatialDims::Two(p.side, p.hconv1_blockdim_y),
-        &conv1_mid_buf, // In
-        &conv1_out_buf, // Out
-        &h1_wgts_buf,   // Weights
+        &bufs[1],     // In
+        &bufs[2],     // Out
+        &h1_wgts_buf, // Weights
     );
     let krn_max_pool1 = b.build_io_kernel(
         "max_pool_1",
         mxp1.gws_hint(),
         mxp1.lws_hint(dev_max_wgs),
-        &conv1_out_buf, // In
-        &mxp1_out_buf,  // Out
+        &bufs[2], // In
+        &bufs[3], // Out
     );
     let krn_vconv2 = b.build_iow_kernel(
         "col_conv_2",
         vconv2.gws_hint(),
         SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y),
-        &in_buf,        // In
-        &conv2_mid_buf, // Out
-        &v2_wgts_buf,   // Weights
+        &bufs[3],     // In
+        &bufs[4],     // Out
+        &v2_wgts_buf, // Weights
     );
     let krn_hconv2 = b.build_iow_kernel(
         "row_conv_2",
         hconv2.gws_hint(),
         SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y),
-        &conv2_mid_buf, // In
-        &conv2_out_buf, // Out
-        &h2_wgts_buf,   // Weights
+        &bufs[4],     // In
+        &bufs[5],     // Out
+        &h2_wgts_buf, // Weights
     );
     let krn_max_pool2 = b.build_io_kernel(
         "max_pool_2",
         mxp2.gws_hint(),
         mxp2.lws_hint(dev_max_wgs),
-        &conv2_out_buf, // In
-        &mxp2_out_buf,  // Out
+        &bufs[5], // In
+        &bufs[6], // Out
     );
 
     // Map input data to input buffer
     unsafe {
-        cl::map_to_buf(&in_buf, &input_data).unwrap();
+        cl::map_to_buf(&bufs[0], &input_data).unwrap();
     }
 
     // Wait for setup to finish
@@ -339,21 +324,16 @@ fn bench_conv1and2(conv1: ConvLayer<f32>, conv2: ConvLayer<f32>, c: &mut Criteri
 
     // Allocate read-only memory for the input geometry on device with host-accessible pointer for
     // writing input from file
-    let intermediary_flags = flags::MEM_READ_WRITE;
-    let in_buf = conv1.create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
-    // Allocate read-write memory for the 1st feature map on device
-    let fm1_buf = conv2.create_in_buf(intermediary_flags, &queue);
-    // Allocate read-write memory for the 2nd feature map on device
-    let fm2_buf = conv2.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
+    let bufs = create_buffer_chain(&[&conv1, &conv2], &queue);
 
     // Create the kernel for the 1st layer (Convolution + ReLU)
     let conv_relu1 = ocl::Kernel::builder().program(&program).name("conv_relu_1")
             .queue(queue.clone())
             .global_work_size(conv1.gws_hint())
             // Input
-            .arg(&in_buf)
+            .arg(&bufs[0])
             // Output
-            .arg(&fm1_buf)
+            .arg(&bufs[1])
             .arg(&conv1_wgts_buf).build().unwrap();
 
     // Create the kernel for the 2nd layer (Convolution + ReLU)
@@ -361,13 +341,13 @@ fn bench_conv1and2(conv1: ConvLayer<f32>, conv2: ConvLayer<f32>, c: &mut Criteri
             .queue(queue.clone())
             .global_work_size(conv2.gws_hint())
             // Input
-            .arg(&fm1_buf)
+            .arg(&bufs[1])
             // Output
-            .arg(&fm2_buf)
+            .arg(&bufs[2])
             .arg(&conv2_wgts_buf).build().unwrap();
 
     unsafe {
-        cl::map_to_buf(&in_buf, &input_data).unwrap();
+        cl::map_to_buf(&bufs[0], &input_data).unwrap();
     }
 
     // Wait for setup to finish

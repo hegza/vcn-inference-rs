@@ -39,6 +39,34 @@ where
     }
 }
 
+// Creates a chain of buffers of which the first one is read-only + alloc host-ptr, the ones in between are read-write, and the last one is write-only + alloc host-ptr
+pub fn create_buffer_chain<T>(layers: &[&ClLayer<T>], queue: &Queue) -> Vec<Buffer<T>>
+where
+    T: Coeff,
+{
+    let mut bufs = vec![];
+
+    // Input buffer
+    let in_buf = layers[0].create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, queue);
+    bufs.push(in_buf);
+
+    // Buffers in-between layers 1..N-1
+    for idx in 1..layers.len() {
+        let buf = layers[idx].create_in_buf(flags::MEM_READ_WRITE, queue);
+        bufs.push(buf);
+    }
+
+    // Output buffer
+    let out_buf = layers
+        .iter()
+        .last()
+        .unwrap()
+        .create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, queue);
+    bufs.push(out_buf);
+
+    bufs
+}
+
 pub trait ClWeightedLayer<T>: WeightedLayer<T> + ClLayer<T>
 where
     T: Coeff,

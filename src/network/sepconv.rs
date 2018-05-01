@@ -146,16 +146,12 @@ where
         let d3_wgts_buf = dense3.create_wgts_buf(&queue);
 
         // Allocate memory on-device for the I/O buffers
-        let intermediary_flags = flags::MEM_READ_WRITE;
-        let in_buf = vconv1.create_in_buf(flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
-        let conv1_mid_buf = vconv1.create_out_buf(intermediary_flags, &queue);
-        let conv1_out_buf = hconv1.create_out_buf(intermediary_flags, &queue);
-        let mxp1_out_buf: Buffer<T> = mxp1.create_out_buf(intermediary_flags, &queue);
-        let conv2_mid_buf = vconv2.create_out_buf(intermediary_flags, &queue);
-        let conv2_out_buf = hconv2.create_out_buf(intermediary_flags, &queue);
-        let mxp2_out_buf: Buffer<T> = mxp2.create_out_buf(intermediary_flags, &queue);
-        let dense3_out_buf =
-            dense3.create_out_buf(flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR, &queue);
+        let mut bufs = create_buffer_chain(
+            &[
+                &vconv1.0, &hconv1.0, &mxp1, &vconv2.0, &hconv2.0, &mxp2, &dense3
+            ],
+            &queue,
+        );
 
         // Create kernels
         let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
@@ -165,61 +161,66 @@ where
             "col_conv",
             vconv1.gws_hint(),
             SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y),
-            &in_buf,        // In
-            &conv1_mid_buf, // Out
-            &v1_wgts_buf,   // Weights
+            &bufs[0],     // In
+            &bufs[1],     // Out
+            &v1_wgts_buf, // Weights
         );
         let krn_hconv1 = b.build_iow_kernel(
             "row_conv",
             hconv1.gws_hint(),
             SpatialDims::Two(p.side, p.hconv1_blockdim_y),
-            &conv1_mid_buf, // In
-            &conv1_out_buf, // Out
-            &h1_wgts_buf,   // Weights
+            &bufs[1],     // In
+            &bufs[2],     // Out
+            &h1_wgts_buf, // Weights
         );
         let krn_max_pool1 = b.build_io_kernel(
             "max_pool_1",
             mxp1.gws_hint(),
             mxp1.lws_hint(dev_max_wgs),
-            &conv1_out_buf, // In
-            &mxp1_out_buf,  // Out
+            &bufs[2], // In
+            &bufs[3], // Out
         );
         let krn_vconv2 = b.build_iow_kernel(
             "col_conv_2",
             vconv2.gws_hint(),
             SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y),
-            &mxp1_out_buf,  // In
-            &conv2_mid_buf, // Out
-            &v2_wgts_buf,   // Weights
+            &bufs[3],     // In
+            &bufs[4],     // Out
+            &v2_wgts_buf, // Weights
         );
         let krn_hconv2 = b.build_iow_kernel(
             "row_conv_2",
             hconv2.gws_hint(),
             SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y),
-            &conv2_mid_buf, // In
-            &conv2_out_buf, // Out
-            &h2_wgts_buf,   // Weights
+            &bufs[4],     // In
+            &bufs[5],     // Out
+            &h2_wgts_buf, // Weights
         );
         let krn_max_pool2 = b.build_io_kernel(
             "max_pool_2",
             mxp2.gws_hint(),
             mxp2.lws_hint(dev_max_wgs),
-            &conv2_out_buf, // In
-            &mxp2_out_buf,  // Out
+            &bufs[5], // In
+            &bufs[6], // Out
         );
         let krn_dense3 = Kernel::builder()
             .name("mtx_mul_f32")
             .program(&program)
             .queue(queue.clone())
             .global_work_size(dense3.gws_hint())
-            .arg(&mxp2_out_buf)   // In
-            .arg(&dense3_out_buf) // Out
-            .arg(&d3_wgts_buf)    // Weights
+            .arg(&bufs[6])     // In
+            .arg(&bufs[7])     // Out
+            .arg(&d3_wgts_buf) // Weights
             .build()
             .unwrap();
 
         // Wait until all commands have finished running before returning.
         queue.finish().unwrap();
+
+        // Move and store the first and last buffer
+        let mut buf_drain = bufs.drain(..);
+        let in_buf = buf_drain.next().unwrap();
+        let dense3_out_buf = buf_drain.next_back().unwrap();
 
         SepconvNetwork {
             queue,

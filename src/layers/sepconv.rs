@@ -154,7 +154,49 @@ where
         unimplemented!()
     }
     fn name(&self) -> &'static str {
-        "sepconv"
+        unimplemented!()
+    }
+}
+
+impl<T> Layer for VConvLayer<T>
+where
+    T: Coeff,
+{
+    fn num_out(&self) -> usize {
+        self.0.num_out()
+    }
+    fn num_in(&self) -> usize {
+        self.0.num_in()
+    }
+    fn gws_hint(&self) -> SpatialDims {
+        self.0.gws_hint()
+    }
+    fn lws_hint(&self, device_max_wgs: usize) -> SpatialDims {
+        self.0.lws_hint(device_max_wgs)
+    }
+    fn name(&self) -> &'static str {
+        "vconv"
+    }
+}
+
+impl<T> Layer for HConvLayer<T>
+where
+    T: Coeff,
+{
+    fn num_out(&self) -> usize {
+        self.0.num_out()
+    }
+    fn num_in(&self) -> usize {
+        self.0.num_in()
+    }
+    fn gws_hint(&self) -> SpatialDims {
+        self.0.gws_hint()
+    }
+    fn lws_hint(&self, device_max_wgs: usize) -> SpatialDims {
+        self.0.lws_hint(device_max_wgs)
+    }
+    fn name(&self) -> &'static str {
+        "hconv"
     }
 }
 
@@ -164,5 +206,23 @@ where
 {
     fn weights(&self) -> &Vec<T> {
         &self.weights
+    }
+}
+
+impl<T> WeightedLayer<T> for HConvLayer<T>
+where
+    T: Coeff,
+{
+    fn weights(&self) -> &Vec<T> {
+        self.0.weights()
+    }
+}
+
+impl<T> WeightedLayer<T> for VConvLayer<T>
+where
+    T: Coeff,
+{
+    fn weights(&self) -> &Vec<T> {
+        self.0.weights()
     }
 }

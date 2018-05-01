@@ -108,13 +108,25 @@ where
 {
 }
 
-impl<T> ClWeightedLayer<T> for SepconvLayer<T>
+impl<T> ClWeightedLayer<T> for HConvLayer<T>
 where
     T: Coeff,
 {
 }
 
-impl<T> ClLayer<T> for SepconvLayer<T>
+impl<T> ClLayer<T> for HConvLayer<T>
+where
+    T: Coeff,
+{
+}
+
+impl<T> ClWeightedLayer<T> for VConvLayer<T>
+where
+    T: Coeff,
+{
+}
+
+impl<T> ClLayer<T> for VConvLayer<T>
 where
     T: Coeff,
 {

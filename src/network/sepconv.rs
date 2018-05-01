@@ -147,9 +147,7 @@ where
 
         // Allocate memory on-device for the I/O buffers
         let mut bufs = create_buffer_chain(
-            &[
-                &vconv1.0, &hconv1.0, &mxp1, &vconv2.0, &hconv2.0, &mxp2, &dense3
-            ],
+            &[&vconv1, &hconv1, &mxp1, &vconv2, &hconv2, &mxp2, &dense3],
             &queue,
         );
 

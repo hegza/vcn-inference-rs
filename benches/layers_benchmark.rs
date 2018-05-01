@@ -16,16 +16,18 @@ const BASELINE_DIR: &'static str = "input/baseline";
 /// Benchmark each layer separately.
 fn per_layer_benchmark(c: &mut Criterion) {
     let net = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
+    // Create shorthands (and move)
+    let (conv1, conv2, dense3, dense4, dense5) = net;
 
-    bench_conv1(net.conv1.clone(), c);
-    bench_conv2(net.conv2.clone(), c);
-    bench_conv1and2(net.conv1, net.conv2, c);
-    bench_dense3_cl_gpu(net.dense3.clone(), c);
-    bench_dense3_cl_cpu(net.dense3.clone(), c);
-    bench_dense3_host_ndarray(net.dense3.clone(), c);
-    bench_dense3_host(net.dense3, c);
-    bench_dense4(net.dense4, c);
-    bench_dense5(net.dense5, c);
+    bench_conv1(conv1.clone(), c);
+    bench_conv2(conv2.clone(), c);
+    bench_conv1and2(conv1, conv2, c);
+    bench_dense3_cl_gpu(dense3.clone(), c);
+    bench_dense3_cl_cpu(dense3.clone(), c);
+    bench_dense3_host_ndarray(dense3.clone(), c);
+    bench_dense3_host(dense3, c);
+    bench_dense4(dense4, c);
+    bench_dense5(dense5, c);
     // TODO: make it easier to implement parts of the whole network
     bench_sepconv1(c);
     bench_sepconv2(c);
@@ -38,7 +40,7 @@ fn bench_sepconv1(c: &mut Criterion) {
     // HACK: Reduce dimensions of overshot layers
     SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
 
-    let (vconv1, hconv1, mxp1, ..) = SepconvNetwork::<f32>::create_layers(&p);
+    let layers = SepconvNetwork::<f32>::create_layers(&p);
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
         "{}/sepconv-f32-xcorr/in.bin",
         BASELINE_DIR
@@ -47,8 +49,10 @@ fn bench_sepconv1(c: &mut Criterion) {
     // Init OpenCL
     let (queue, program, _context) = cl::init(
         &["sepconv.cl", "max_pool.cl"],
-        &SepconvNetwork::<f32>::compile_flags(&p),
+        &SepconvNetwork::<f32>::compile_flags(&p, &layers),
     ).expect("cannot init OpenCL");
+
+    let (vconv1, hconv1, mxp1, ..) = layers;
 
     let v1_wgts_buf = vconv1.create_wgts_buf(&queue);
     let h1_wgts_buf = hconv1.create_wgts_buf(&queue);
@@ -113,7 +117,7 @@ fn bench_sepconv2(c: &mut Criterion) {
     // HACK: Reduce dimensions of overshot layers
     SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
 
-    let (_, _, _, vconv2, hconv2, mxp2, ..) = SepconvNetwork::<f32>::create_layers(&p);
+    let layers = SepconvNetwork::<f32>::create_layers(&p);
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
         "{}/sepconv-f32-xcorr/mxp1-out.bin",
         BASELINE_DIR
@@ -122,8 +126,10 @@ fn bench_sepconv2(c: &mut Criterion) {
     // Init OpenCL
     let (queue, program, _context) = cl::init(
         &["sepconv.cl", "max_pool.cl"],
-        &SepconvNetwork::<f32>::compile_flags(&p),
+        &SepconvNetwork::<f32>::compile_flags(&p, &layers),
     ).expect("cannot init OpenCL");
+
+    let (_, _, _, vconv2, hconv2, mxp2, ..) = layers;
 
     let v2_wgts_buf = vconv2.create_wgts_buf(&queue);
     let h2_wgts_buf = hconv2.create_wgts_buf(&queue);
@@ -188,7 +194,7 @@ fn bench_sepconv1and2(c: &mut Criterion) {
     // HACK: Reduce dimensions of overshot layers
     SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
 
-    let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, ..) = SepconvNetwork::<f32>::create_layers(&p);
+    let layers = SepconvNetwork::<f32>::create_layers(&p);
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
         "{}/sepconv-f32-xcorr/in.bin",
         BASELINE_DIR
@@ -197,8 +203,10 @@ fn bench_sepconv1and2(c: &mut Criterion) {
     // Init OpenCL
     let (queue, program, _context) = cl::init(
         &["sepconv.cl", "max_pool.cl"],
-        &SepconvNetwork::<f32>::compile_flags(&p),
+        &SepconvNetwork::<f32>::compile_flags(&p, &layers),
     ).expect("cannot init OpenCL");
+
+    let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, ..) = layers;
 
     let v1_wgts_buf = vconv1.create_wgts_buf(&queue);
     let h1_wgts_buf = hconv1.create_wgts_buf(&queue);

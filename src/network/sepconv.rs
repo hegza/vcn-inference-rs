@@ -1,7 +1,8 @@
 use super::*;
-use ocl::SpatialDims;
+use ocl::{Device, SpatialDims};
 use geometry::*;
 use ndarray::{Array, ShapeBuilder, arr2};
+use std::ops::Deref;
 
 pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     // TODO: revisit the names here
@@ -20,6 +21,18 @@ pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     fully_connected_const: 100,
     num_output_classes: 4,
 };
+
+pub type Layers<T> = (
+    VConvLayer<T>,
+    HConvLayer<T>,
+    MaxpoolLayer,
+    VConvLayer<T>,
+    HConvLayer<T>,
+    MaxpoolLayer,
+    DenseLayer<T>,
+    DenseLayer<T>,
+    DenseLayer<T>,
+);
 
 #[derive(Clone, Debug)]
 pub struct SepconvHyperParams {
@@ -62,19 +75,7 @@ impl<T> SepconvNetwork<T>
 where
     T: CoeffFloat + ReadCsv,
 {
-    pub fn create_layers(
-        p: &SepconvHyperParams,
-    ) -> (
-        VConvLayer<T>,
-        HConvLayer<T>,
-        MaxpoolLayer,
-        VConvLayer<T>,
-        HConvLayer<T>,
-        MaxpoolLayer,
-        DenseLayer<T>,
-        DenseLayer<T>,
-        DenseLayer<T>,
-    ) {
+    pub fn create_layers(p: &SepconvHyperParams) -> Layers<T> {
         // Load the weights for the convolutional layers
         let v1_wgts = T::read_csv(&format!("{}/vcr1-f32.csv", WEIGHTS_DIR));
         let h1_wgts = T::read_csv(&format!("{}/hcr1-f32.csv", WEIGHTS_DIR));
@@ -111,6 +112,7 @@ where
         let dense3 = DenseLayer::new(mxp2.num_out(), p.fully_connected_const, dense3_wgts);
         let dense4 = DenseLayer::new(dense3.num_out(), p.fully_connected_const, dense4_wgts);
         let dense5 = DenseLayer::new(dense4.num_out(), p.num_output_classes, dense5_wgts);
+
         (
             vconv1,
             hconv1,
@@ -129,14 +131,16 @@ where
         // HACK: Reduce dimensions of overshot layers
         SepconvNetwork::<T>::fix_params_for_default_gpu(&mut p);
 
-        let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3, dense4, dense5) =
-            SepconvNetwork::create_layers(&p);
+        let layers: Layers<T> = SepconvNetwork::create_layers(&p);
 
         // Init OpenCL
         let (queue, program, _context) = cl::init(
             &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
-            &SepconvNetwork::<f32>::compile_flags(&p),
+            &SepconvNetwork::<T>::compile_flags(&p, &layers),
         ).expect(COMPILE_ERR_MSG);
+
+        // Create shorthands (and move)
+        let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3, dense4, dense5) = layers;
 
         // Allocate read-only memory on-device for the weights buffers
         let v1_wgts_buf = vconv1.create_wgts_buf(&queue);
@@ -159,6 +163,8 @@ where
 
         // Create kernels
         let b = ClKernelBuilder::new(&program, queue.clone());
+        let current_device = Device::from(*program.devices().unwrap().first().unwrap());
+        let dev_max_wgs = cl::max_wgs(Some(&current_device));
         let krn_vconv1 = b.build_iow_kernel(
             "col_conv",
             vconv1.gws_hint(),
@@ -178,7 +184,7 @@ where
         let krn_max_pool1 = b.build_io_kernel(
             "max_pool_1",
             mxp1.gws_hint(),
-            SpatialDims::Two(p.mp1_block_dim, p.mp1_block_dim),
+            mxp2.lws_hint(dev_max_wgs),
             &conv1_out_buf, // In
             &mxp1_out_buf,  // Out
         );
@@ -201,7 +207,7 @@ where
         let krn_max_pool2 = b.build_io_kernel(
             "max_pool_2",
             mxp2.gws_hint(),
-            SpatialDims::Two(p.mp2_block_dim, p.mp2_block_dim),
+            mxp2.lws_hint(dev_max_wgs),
             &conv2_out_buf, // In
             &mxp2_out_buf,  // Out
         );
@@ -210,9 +216,9 @@ where
             .program(&program)
             .queue(queue.clone())
             .global_work_size(dense3.gws_hint())
-            .arg(&mxp2_out_buf)
-            .arg(&dense3_out_buf)
-            .arg(&d3_wgts_buf)
+            .arg(&mxp2_out_buf)   // In
+            .arg(&dense3_out_buf) // Out
+            .arg(&d3_wgts_buf)    // Weights
             .build()
             .unwrap();
 
@@ -246,7 +252,7 @@ where
             warn!("using halved dimension for maxpool 1");
         }
     }
-    pub fn compile_flags(p: &SepconvHyperParams) -> Vec<(&str, i32)> {
+    pub fn compile_flags(p: &SepconvHyperParams, _layers: &Layers<T>) -> Vec<(&'static str, i32)> {
         vec![
             ("WIDTH", p.side as i32),
             ("HEIGHT", p.side as i32),

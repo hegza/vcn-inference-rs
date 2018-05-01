@@ -61,13 +61,7 @@ where
         // Verify that I/O dimensions match between layers
         verify_network_dimensions(&[&conv1, &conv2, &dense3, &dense4, &dense5]);
 
-        Layers {
-            conv1,
-            conv2,
-            dense3,
-            dense4,
-            dense5,
-        }
+        (conv1, conv2, dense3, dense4, dense5)
     }
 
     /// Initializes the network, kernels and buffers. Returns only after all OpenCL-commands have
@@ -79,13 +73,8 @@ where
         // Initialize OpenCL
         let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 
-        let (conv1, conv2, dense3, dense4, dense5) = (
-            layers.conv1,
-            layers.conv2,
-            layers.dense3,
-            layers.dense4,
-            layers.dense5,
-        );
+        // Create shorthands (and move)
+        let (conv1, conv2, dense3, dense4, dense5) = layers;
 
         // Allocate read-only memory for the weights of the 1st three layers
         let conv1_wgts_buf = conv1.create_wgts_buf(&queue);
@@ -374,16 +363,13 @@ impl NetworkParams {
     }
 }
 
-pub struct Layers<T>
-where
-    T: Coeff,
-{
-    pub conv1: ConvLayer<T>,
-    pub conv2: ConvLayer<T>,
-    pub dense3: DenseLayer<T>,
-    pub dense4: DenseLayer<T>,
-    pub dense5: DenseLayer<T>,
-}
+pub type Layers<T> = (
+    ConvLayer<T>,
+    ConvLayer<T>,
+    DenseLayer<T>,
+    DenseLayer<T>,
+    DenseLayer<T>,
+);
 
 impl Deref for NetworkParams {
     type Target = ClassicHyperParams;

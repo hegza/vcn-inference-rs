@@ -153,6 +153,9 @@ where
     fn lws_hint(&self, _device_max_wgs: usize) -> SpatialDims {
         unimplemented!()
     }
+    fn name(&self) -> &'static str {
+        "sepconv"
+    }
 }
 
 impl<T> WeightedLayer<T> for SepconvLayer<T>

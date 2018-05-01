@@ -31,6 +31,7 @@ pub trait Layer {
     fn gws_hint(&self) -> SpatialDims;
     // The probable optimal local work-group-size-shape of the matching kernel
     fn lws_hint(&self, device_max_wgs: usize) -> SpatialDims;
+    fn name(&self) -> &'static str;
 }
 
 pub trait WeightedLayer<T>: Layer {

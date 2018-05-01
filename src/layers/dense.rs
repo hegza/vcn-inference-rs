@@ -54,6 +54,9 @@ where
     fn lws_hint(&self, _device_max_wgs: usize) -> SpatialDims {
         unimplemented!()
     }
+    fn name(&self) -> &'static str {
+        "dense"
+    }
 }
 
 impl<T> WeightedLayer<T> for DenseLayer<T>

@@ -70,6 +70,9 @@ impl Layer for MaxpoolLayer {
 
         SpatialDims::Two(lws_side, lws_side)
     }
+    fn name(&self) -> &'static str {
+        "maxpool"
+    }
 }
 
 #[test]

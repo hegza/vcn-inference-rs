@@ -13,6 +13,7 @@ __kernel void max_pool_1(__global const float *src, __global float *dst) {
     src += get_group_id(0) * get_local_size(0) + get_group_id(1) * get_local_size(1) * WIDTH +
            get_group_id(2) * WIDTH * HEIGHT;
 
+    // Create work-group local array for results
     __local float sh_data[MP1_BLOCK_DIM][MP1_BLOCK_DIM];
 
     sh_data[get_local_id(1)][get_local_id(0)] = src[get_local_id(1) * WIDTH + get_local_id(0)];
@@ -21,6 +22,7 @@ __kernel void max_pool_1(__global const float *src, __global float *dst) {
 
     if (get_local_id(0) < MP1_BLOCK_DIM / 2 && get_local_id(1) < MP1_BLOCK_DIM / 2) {
 
+        // Find out the largest element for each group of STRIDE*STRIDE square
         float locMax = sh_data[get_local_id(1) * 2][get_local_id(0) * 2];
 
         if (locMax < sh_data[get_local_id(1) * 2][get_local_id(0) * 2 + 1])
@@ -33,7 +35,7 @@ __kernel void max_pool_1(__global const float *src, __global float *dst) {
             locMax = sh_data[get_local_id(1) * 2 + 1][get_local_id(0) * 2 + 1];
 
 #ifdef INJECT_RELU_AFTER_MXP
-        dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax > 0? locMax : 0;
+        dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax > 0 ? locMax : 0;
 #else
         dst[get_local_id(1) * WIDTH / 2 + get_local_id(0)] = locMax;
 #endif

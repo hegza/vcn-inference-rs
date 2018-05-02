@@ -11,6 +11,7 @@ extern crate log;
 extern crate ndarray;
 extern crate num_traits;
 extern crate ocl;
+extern crate rand;
 
 pub mod cl_util;
 pub mod geometry;

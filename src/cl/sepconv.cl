@@ -3,6 +3,7 @@
 //  #define HEIGHT                  i32
 //  #define ROWS_BLOCKDIM_Y         i32
 //  #define ROWS_2_BLOCKDIM_Y       i32
+//  #define CL_PRIM                 type {float, char}
 
 #define ROWS_BLOCKDIM_X 96
 #define ROWS_2_BLOCKDIM_X 48
@@ -19,9 +20,9 @@
 #define C2 7
 #define C3 32
 
-__kernel void row_conv(__global float *d_Src, __global float *d_Dst, __constant float *c_rowKernel) {
+__kernel void row_conv(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, __constant CL_PRIM *c_rowKernel) {
 
-    __local float l_data[ROWS_BLOCKDIM_Y][ROWS_BLOCKDIM_X + KERNEL_RADIUS * 2];
+    __local CL_PRIM l_data[ROWS_BLOCKDIM_Y][ROWS_BLOCKDIM_X + KERNEL_RADIUS * 2];
 
     const int lix = get_local_id(0);
     const int liy = get_local_id(1);
@@ -32,7 +33,7 @@ __kernel void row_conv(__global float *d_Src, __global float *d_Dst, __constant 
     d_Src +=
         (ROWS_BLOCKDIM_Y * get_group_id(1) + liy) * (WIDTH) + get_group_id(0) * ROWS_BLOCKDIM_X;
 
-    float sum = 0;
+    CL_PRIM sum = 0;
 
     l_data[liy][lix] = 0;
 
@@ -47,7 +48,7 @@ __kernel void row_conv(__global float *d_Src, __global float *d_Dst, __constant 
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        float C_sum = 0;
+        CL_PRIM C_sum = 0;
 
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
             C_sum += c_rowKernel[KERNEL_RADIUS + j + c * KERNEL_LENGTH +
@@ -63,9 +64,9 @@ __kernel void row_conv(__global float *d_Src, __global float *d_Dst, __constant 
     d_Dst[dst_idx] = sum;
 }
 
-__kernel void col_conv(__global float *d_Src, __global float *d_Dst, __constant float *c_colKernel) {
+__kernel void col_conv(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, __constant CL_PRIM *c_colKernel) {
 
-    __local float l_data[COLUMNS_BLOCKDIM_Y + KERNEL_RADIUS * 2][COLUMNS_BLOCKDIM_X];
+    __local CL_PRIM l_data[COLUMNS_BLOCKDIM_Y + KERNEL_RADIUS * 2][COLUMNS_BLOCKDIM_X];
     const int lix = get_local_id(0);
     const int liy = get_local_id(1);
     const int giy = get_group_id(1) * get_local_size(1) + get_local_id(1);
@@ -75,7 +76,7 @@ __kernel void col_conv(__global float *d_Src, __global float *d_Dst, __constant 
     d_Src += (COLUMNS_BLOCKDIM_Y * get_group_id(1) + liy) * (WIDTH) +
              get_group_id(0) * COLUMNS_BLOCKDIM_X;
 
-    float sum = 0;
+    CL_PRIM sum = 0;
 
     l_data[liy][lix] = 0;
 
@@ -121,7 +122,7 @@ __kernel void col_conv(__global float *d_Src, __global float *d_Dst, __constant 
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        float C_sum = 0;
+        CL_PRIM C_sum = 0;
 
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
 
@@ -137,10 +138,10 @@ __kernel void col_conv(__global float *d_Src, __global float *d_Dst, __constant 
     d_Dst[dst_idx] = sum;
 }
 
-__kernel void row_conv_2(__global float *d_Src, __global float *d_Dst,
-                       __constant float *c_row2Kernel) {
+__kernel void row_conv_2(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
+                       __constant CL_PRIM *c_row2Kernel) {
 
-    __local float l_data[ROWS_2_BLOCKDIM_Y][ROWS_2_BLOCKDIM_X + KERNEL_RADIUS * 2];
+    __local CL_PRIM l_data[ROWS_2_BLOCKDIM_Y][ROWS_2_BLOCKDIM_X + KERNEL_RADIUS * 2];
     const int lix = get_local_id(0);
     const int liy = get_local_id(1);
     const int giy = get_group_id(1) * get_local_size(1) + get_local_id(1);
@@ -151,7 +152,7 @@ __kernel void row_conv_2(__global float *d_Src, __global float *d_Dst,
     d_Src += (ROWS_2_BLOCKDIM_Y * get_group_id(1) + liy) * (WIDTH / 2) +
              get_group_id(0) * ROWS_2_BLOCKDIM_X;
 
-    float sum = 0;
+    CL_PRIM sum = 0;
 
     l_data[liy][lix] = 0;
 
@@ -166,7 +167,7 @@ __kernel void row_conv_2(__global float *d_Src, __global float *d_Dst,
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        float C_sum = 0;
+        CL_PRIM C_sum = 0;
 
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
 
@@ -183,10 +184,10 @@ __kernel void row_conv_2(__global float *d_Src, __global float *d_Dst,
     d_Dst[dst_idx] = sum;
 }
 
-__kernel void col_conv_2(__global float *d_Src, __global float *d_Dst,
-                       __constant float *c_col2Kernel) {
+__kernel void col_conv_2(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
+                       __constant CL_PRIM *c_col2Kernel) {
 
-    __local float l_data[COLUMNS_2_BLOCKDIM_Y + KERNEL_RADIUS * 2][COLUMNS_2_BLOCKDIM_X];
+    __local CL_PRIM l_data[COLUMNS_2_BLOCKDIM_Y + KERNEL_RADIUS * 2][COLUMNS_2_BLOCKDIM_X];
     const int lix = get_local_id(0);
     const int liy = get_local_id(1);
     const int giy = get_group_id(1) * get_local_size(1) + get_local_id(1);
@@ -203,7 +204,7 @@ __kernel void col_conv_2(__global float *d_Src, __global float *d_Dst,
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    float sum = 0;
+    CL_PRIM sum = 0;
 
     for (int c = 0; c < C3; c++) {
 
@@ -242,7 +243,7 @@ __kernel void col_conv_2(__global float *d_Src, __global float *d_Dst,
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        float C_sum = 0;
+        CL_PRIM C_sum = 0;
 
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
 

@@ -17,8 +17,9 @@ use ocl::{Device, OclPrm, SpatialDims};
 use util::*;
 use num_traits::{Float, NumAssign};
 use math::GenericOps;
+use cl_util;
 
-pub trait Coeff: NumAssign + GenericOps + OclPrm {}
+pub trait Coeff: NumAssign + GenericOps + OclPrm + cl_util::ClTypeName {}
 pub trait CoeffFloat: Float + Coeff {}
 
 /// Describes a layer of a convolutive neural network.

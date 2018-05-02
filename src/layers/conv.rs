@@ -30,7 +30,10 @@ where
         // Make sure that the weight count is correct
         debug_assert_eq!(
             num_filter_elems * input_shape.channels() * output_shape.channels(),
-            weights.len()
+            weights.len(),
+            "layer: conv, weights: {}, expected: {}",
+            weights.len(),
+            num_filter_elems * input_shape.channels() * output_shape.channels(),
         );
         let layer = ConvLayer {
             weights,

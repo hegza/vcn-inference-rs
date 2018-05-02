@@ -123,7 +123,7 @@ fn test_mxp() {
     let mxp = MaxpoolLayer::new(in_shape, 2);
 
     // Run mxp on GPU
-    let (queue, program, _context) = cl::init(&["test/mxp.cl"], &[]).unwrap();
+    let (queue, program, _context) = cl::init::<f32>(&["test/mxp.cl"], &[]).unwrap();
 
     let (in_buf, out_buf) = mxp.create_io_bufs(
         flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,

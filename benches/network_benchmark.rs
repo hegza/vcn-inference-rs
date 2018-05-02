@@ -36,7 +36,7 @@ fn classic_full(c: &mut Criterion) {
 
 /// Benchmark full computations of sepconv implementation.
 fn sepconv_full(c: &mut Criterion) {
-    let net = SepconvNetwork::<f32>::new();
+    let net = SepconvNetwork::<f32>::new(Weights::default());
     let input_data = criterion::black_box(f32::read_bin_from_file(
         "input/baseline/sepconv-f32-xcorr/in.bin",
     ));

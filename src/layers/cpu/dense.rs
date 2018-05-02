@@ -18,6 +18,6 @@ where
 
 impl<T> CpuDense<T> for DenseLayer<T>
 where
-    T: CoeffFloat,
+    T: Coeff,
 {
 }

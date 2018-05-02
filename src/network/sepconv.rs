@@ -32,6 +32,16 @@ pub type Layers<T> = (
     DenseLayer<T>,
 );
 
+pub struct Weights<T>(
+    pub Vec<T>,
+    pub Vec<T>,
+    pub Vec<T>,
+    pub Vec<T>,
+    pub Vec<T>,
+    pub Vec<T>,
+    pub Vec<T>,
+);
+
 #[derive(Clone, Debug)]
 pub struct SepconvHyperParams {
     pub side: usize,
@@ -69,45 +79,26 @@ where
 
 impl<T> SepconvNetwork<T>
 where
-    T: CoeffFloat + ReadCsv,
+    T: Coeff + ReadCsv,
 {
-    pub fn create_layers(p: &SepconvHyperParams) -> Layers<T> {
-        // Load the weights for the convolutional layers
-        let v1_wgts = T::read_csv(&format!("{}/vcr1-f32.csv", WEIGHTS_DIR));
-        let h1_wgts = T::read_csv(&format!("{}/hcr1-f32.csv", WEIGHTS_DIR));
-        let v2_wgts = T::read_csv(&format!("{}/vcr2-f32.csv", WEIGHTS_DIR));
-        let h2_wgts = T::read_csv(&format!("{}/hcr2-f32.csv", WEIGHTS_DIR));
-        // Load the weights for the dense layers
-        let dense3_wgts = T::read_csv(&format!("{}/fc3-f32-nchw.csv", WEIGHTS_DIR));
-        let dense4_wgts = T::read_csv(&format!("{}/fc4-f32.csv", WEIGHTS_DIR));
-        let dense5_wgts = T::read_csv(&format!("{}/fc5-f32.csv", WEIGHTS_DIR));
-
+    pub fn create_layers(p: &SepconvHyperParams, wgts: Weights<T>) -> Layers<T> {
+        // TODO: weights are read as T, independent of what's actually stored
         let in_shape = ImageGeometry::new(p.side, p.num_channels);
-        let vconv1 = VConvLayer::new(p.kernel_len, in_shape, p.conv_kernel_split, v1_wgts);
-        let hconv1 = HConvLayer::new(
-            p.kernel_len,
-            *vconv1.output_shape(),
-            p.num_conv_fms,
-            h1_wgts,
-        );
+        let vconv1 = VConvLayer::new(p.kernel_len, in_shape, p.conv_kernel_split, wgts.0);
+        let hconv1 = HConvLayer::new(p.kernel_len, *vconv1.output_shape(), p.num_conv_fms, wgts.1);
         let mxp1 = MaxpoolLayer::new(*hconv1.output_shape(), 2);
         let vconv2 = VConvLayer::new(
             p.kernel_len,
             *mxp1.output_shape(),
             p.conv_kernel_split,
-            v2_wgts,
+            wgts.2,
         );
-        let hconv2 = HConvLayer::new(
-            p.kernel_len,
-            *vconv2.output_shape(),
-            p.num_conv_fms,
-            h2_wgts,
-        );
+        let hconv2 = HConvLayer::new(p.kernel_len, *vconv2.output_shape(), p.num_conv_fms, wgts.3);
         let mxp2 = MaxpoolLayer::new(*hconv2.output_shape(), 2);
 
-        let dense3 = DenseLayer::new(mxp2.num_out(), p.fully_connected_const, dense3_wgts);
-        let dense4 = DenseLayer::new(dense3.num_out(), p.fully_connected_const, dense4_wgts);
-        let dense5 = DenseLayer::new(dense4.num_out(), p.num_output_classes, dense5_wgts);
+        let dense3 = DenseLayer::new(mxp2.num_out(), p.fully_connected_const, wgts.4);
+        let dense4 = DenseLayer::new(dense3.num_out(), p.fully_connected_const, wgts.5);
+        let dense5 = DenseLayer::new(dense4.num_out(), p.num_output_classes, wgts.6);
 
         (
             vconv1,
@@ -121,16 +112,16 @@ where
             dense5,
         )
     }
-    pub fn new() -> SepconvNetwork<T> {
+    pub fn new(wgts: Weights<T>) -> SepconvNetwork<T> {
         let mut p = SEPCONV_HYPER_PARAMS.clone();
 
         // HACK: Reduce dimensions of overshot layers
         SepconvNetwork::<T>::fix_params_for_default_gpu(&mut p);
 
-        let layers: Layers<T> = SepconvNetwork::create_layers(&p);
+        let layers: Layers<T> = SepconvNetwork::create_layers(&p, wgts);
 
         // Init OpenCL
-        let (queue, program, _context) = cl::init(
+        let (queue, program, _context) = cl::init::<T>(
             &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
             &SepconvNetwork::<T>::compile_flags(&p, &layers),
         ).expect(COMPILE_ERR_MSG);
@@ -150,73 +141,49 @@ where
         // Create kernels
         let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
         let dev_max_wgs = cl::max_wgs(Some(&primary_device));
-        let krn_vconv1 = vconv1.create_kernel(
-            "col_conv",
-            &bufs[0],      // In
-            &bufs[1],      // Out
-            &wgts_bufs[0], // Weights
-            LocalWorkSizePolicy::Specify(SpatialDims::Two(
-                p.vconv1_blockdim_x,
-                p.vconv1_blockdim_y,
-            )),
-            &program,
-            &queue,
-        );
-        let krn_hconv1 = hconv1.create_kernel(
-            "row_conv",
-            &bufs[1],      // In
-            &bufs[2],      // Out
-            &wgts_bufs[1], // Weights
-            LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side, p.hconv1_blockdim_y)),
-            &program,
-            &queue,
-        );
-        let krn_max_pool1 = mxp1.create_kernel(
-            "max_pool_1",
-            &bufs[2], // In
-            &bufs[3], // Out
-            LocalWorkSizePolicy::Infer { dev_max_wgs },
-            &program,
-            &queue,
-        );
-        let krn_vconv2 = vconv2.create_kernel(
-            "col_conv_2",
-            &bufs[3],      // In
-            &bufs[4],      // Out
-            &wgts_bufs[2], // Weights
-            LocalWorkSizePolicy::Specify(SpatialDims::Two(
-                p.vconv2_blockdim_x,
-                p.vconv1_blockdim_y,
-            )),
-            &program,
-            &queue,
-        );
-        let krn_hconv2 = hconv2.create_kernel(
-            "row_conv_2",
-            &bufs[4],      // In
-            &bufs[5],      // Out
-            &wgts_bufs[3], // Weights
-            LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y)),
-            &program,
-            &queue,
-        );
-        let krn_max_pool2 = mxp2.create_kernel(
-            "max_pool_2",
-            &bufs[5], // In
-            &bufs[6], // Out
-            LocalWorkSizePolicy::Infer { dev_max_wgs },
-            &program,
-            &queue,
-        );
-        let krn_dense3 = dense3.create_kernel(
-            "mtx_mul_f32",
-            &bufs[6],
-            &bufs[7],
-            &wgts_bufs[4],
-            LocalWorkSizePolicy::UseDefault,
-            &program,
-            &queue,
-        );
+
+        let kernels = {
+            let mut b = ClKernelChainBuilder::<T>::new(&bufs, &wgts_bufs, &program, queue.clone());
+            (
+                b.build_iow_kernel(
+                    &vconv1,
+                    "col_conv",
+                    LocalWorkSizePolicy::Specify(SpatialDims::Two(
+                        p.vconv1_blockdim_x,
+                        p.vconv1_blockdim_y,
+                    )),
+                ),
+                b.build_iow_kernel(
+                    &hconv1,
+                    "row_conv",
+                    LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side, p.hconv1_blockdim_y)),
+                ),
+                b.build_io_kernel(
+                    &mxp1,
+                    "max_pool_1",
+                    LocalWorkSizePolicy::Infer { dev_max_wgs },
+                ),
+                b.build_iow_kernel(
+                    &vconv2,
+                    "col_conv_2",
+                    LocalWorkSizePolicy::Specify(SpatialDims::Two(
+                        p.vconv2_blockdim_x,
+                        p.vconv1_blockdim_y,
+                    )),
+                ),
+                b.build_iow_kernel(
+                    &hconv2,
+                    "row_conv_2",
+                    LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y)),
+                ),
+                b.build_io_kernel(
+                    &mxp2,
+                    "max_pool_2",
+                    LocalWorkSizePolicy::Infer { dev_max_wgs },
+                ),
+                b.build_iow_kernel(&dense3, "mtx_mul_f32", LocalWorkSizePolicy::UseDefault),
+            )
+        };
 
         // Wait until all commands have finished running before returning.
         queue.finish().unwrap();
@@ -229,13 +196,13 @@ where
         SepconvNetwork {
             queue,
             in_buf,
-            krn_vconv1,
-            krn_hconv1,
-            krn_max_pool1,
-            krn_vconv2,
-            krn_hconv2,
-            krn_max_pool2,
-            krn_dense3,
+            krn_vconv1: kernels.0,
+            krn_hconv1: kernels.1,
+            krn_max_pool1: kernels.2,
+            krn_vconv2: kernels.3,
+            krn_hconv2: kernels.4,
+            krn_max_pool2: kernels.5,
+            krn_dense3: kernels.6,
             dense3_out_buf,
             dense4,
             dense5,
@@ -268,7 +235,7 @@ where
 
 impl<T> Predict<T> for SepconvNetwork<T>
 where
-    T: CoeffFloat + WriteLinesIntoFile,
+    T: Coeff,
 {
     // Maps the input buffer, and runs the network, returning the result.
     fn predict(&self, input_data: &[T]) -> Vec<f32> {
@@ -322,5 +289,36 @@ where
     }
     fn mxp2(&self) -> &MaxpoolLayer {
         &self.5
+    }
+}
+
+trait SepconvWeights<T>
+where
+    T: Coeff,
+{
+}
+
+impl<T> SepconvWeights<T> for Weights<T>
+where
+    T: Coeff,
+{
+}
+
+impl<T> Default for Weights<T>
+where
+    T: Coeff + ReadCsv,
+{
+    fn default() -> Weights<T> {
+        Weights(
+            // Load the weights for the convolutional layers
+            T::read_csv(&format!("{}/vcr1-f32.csv", WEIGHTS_DIR)),
+            T::read_csv(&format!("{}/hcr1-f32.csv", WEIGHTS_DIR)),
+            T::read_csv(&format!("{}/vcr2-f32.csv", WEIGHTS_DIR)),
+            T::read_csv(&format!("{}/hcr2-f32.csv", WEIGHTS_DIR)),
+            // Load the weights for the dense layers
+            T::read_csv(&format!("{}/fc3-f32-nchw.csv", WEIGHTS_DIR)),
+            T::read_csv(&format!("{}/fc4-f32.csv", WEIGHTS_DIR)),
+            T::read_csv(&format!("{}/fc5-f32.csv", WEIGHTS_DIR)),
+        )
     }
 }

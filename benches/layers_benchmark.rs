@@ -39,14 +39,14 @@ fn bench_sepconv1(c: &mut Criterion) {
     // HACK: Reduce dimensions of overshot layers
     SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
 
-    let layers = SepconvNetwork::<f32>::create_layers(&p);
+    let layers = SepconvNetwork::<f32>::create_layers(&p, sepconv::Weights::default());
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
         "{}/sepconv-f32-xcorr/in.bin",
         BASELINE_DIR
     )));
 
     // Init OpenCL
-    let (queue, program, _context) = cl::init(
+    let (queue, program, _context) = cl::init::<f32>(
         &["sepconv.cl", "max_pool.cl"],
         &SepconvNetwork::<f32>::compile_flags(&p, &layers),
     ).expect("cannot init OpenCL");
@@ -104,14 +104,14 @@ fn bench_sepconv2(c: &mut Criterion) {
     // HACK: Reduce dimensions of overshot layers
     SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
 
-    let layers = SepconvNetwork::<f32>::create_layers(&p);
+    let layers = SepconvNetwork::<f32>::create_layers(&p, sepconv::Weights::default());
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
         "{}/sepconv-f32-xcorr/mxp1-out.bin",
         BASELINE_DIR
     )));
 
     // Init OpenCL
-    let (queue, program, _context) = cl::init(
+    let (queue, program, _context) = cl::init::<f32>(
         &["sepconv.cl", "max_pool.cl"],
         &SepconvNetwork::<f32>::compile_flags(&p, &layers),
     ).expect("cannot init OpenCL");
@@ -169,14 +169,14 @@ fn bench_sepconv1and2(c: &mut Criterion) {
     // HACK: Reduce dimensions of overshot layers
     SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
 
-    let layers = SepconvNetwork::<f32>::create_layers(&p);
+    let layers = SepconvNetwork::<f32>::create_layers(&p, sepconv::Weights::default());
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
         "{}/sepconv-f32-xcorr/in.bin",
         BASELINE_DIR
     )));
 
     // Init OpenCL
-    let (queue, program, _context) = cl::init(
+    let (queue, program, _context) = cl::init::<f32>(
         &["sepconv.cl", "max_pool.cl"],
         &SepconvNetwork::<f32>::compile_flags(&p, &layers),
     ).expect("cannot init OpenCL");
@@ -274,7 +274,7 @@ fn bench_conv1and2(conv1: ConvLayer<f32>, conv2: ConvLayer<f32>, c: &mut Criteri
         *conv1.input_shape(),
     ));
 
-    let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
+    let (queue, program, _context) = cl::init::<f32>(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 
     let wgts_bufs = create_weights_bufs(&[&conv1, &conv2], &queue);
     let bufs = create_buffer_chain(&[&conv1, &conv2], &queue);

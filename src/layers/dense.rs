@@ -21,7 +21,13 @@ where
     /// Creates a descriptor of a fully-connected layer
     pub fn new(input_dim: usize, output_dim: usize, weights: Vec<T>) -> DenseLayer<T> {
         // Make sure that the weight count is correct
-        debug_assert_eq!(input_dim * output_dim, weights.len());
+        debug_assert_eq!(
+            input_dim * output_dim,
+            weights.len(),
+            "layer: dense, weights: {}, expected: {}",
+            weights.len(),
+            input_dim * output_dim
+        );
         let layer = DenseLayer {
             weights,
             num_in: input_dim,

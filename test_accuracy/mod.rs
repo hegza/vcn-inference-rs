@@ -63,7 +63,7 @@ pub fn main() {
         }
 
         // Initialize OpenCL and the sep-conv network
-        let net = SepconvNetwork::<f32>::new();
+        let net = SepconvNetwork::<f32>::new(Weights::default());
 
         // Make classifications and measure accuracy using the sep-conv network
         let (correct, total) = measure_accuracy(&net, &test_data);

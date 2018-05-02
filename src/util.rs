@@ -115,6 +115,19 @@ impl WriteLinesIntoFile for f64 {
     }
 }
 
+impl WriteLinesIntoFile for i8 {
+    fn write_lines_into_file(filename: &str, i8s: &[i8]) {
+        let path: &Path = Path::new(filename);
+        let parent: &Path = path.parent().unwrap();
+        create_dir_all(parent).unwrap();
+        let mut file = File::create(filename).expect("unable to create file");
+
+        for i in i8s {
+            write!(file, "{}\n", i).expect("unable to write i8 to file");
+        }
+    }
+}
+
 impl<T> ReadCsv for T
 where
     T: Num + FromStr,

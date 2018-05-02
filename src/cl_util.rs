@@ -9,10 +9,13 @@ const PROFILING: bool = false;
 const KERNEL_PATH: &str = "src/cl";
 
 /// Define which platform and device(s) to use. Create a context, queue, and program.
-pub fn init(
+pub fn init<T>(
     kernel_files: &[&str],
     addt_cmplr_defs: &[(&str, i32)],
-) -> ocl::Result<(Queue, Program, Context)> {
+) -> ocl::Result<(Queue, Program, Context)>
+where
+    T: ClTypeName,
+{
     let platform = ocl::Platform::default();
     let devices = ocl::Device::list_all(&platform).unwrap();
     let device_names: Vec<String> = devices
@@ -33,7 +36,8 @@ pub fn init(
     program
         .devices(device)
         .cmplr_opt("-I./src/cl")
-        .cmplr_opt("-cl-std=CL1.2");
+        .cmplr_opt("-cl-std=CL1.2")
+        .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()));
     // Input the user-defined compiler definitions
     addt_cmplr_defs.iter().for_each(|&(name, val)| {
         program.cmplr_def(name, val);
@@ -121,4 +125,44 @@ fn describe_device(device: &Device) -> ocl::Result<()> {
         device.info(DeviceInfo::MaxWorkItemSizes)?
     );
     Ok(())
+}
+
+pub trait ClTypeName {
+    fn cl_type_name() -> &'static str;
+}
+
+impl ClTypeName for i8 {
+    fn cl_type_name() -> &'static str {
+        "char"
+    }
+}
+
+impl ClTypeName for f32 {
+    fn cl_type_name() -> &'static str {
+        "float"
+    }
+}
+
+impl ClTypeName for i32 {
+    fn cl_type_name() -> &'static str {
+        "int"
+    }
+}
+
+impl ClTypeName for i16 {
+    fn cl_type_name() -> &'static str {
+        "short"
+    }
+}
+
+impl ClTypeName for u32 {
+    fn cl_type_name() -> &'static str {
+        "unsigned int"
+    }
+}
+
+impl ClTypeName for f64 {
+    fn cl_type_name() -> &'static str {
+        "double"
+    }
 }

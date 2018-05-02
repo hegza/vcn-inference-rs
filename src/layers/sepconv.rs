@@ -115,7 +115,10 @@ where
         // Make sure that the weight count is correct
         debug_assert_eq!(
             filter_len * in_shape.channels() * num_out_channels,
-            weights.len()
+            weights.len(),
+            "layer: sepconv, weights: {}, expected: {}",
+            weights.len(),
+            filter_len * in_shape.channels() * num_out_channels,
         );
         let out_shape = ImageGeometry::new(in_shape.side(), num_out_channels);
         SepconvLayer {

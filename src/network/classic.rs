@@ -71,7 +71,8 @@ where
         let layers = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
 
         // Initialize OpenCL
-        let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
+        let (queue, program, _context) =
+            cl::init::<T>(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 
         // Create shorthands (and move)
         let (conv1, conv2, dense3, dense4, dense5) = layers;
@@ -186,7 +187,7 @@ pub fn create_standalone_kernel<L: ClWeightedLayer<T>, T: Coeff>(
     input_data: &[T],
 ) -> ocl::Result<(Kernel, Buffer<T>, Queue)> {
     // Initialize OpenCL
-    let (queue, program, _context) = cl::init(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
+    let (queue, program, _context) = cl::init::<T>(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 
     let wgts_buf = layer.create_wgts_buf(&queue);
     let (in_buf, out_buf) = layer.create_io_bufs(

@@ -235,7 +235,8 @@ pub fn create_standalone_kernel_cpu<L: ClWeightedLayer<T>, T: Coeff>(
     program
         .devices(device)
         .cmplr_opt("-I./src/cl")
-        .cmplr_opt("-cl-std=CL1.2");
+        .cmplr_opt("-cl-std=CL1.2")
+        .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()));
     // Input the kernel source files
     const KERNEL_PATH: &str = "src/cl";
     program.src_file(&format!("{}/conv_relu.cl", KERNEL_PATH));

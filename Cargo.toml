@@ -1,6 +1,6 @@
 [package]
 name = "rusty-cnn"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Henri Lunnikivi <henri.lunnikivi@gmail.com>"]
 
 [dependencies]

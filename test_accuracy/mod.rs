@@ -18,9 +18,11 @@ use geometry::*;
 const INPUT_IMG_DIR: &str = "input/images";
 
 const TEST_CLASSIC: bool = true;
-const TEST_SEPCONV: bool = true;
+const TEST_SEPCONV_F32: bool = true;
+const TEST_SEPCONV_I8: bool = true;
 const CLASSIC_SINGLE_SHOT: bool = false;
-const SEPCONV_SINGLE_SHOT: bool = false;
+const SEPCONV_F32_SINGLE_SHOT: bool = false;
+const SEPCONV_I8_SINGLE_SHOT: bool = false;
 
 pub fn main() {
     env_logger::init();
@@ -50,17 +52,20 @@ pub fn main() {
         println!("{} ({}/{})", accuracy, correct, total);
     }
 
-    if TEST_SEPCONV {
-        debug!("Loading input images for sep-conv network...");
+    debug!("Loading input images for sepconv networks...");
 
-        let load_fun = |file: &String| -> Vec<f32> { load_jpeg(file) };
-        let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
-        if SEPCONV_SINGLE_SHOT {
-            test_data = test_data
-                .into_iter()
+    let load_fun = |file: &String| -> Vec<f32> { load_jpeg(file) };
+    let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
+
+    if TEST_SEPCONV_F32 {
+        let test_data = match SEPCONV_F32_SINGLE_SHOT {
+            true => test_data
+                .iter()
+                .cloned()
                 .take(1)
-                .collect::<Vec<(Vec<f32>, Class)>>();
-        }
+                .collect::<Vec<(Vec<f32>, Class)>>(),
+            false => test_data.iter().cloned().collect(),
+        };
 
         // Initialize OpenCL and the sep-conv network
         let net = SepconvNetwork::<f32>::new(Weights::default());
@@ -68,16 +73,57 @@ pub fn main() {
         // Make classifications and measure accuracy using the sep-conv network
         let (correct, total) = measure_accuracy(&net, &test_data);
         let accuracy = correct as f32 / total as f32;
-        println!("sep-conv network accuracy:");
+        println!("sepconv-f32 network accuracy:");
+        println!("{} ({}/{})", accuracy, correct, total);
+    }
+
+    if TEST_SEPCONV_I8 {
+        let test_data = match SEPCONV_I8_SINGLE_SHOT {
+            true => test_data
+                .iter()
+                .cloned()
+                .take(1)
+                .collect::<Vec<(Vec<f32>, Class)>>(),
+            false => test_data.iter().cloned().collect(),
+        };
+        let test_data = test_data
+            .into_iter()
+            .map(|(vec, c)| {
+                (
+                    vec.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
+                    c,
+                )
+            })
+            .collect::<Vec<(Vec<i8>, Class)>>();
+
+        let Weights(w0, w1, w2, w3, w4, w5, w6) = Weights::default();
+        // HACK: oh dog
+        let weights = Weights(
+            w0.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
+            w1.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
+            w2.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
+            w3.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
+            w4.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
+            w5.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
+            w6.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
+        );
+        // Initialize OpenCL and the sep-conv network
+        let net = SepconvNetwork::<i8>::new(weights);
+
+        // Make classifications and measure accuracy using the sep-conv network
+        let (correct, total) = measure_accuracy(&net, &test_data);
+        let accuracy = correct as f32 / total as f32;
+        println!("sepconv-i8 network accuracy:");
         println!("{} ({}/{})", accuracy, correct, total);
     }
 }
 
 /// Returns (num_correct, num_total)
-fn measure_accuracy<F, P>(predictor: &P, test_data: &[(Vec<F>, Class)]) -> (usize, usize)
+fn measure_accuracy<F, P, C>(predictor: &P, test_data: &[(Vec<F>, C)]) -> (usize, usize)
 where
-    F: CoeffFloat,
+    F: Coeff,
     P: Predict<F>,
+    C: AsRef<Class>,
 {
     let mut num_correct = 0;
     let mut num_total = 0;
@@ -100,7 +146,7 @@ where
         let prediction = idx_to_class(idx_of_correct);
 
         num_total += 1;
-        if prediction == *correct {
+        if prediction == *correct.as_ref() {
             num_correct += 1;
         }
     }

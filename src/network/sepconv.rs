@@ -292,18 +292,6 @@ where
     }
 }
 
-trait SepconvWeights<T>
-where
-    T: Coeff,
-{
-}
-
-impl<T> SepconvWeights<T> for Weights<T>
-where
-    T: Coeff,
-{
-}
-
 impl<T> Default for Weights<T>
 where
     T: Coeff + ReadCsv,
@@ -321,4 +309,16 @@ where
             T::read_csv(&format!("{}/fc5-f32.csv", WEIGHTS_DIR)),
         )
     }
+}
+
+pub trait SepconvWeights<T>
+where
+    T: Coeff,
+{
+}
+
+impl<T> SepconvWeights<T> for Weights<T>
+where
+    T: Coeff,
+{
 }

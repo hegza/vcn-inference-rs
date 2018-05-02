@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Class {
     Bus,
     NormalCar,
@@ -34,5 +34,11 @@ impl FromStr for Class {
             "van" => Ok(Van),
             _ => Err("cannot convert input to any of existing classes"),
         }
+    }
+}
+
+impl AsRef<Class> for Class {
+    fn as_ref(&self) -> &Class {
+        self
     }
 }

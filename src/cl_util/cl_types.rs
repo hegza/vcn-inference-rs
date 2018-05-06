@@ -1,83 +1,52 @@
 pub trait ClTypeName {
     fn cl_type_name() -> &'static str;
 }
+pub trait ClVecTypeName: ClTypeName {
+    fn cl_vec2_type_name() -> &'static str;
+    fn cl_vec4_type_name() -> &'static str;
+    fn cl_vec8_type_name() -> &'static str;
+    fn cl_vec16_type_name() -> &'static str;
+}
 
-/*
 macro_rules! cl_type {
-    ( $( $t:ty ),* ) => { ... };
+    ($NativeType:ty, $cl_data_type:tt) => {
+        impl ClTypeName for $NativeType {
+            fn cl_type_name() -> &'static str {
+                $cl_data_type
+            }
+        }
+    };
 }
 
-cl_type(i8, char, true)
-*/
-
-impl ClTypeName for i8 {
-    fn cl_type_name() -> &'static str {
-        "char"
-    }
+macro_rules! cl_vec_type {
+    ($NativeType:ty, $cl_data_type:tt) => {
+        cl_type!($NativeType, $cl_data_type);
+        impl ClVecTypeName for $NativeType {
+            fn cl_vec2_type_name() -> &'static str {
+                concat!($cl_data_type, "2")
+            }
+            fn cl_vec4_type_name() -> &'static str {
+                concat!($cl_data_type, "4")
+            }
+            fn cl_vec8_type_name() -> &'static str {
+                concat!($cl_data_type, "8")
+            }
+            fn cl_vec16_type_name() -> &'static str {
+                concat!($cl_data_type, "16")
+            }
+        }
+    };
 }
 
-impl ClTypeName for u8 {
-    fn cl_type_name() -> &'static str {
-        "uchar"
-    }
-}
-
-impl ClTypeName for i16 {
-    fn cl_type_name() -> &'static str {
-        "short"
-    }
-}
-
-impl ClTypeName for u16 {
-    fn cl_type_name() -> &'static str {
-        "ushort"
-    }
-}
-
-impl ClTypeName for i32 {
-    fn cl_type_name() -> &'static str {
-        "int"
-    }
-}
-
-impl ClTypeName for u32 {
-    fn cl_type_name() -> &'static str {
-        "uint"
-    }
-}
-
-impl ClTypeName for i64 {
-    fn cl_type_name() -> &'static str {
-        "long"
-    }
-}
-
-impl ClTypeName for u64 {
-    fn cl_type_name() -> &'static str {
-        "ulong"
-    }
-}
-
-impl ClTypeName for f32 {
-    fn cl_type_name() -> &'static str {
-        "float"
-    }
-}
-
-impl ClTypeName for f64 {
-    fn cl_type_name() -> &'static str {
-        "double"
-    }
-}
-
-impl ClTypeName for usize {
-    fn cl_type_name() -> &'static str {
-        "size_t"
-    }
-}
-
-impl ClTypeName for () {
-    fn cl_type_name() -> &'static str {
-        "void"
-    }
-}
+cl_vec_type!(i8, "char");
+cl_vec_type!(u8, "uchar");
+cl_vec_type!(i16, "short");
+cl_vec_type!(u16, "ushort");
+cl_vec_type!(i32, "int");
+cl_vec_type!(u32, "uint");
+cl_vec_type!(i64, "long");
+cl_vec_type!(u64, "ulong");
+cl_vec_type!(f32, "float");
+cl_vec_type!(f64, "double");
+cl_type!(usize, "size_t");
+cl_type!((), "void");

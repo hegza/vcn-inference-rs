@@ -155,3 +155,70 @@ fn test_mxp() {
     assert!(is_within_margin(&gpu_out, &correct, RESULT_MARGIN));
     assert!(is_within_margin(&cpu_out, &correct, RESULT_MARGIN));
 }
+
+// FIXME: segfaults
+#[test]
+fn test_dense3_cl_cpu_vec16() {
+    let net = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
+    // Create shorthands (and move)
+    let (_, _, dense3, ..) = net;
+
+    // Custom-initialize OpenCL
+    let platform = ocl::Platform::default();
+    let devices = ocl::Device::list(platform, Some(ocl::flags::DeviceType::CPU)).unwrap();
+    let device = devices.first().unwrap();
+
+    let context = ocl::Context::builder()
+        .platform(platform)
+        .devices(device)
+        .build()
+        .unwrap();
+
+    let mut program = ocl::Program::builder();
+    cl::configure_program::<f32>(&mut program, &device);
+
+    // Input the kernel source files
+    const KERNEL_PATH: &str = "src/cl";
+    program.src_file(&format!("{}/mtx_mul.cl", KERNEL_PATH));
+    let program = program.build(&context).unwrap();
+
+    // Create the queue for the default device
+    const PROFILING: bool = false;
+    let profile_flag = match PROFILING {
+        true => Some(flags::CommandQueueProperties::PROFILING_ENABLE),
+        false => None,
+    };
+    let queue = Queue::new(&context, *device, profile_flag).unwrap();
+
+    let wgts_buf =
+        cl::create_buffer::<f32>(dense3.num_weights(), flags::MEM_READ_ONLY, &queue).unwrap();
+    wgts_buf.write(dense3.weights()).enq().unwrap();
+
+    let in_buf = cl::create_buffer::<f32>(
+        dense3.num_in(),
+        flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
+        &queue,
+    ).unwrap();
+    let out_buf = cl::create_buffer::<f32>(
+        dense3.num_out(),
+        flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
+        &queue,
+    ).unwrap();
+
+    let kernel = Kernel::builder().program(&program).name("mtx_mul_vec16")
+        .queue(queue.clone())
+        .global_work_size(dense3.gws_hint())
+        // Input
+        .arg(&in_buf)
+        // Output
+        .arg(&out_buf)
+        .arg(&wgts_buf).build().unwrap();
+
+    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", BASELINE_DIR));
+    unsafe {
+        cl::map_to_buf(&in_buf, &input_data).unwrap();
+    }
+    queue.finish().unwrap();
+
+    run_kernel_wait(&kernel, &queue).unwrap();
+}

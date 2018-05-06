@@ -23,6 +23,7 @@ fn per_layer_benchmark(c: &mut Criterion) {
     bench_conv2(conv2.clone(), c);
     bench_conv1and2(conv1, conv2, c);
     bench_dense3_cl_gpu(dense3.clone(), c);
+    // TODO: cl_[c|g]pu_vec16
     bench_dense3_cl_cpu(dense3.clone(), c);
     bench_dense3_host_ndarray(dense3.clone(), c);
     bench_dense3_host(dense3, c);

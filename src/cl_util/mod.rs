@@ -1,9 +1,14 @@
 #![allow(dead_code)]
+mod cl_types;
+mod info;
+
 use util::*;
 use ocl;
 use ocl::builders::*;
 use ocl::enums::*;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
+pub use self::cl_types::ClTypeName;
+pub use self::info::*;
 
 const PROFILING: bool = false;
 const KERNEL_PATH: &str = "src/cl";
@@ -92,77 +97,4 @@ pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<
 
     mem_map.unmap().enq()?;
     Ok(())
-}
-
-/// Returns the max work-group-size of the primary OpenCL device.
-pub fn max_wgs(device: Option<&Device>) -> usize {
-    let device = match device {
-        Some(d) => d.clone(),
-        None => {
-            let platform = Platform::default();
-            Device::first(platform).unwrap()
-        }
-    };
-
-    match device.info(DeviceInfo::MaxWorkGroupSize).unwrap() {
-        DeviceInfoResult::MaxWorkGroupSize(max_wgs) => max_wgs,
-        e => panic!("ocl library returned invalid enum {:?}", e),
-    }
-}
-
-fn describe_device(device: &Device) -> ocl::Result<()> {
-    let device_type = match device.info(DeviceInfo::Type)? {
-        DeviceInfoResult::Type(t) => match t {
-            flags::DeviceType::CPU => "CPU",
-            flags::DeviceType::GPU => "GPU",
-            _ => "unknown device type",
-        },
-        _ => panic!("ocl did not return the expected type"),
-    };
-    info!("Using {} \"{}\".", device_type, device.name()?);
-    debug!(
-        "Maximum work-item-sizes: {}",
-        device.info(DeviceInfo::MaxWorkItemSizes)?
-    );
-    Ok(())
-}
-
-pub trait ClTypeName {
-    fn cl_type_name() -> &'static str;
-}
-
-impl ClTypeName for i8 {
-    fn cl_type_name() -> &'static str {
-        "char"
-    }
-}
-
-impl ClTypeName for f32 {
-    fn cl_type_name() -> &'static str {
-        "float"
-    }
-}
-
-impl ClTypeName for i32 {
-    fn cl_type_name() -> &'static str {
-        "int"
-    }
-}
-
-impl ClTypeName for i16 {
-    fn cl_type_name() -> &'static str {
-        "short"
-    }
-}
-
-impl ClTypeName for u32 {
-    fn cl_type_name() -> &'static str {
-        "unsigned int"
-    }
-}
-
-impl ClTypeName for f64 {
-    fn cl_type_name() -> &'static str {
-        "double"
-    }
 }

@@ -1,6 +1,8 @@
+// TODO: rename to ClType, functions as-is
 pub trait ClTypeName {
     fn cl_type_name() -> &'static str;
 }
+// TODO: rename to ClVecType, functions as-is
 pub trait ClVecTypeName: ClTypeName {
     fn cl_vec2_type_name() -> &'static str;
     fn cl_vec4_type_name() -> &'static str;

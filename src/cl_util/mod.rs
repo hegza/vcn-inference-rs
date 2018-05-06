@@ -38,15 +38,7 @@ where
         .build()?;
 
     let mut program = Program::builder();
-    program
-        .devices(device)
-        .cmplr_opt("-I./src/cl")
-        .cmplr_opt("-cl-std=CL1.2")
-        .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()))
-        .cmplr_opt(format!("-D CL_PRIM2={}", T::cl_vec2_type_name()))
-        .cmplr_opt(format!("-D CL_PRIM4={}", T::cl_vec2_type_name()))
-        .cmplr_opt(format!("-D CL_PRIM8={}", T::cl_vec2_type_name()))
-        .cmplr_opt(format!("-D CL_PRIM16={}", T::cl_vec2_type_name()));
+    configure_program::<T>(&mut program, &device);
     // Input the user-defined compiler definitions
     addt_cmplr_defs.iter().for_each(|&(name, val)| {
         program.cmplr_def(name, val);
@@ -65,6 +57,21 @@ where
     let queue = Queue::new(&context, device, profile_flag)?;
 
     Ok((queue, program, context))
+}
+
+pub fn configure_program<T>(program_b: &mut ProgramBuilder, device: &Device)
+where
+    T: ClVecTypeName,
+{
+    program_b
+        .devices(device.clone())
+        .cmplr_opt("-I./src/cl")
+        .cmplr_opt("-cl-std=CL1.2")
+        .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM2={}", T::cl_vec2_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM4={}", T::cl_vec2_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM8={}", T::cl_vec2_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM16={}", T::cl_vec2_type_name()));
 }
 
 pub fn create_buffer<T>(

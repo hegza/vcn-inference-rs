@@ -1,7 +1,14 @@
-
 pub trait ClTypeName {
     fn cl_type_name() -> &'static str;
 }
+
+/*
+macro_rules! cl_type {
+    ( $( $t:ty ),* ) => { ... };
+}
+
+cl_type(i8, char, true)
+*/
 
 impl ClTypeName for i8 {
     fn cl_type_name() -> &'static str {

@@ -13,6 +13,20 @@ extern crate num_traits;
 extern crate ocl;
 extern crate rand;
 
+#[macro_use]
+#[allow(unused_macros)]
+macro_rules! format_result {
+    // This macro takes an expression of type `expr` and prints
+    // it as a string along with its result.
+    // The `expr` designator is used for expressions.
+    ($expression:expr) => (
+        // `stringify!` will convert the expression *as it is* into a string.
+        format!("{:?} = {:?}",
+                 stringify!($expression),
+                 $expression);
+    )
+}
+
 pub mod cl_util;
 pub mod geometry;
 pub mod network;

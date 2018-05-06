@@ -81,7 +81,7 @@ fn run_l3(params: &NetworkParams) -> ocl::Result<Vec<f32>> {
     );
 
     let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", BASELINE_DIR));
-    let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "mtx_mul_f32", &input_data)?;
+    let (kernel, out_buf, queue) = create_standalone_kernel(&layer, "mtx_mul", &input_data)?;
     // Enqueue the kernel for the 3rd layer (Convolution)
     run_kernel_wait(&kernel, &queue)?;
     // Run relu on CPU

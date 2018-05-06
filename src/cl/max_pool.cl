@@ -4,7 +4,8 @@
 //  #define MP1_BLOCK_DIM           i32
 //  #define MP2_BLOCK_DIM           i32
 //  #define INJECT_RELU_AFTER_MXP
-//  #define CL_PRIM                 type {float, char}
+//  #define CL_PRIM                 type (eg. float, char)
+//  #define CL_PRIM<N>              vector type (eg. float2, char2)
 
 // Update test_mxp.cl if this is changed
 __kernel void max_pool_1(__global const CL_PRIM *src, __global CL_PRIM *dst) {

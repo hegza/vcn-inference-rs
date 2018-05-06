@@ -7,7 +7,7 @@ use ocl;
 use ocl::builders::*;
 use ocl::enums::*;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
-pub use self::cl_types::ClTypeName;
+pub use self::cl_types::*;
 pub use self::info::*;
 
 const PROFILING: bool = false;
@@ -19,7 +19,7 @@ pub fn init<T>(
     addt_cmplr_defs: &[(&str, i32)],
 ) -> ocl::Result<(Queue, Program, Context)>
 where
-    T: ClTypeName,
+    T: ClVecTypeName,
 {
     let platform = ocl::Platform::default();
     let devices = ocl::Device::list_all(&platform).unwrap();
@@ -42,7 +42,11 @@ where
         .devices(device)
         .cmplr_opt("-I./src/cl")
         .cmplr_opt("-cl-std=CL1.2")
-        .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()));
+        .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM2={}", T::cl_vec2_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM4={}", T::cl_vec2_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM8={}", T::cl_vec2_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM16={}", T::cl_vec2_type_name()));
     // Input the user-defined compiler definitions
     addt_cmplr_defs.iter().for_each(|&(name, val)| {
         program.cmplr_def(name, val);

@@ -108,7 +108,7 @@ where
 
         // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
         let krn_dense3 = dense3.create_kernel(
-            "mtx_mul_f32",
+            "mtx_mul",
             &bufs[2],
             &bufs[3],
             &wgts_bufs[2],

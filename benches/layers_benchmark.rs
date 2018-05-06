@@ -311,7 +311,7 @@ fn bench_dense3_cl_gpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
         "{}/orig-f32-all-layers/fm2.f",
         BASELINE_DIR
     )));
-    let (kernel, _, queue) = create_standalone_kernel(&dense3, "mtx_mul_f32", &input_data).unwrap();
+    let (kernel, _, queue) = create_standalone_kernel(&dense3, "mtx_mul", &input_data).unwrap();
     c.bench_function("layer 3 - cl gpu mtxmul", move |b| {
         b.iter(|| run_kernel_wait(&kernel, &queue).unwrap())
     });
@@ -322,8 +322,7 @@ fn bench_dense3_cl_cpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
         "{}/orig-f32-all-layers/fm2.f",
         BASELINE_DIR
     )));
-    let (kernel, _, queue) =
-        create_standalone_kernel_cpu(&dense3, "mtx_mul_f32", &input_data).unwrap();
+    let (kernel, _, queue) = create_standalone_kernel_cpu(&dense3, "mtx_mul", &input_data).unwrap();
     c.bench_function("layer 3 - cl cpu mtxmul", move |b| {
         b.iter(|| run_kernel_wait(&kernel, &queue).unwrap())
     });

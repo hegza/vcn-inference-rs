@@ -181,7 +181,7 @@ where
                     "max_pool_2",
                     LocalWorkSizePolicy::Infer { dev_max_wgs },
                 ),
-                b.build_iow_kernel(&dense3, "mtx_mul_f32", LocalWorkSizePolicy::UseDefault),
+                b.build_iow_kernel(&dense3, "mtx_mul", LocalWorkSizePolicy::UseDefault),
             )
         };
 

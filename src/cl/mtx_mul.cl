@@ -1,11 +1,12 @@
 // Compiled with:
 //  #define CL_PRIM                 type {float, char}
+//  #define CL_PRIM<N>              vector type (eg. float2, char2)
 
 // HACK: should be based passed in as a flag (cnn.h for classic, sepconv.h for sepconv)
 #include "cnn.h"
 
 // `restrict` makes sure OpenCL knows that the pointers must not overlap
-__kernel void mtx_mul_f32(__global CL_PRIM* restrict B, __global CL_PRIM* restrict c_mul,
+__kernel void mtx_mul(__global CL_PRIM* restrict B, __global CL_PRIM* restrict c_mul,
                        __global CL_PRIM* restrict A) {
 
     const int Mdim = MAGIC;

@@ -4,6 +4,7 @@
 //  #define ROWS_BLOCKDIM_Y         i32
 //  #define ROWS_2_BLOCKDIM_Y       i32
 //  #define CL_PRIM                 type {float, char, ...}
+//  #define CL_PRIM<N>              vector type (eg. float2, char2)
 
 #define ROWS_BLOCKDIM_X 96
 #define ROWS_2_BLOCKDIM_X 48

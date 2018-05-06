@@ -7,18 +7,12 @@ __kernel void conv_relu_1(
     __constant float* restrict wgt)
 {
     const int nInWidth = PATCH1 + (2 * PAD_NUM);
-    const int nWidth = PATCH1;
-    const int nHeight = PATCH1;
     const int nFilterWidth = CONV1SIZE;
 
     int fm = get_global_id(0);
     int row = get_global_id(1)*PAD_NUM;
     int col = get_global_id(2)*PAD_NUM;
-/*
-    for (int fm = 0; fm < FM_COUNT; fm++) {
-    for (int row = 0; row < nHeight; row += PAD_NUM) {
-    for (int col = 0; col < nWidth; col += PAD_NUM) {
-*/
+
     float tmp = 0;
     if ((row > PAD_NUM) && (col > PAD_NUM) && (row < PATCH1+(2*PAD_NUM)) && (col < PATCH1+(2*PAD_NUM))) {
         int rr = row - 2*PAD_NUM;
@@ -47,11 +41,6 @@ __kernel void conv_relu_1(
         tmp = tmp > gssample[3] ? tmp : gssample[3];
     }
     matrix1(fifo_out, (fm*PATCH2SQPAD), (PATCH2+2*PAD_NUM), (row/2), (col/2)) = tmp;
-/*
-    } // col
-    } // row
-    } // fm
-*/
 }
 
 __kernel void conv_relu_2(
@@ -60,18 +49,11 @@ __kernel void conv_relu_2(
     __global float* restrict wgt)
 {
     const int nInWidth = PATCH2 + (2 * PAD_NUM);
-    const int nWidth = PATCH2;
-    const int nHeight = PATCH2;
-     const int nFilterWidth = CONV2SIZE;
+    const int nFilterWidth = CONV2SIZE;
 
     int fm = get_global_id(0);
     int row = get_global_id(1)*PAD_NUM;
     int col = get_global_id(2)*PAD_NUM;
-/*
-    for (int fm = 0; fm < FM_COUNT; fm++) {
-    for (int row = 0; row < nHeight; row += PAD_NUM) {
-    for (int col = 0; col < nWidth; col += PAD_NUM) {
-*/
 
     float gssample[PAD_NUM*PAD_NUM] = {0};
     for (int c = 0; c < FM_COUNT; c++) {
@@ -96,9 +78,4 @@ __kernel void conv_relu_2(
     tmp = tmp > gssample[2] ? tmp : gssample[2];
     tmp = tmp > gssample[3] ? tmp : gssample[3];
     matrix1(fifo_out, fm*PATCH3SQ, (PATCH2/TILE_NUM), (row/2), (col/2)) = tmp;
-/*
-    } // col
-    } // row
-    } // fm
-*/
 }

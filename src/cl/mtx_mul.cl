@@ -6,18 +6,35 @@
 #include "cnn.h"
 
 // `restrict` makes sure OpenCL knows that the pointers must not overlap
-__kernel void mtx_mul(__global CL_PRIM* restrict B, __global CL_PRIM* restrict c_mul,
-                       __global CL_PRIM* restrict A) {
+__kernel void mtx_mul(
+        __global CL_PRIM* restrict input,
+        __global CL_PRIM* restrict output,
+        __global CL_PRIM* restrict weights) {
 
-    const int Mdim = MAGIC;
-    const int Kdim = 1;
-    const int Ndim = PATCH3SQ * FM_COUNT;
+    const int DATA_COUNT = PATCH3SQ * FM_COUNT;
 
-    int i = get_global_id(0);
+    size_t gid = get_global_id(0);
 
     CL_PRIM acc = 0.0;
-    for (int z = 0; z < Ndim; z++) {
-        acc += A[Ndim*i + z] * B[z];
+    for (int z = 0; z < DATA_COUNT; z++) {
+        acc += weights[DATA_COUNT*gid + z] * input[z];
     }
-    c_mul[i] = acc;
+    output[gid] = acc;
+
+}
+
+__kernel void mtx_mul_vec16(
+        __global CL_PRIM16* restrict input,
+        __global CL_PRIM16* restrict output,
+        __global CL_PRIM16* restrict weights) {
+
+    const int DATA_COUNT = PATCH3SQ * FM_COUNT;
+
+    size_t gid = get_global_id(0);
+
+    CL_PRIM16 acc = (CL_PRIM16)(0.0);
+    for (int z = 0; z < DATA_COUNT; ++z) {
+        acc += weights[DATA_COUNT * gid + z] * input[z];
+    }
+    output[gid] = acc;
 }

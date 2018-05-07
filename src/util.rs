@@ -70,6 +70,26 @@ impl ReadBinFromFile for f32 {
     }
 }
 
+impl ReadBinFromFile for i8 {
+    fn read_bin_from_file(filename: &str) -> Vec<i8> {
+        let metadata =
+            std::fs::metadata(&filename).expect(&format!("file not found '{}'", filename));
+
+        let f = File::open(filename).expect(&format!("file not found '{}'", filename));
+        // i8 = 1 byte
+        let len_i8s = metadata.len() as usize;
+        let mut reader = BufReader::with_capacity(len_i8s, f);
+
+        let mut ints: Vec<i8> = Vec::with_capacity(len_i8s + 1);
+
+        // Iterate the file into f32s
+        while let Ok(f) = reader.read_i8() {
+            ints.push(f);
+        }
+        ints
+    }
+}
+
 impl ReadBinFromFile for f64 {
     fn read_bin_from_file(filename: &str) -> Vec<f64> {
         let metadata =

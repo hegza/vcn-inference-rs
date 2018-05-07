@@ -225,4 +225,9 @@ fn test_dense3_cl_cpu_vec4() {
         kernel.cmd().queue(&queue).enq().unwrap();
     }
     queue.finish().unwrap();
+
+    let res = unsafe { cl::read_buf(&out_buf).unwrap() };
+    let corr = f32::read_lines_from_file(&format!("{}/fc3.f", BASELINE_DIR));
+    println!("a: {:?}\nb: {:?}", &res[0..10], &corr[0..10]);
+    assert!(is_within_margin(&res, &corr, RESULT_MARGIN,));
 }

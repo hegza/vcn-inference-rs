@@ -158,8 +158,9 @@ fn test_mxp() {
 
 // FIXME: segfaults
 #[test]
-fn test_dense3_cl_cpu_vec16() {
+fn test_dense3_cl_cpu_vec4() {
     let net = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
+
     // Create shorthands (and move)
     let (_, _, dense3, ..) = net;
 
@@ -205,7 +206,7 @@ fn test_dense3_cl_cpu_vec16() {
         &queue,
     ).unwrap();
 
-    let kernel = Kernel::builder().program(&program).name("mtx_mul_vec16")
+    let kernel = Kernel::builder().program(&program).name("mtx_mul_vec4")
         .queue(queue.clone())
         .global_work_size(dense3.gws_hint())
         // Input
@@ -220,5 +221,8 @@ fn test_dense3_cl_cpu_vec16() {
     }
     queue.finish().unwrap();
 
-    run_kernel_wait(&kernel, &queue).unwrap();
+    unsafe {
+        kernel.cmd().queue(&queue).enq().unwrap();
+    }
+    queue.finish().unwrap();
 }

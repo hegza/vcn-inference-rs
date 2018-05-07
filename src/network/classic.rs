@@ -30,7 +30,7 @@ where
 
 impl<T> ClassicNetwork<T>
 where
-    T: CoeffFloat + ReadBinFromFile,
+    T: Coeff + ReadBinFromFile,
 {
     pub fn create_layers(params: &ClassicHyperParams) -> Layers<T> {
         let params = NetworkParams::new(params.clone());

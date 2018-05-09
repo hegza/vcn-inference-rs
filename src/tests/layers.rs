@@ -111,12 +111,13 @@ fn test_mxp() {
         flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
         &queue,
     );
+    let max_wgs = cl_util::max_wgs(None);
     let mxp_krn = Kernel::builder()
         .program(&program)
         .name("max_pool")
         .queue(queue.clone())
-        .global_work_size(SpatialDims::Three(SIDE, SIDE, 1))
-        .local_work_size(SpatialDims::Three(SIDE, SIDE, 1))
+        .global_work_size(mxp.gws_hint())
+        .local_work_size(mxp.lws_hint(max_wgs))
         .arg(&in_buf)
         .arg(&out_buf)
         .build()
@@ -207,6 +208,7 @@ fn test_dense3_cl_cpu_vec4() {
 
     let res = unsafe { cl::read_buf(&out_buf).unwrap() };
     let corr = f32::read_lines_from_file(&format!("{}/fc3.f", BASELINE_DIR));
+    assert_eq!(res.len(), corr.len());
     println!("a: {:?}\nb: {:?}", &res[0..10], &corr[0..10]);
-    assert!(is_within_margin(&res, &corr, RESULT_MARGIN,));
+    verify(&res, &corr, RESULT_MARGIN);
 }

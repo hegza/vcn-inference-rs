@@ -49,6 +49,7 @@ impl Layer for MaxpoolLayer {
             self.in_shape.channels(),
         )
     }
+    /// Finds the largest possible local-work-size that fits with the data and the GPU max work-group-size
     fn lws_hint(&self, device_max_wgs: usize) -> SpatialDims {
         // Verify that the device max wgs is a power of two
         if (device_max_wgs & (device_max_wgs - 1)) != 0 {

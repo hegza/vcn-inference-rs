@@ -167,11 +167,15 @@ pub fn run_kernel_wait(kernel: &Kernel, queue: &Queue) -> ocl::Result<()> {
 }
 
 /// Creates a standalone kernel for benchmarking. Uploads input data. Returns only after all commands have finished.
-pub fn create_standalone_kernel<L: ClWeightedLayer<T>, T: Coeff>(
+pub fn create_standalone_kernel<L, T>(
     layer: &L,
     kernel_func: &str,
     input_data: &[T],
-) -> ocl::Result<(Kernel, Buffer<T>, Queue)> {
+) -> ocl::Result<(Kernel, Buffer<T>, Queue)>
+where
+    L: ClWeightedLayer<T>,
+    T: Coeff,
+{
     // Initialize OpenCL
     let (queue, program, _context) = cl::init::<T>(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
 

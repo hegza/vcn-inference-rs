@@ -5,52 +5,18 @@
 // HACK: should be based passed in as a flag (cnn.h for classic, sepconv.h for sepconv)
 #include "cnn.h"
 
-// `restrict` makes sure OpenCL knows that the pointers must not overlap
 __kernel void mtx_mul(
         __global CL_PRIM* restrict input,
         __global CL_PRIM* restrict output,
         __global CL_PRIM* restrict weights) {
 
-    const int DATA_COUNT = PATCH3SQ * FM_COUNT;
+    const int DATA_SIZE = PATCH3SQ * FM_COUNT;
 
     size_t gid = get_global_id(0);
 
     CL_PRIM acc = 0.0;
-    for (int z = 0; z < DATA_COUNT; z++) {
-        acc += weights[DATA_COUNT*gid + z] * input[z];
-    }
-    output[gid] = acc;
-
-}
-
-__kernel void mtx_mul_vec4(
-        __global CL_PRIM4* restrict input,
-        __global CL_PRIM4* restrict output,
-        __global CL_PRIM4* restrict weights) {
-
-    const int DATA_COUNT = PATCH3SQ * FM_COUNT / 4;
-
-    size_t gid = get_global_id(0);
-
-    CL_PRIM4 acc = (CL_PRIM4)(0.0);
-    for (int z = 0; z < DATA_COUNT; ++z) {
-        acc += weights[DATA_COUNT * gid + z] * input[z];
-    }
-    output[gid] = acc;
-}
-
-__kernel void mtx_mul_vec16(
-        __global CL_PRIM16* restrict input,
-        __global CL_PRIM16* restrict output,
-        __global CL_PRIM16* restrict weights) {
-
-    const int DATA_COUNT = PATCH3SQ * FM_COUNT / 16;
-
-    size_t gid = get_global_id(0);
-
-    CL_PRIM16 acc = (CL_PRIM16)(0.0);
-    for (int z = 0; z < DATA_COUNT; ++z) {
-        acc += weights[DATA_COUNT * gid + z] * input[z];
+    for (int data_idx = 0; data_idx != DATA_SIZE; ++data_idx) {
+        acc += weights[DATA_SIZE*gid + data_idx] * input[data_idx];
     }
     output[gid] = acc;
 }

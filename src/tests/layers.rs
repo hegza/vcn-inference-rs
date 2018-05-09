@@ -163,8 +163,10 @@ fn test_dense3_cl_cpu_vec4() {
     let mut program_b = Program::builder();
     cl::configure_program::<f32>(&mut program_b, &device);
 
+    program_b.cmplr_opt("-D VECN=4");
+
     // Input the kernel source files
-    program_b.src_file("src/cl/mtx_mul.cl");
+    program_b.src_file("src/cl/mtx_mul_vec.cl");
 
     let program = program_b.build(&context).unwrap();
 

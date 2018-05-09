@@ -2,41 +2,30 @@ use super::*;
 use rand::Rng;
 
 #[test]
-fn test_classic() {
+fn classic_predicts() {
     let output = run_classic();
     let correct = f32::read_lines_from_file(&format!("{}/out5.f", BASELINE_DIR));
-    assert!(is_within_margin(&output, &correct, RESULT_MARGIN));
+
+    verify(&output, &correct, RESULT_MARGIN);
 }
 
 #[test]
-fn test_sepconv_f32() {
+fn sepconv_f32_predicts() {
     let output = run_sepconv_f32();
-    assert_eq!(output.len(), 4);
     let correct = f32::read_lines_from_file("input/baseline/sepconv-f32-xcorr/f32/out.f");
 
-    assert!(
-        is_within_margin(&output, &correct, COARSE_RESULT_MARGIN),
-        "output is not within margin of correct: {:?} != {:?}",
-        output,
-        correct
-    );
+    verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
 
 #[test]
-fn test_sepconv_i8() {
+fn sepconv_i8_runs() {
     let output = run_sepconv_i8();
     assert_eq!(output.len(), 4);
-    // TODO: verify correctness
-    /*
-    let correct = i8::read_lines_from_file("X");
 
-    assert!(
-        is_within_margin(&output, &correct, COARSE_RESULT_MARGIN),
-        "output is not within margin of correct: {:?} != {:?}",
-        output,
-        correct
-    );
-    */}
+    // TODO: verify correctness
+    //let correct = i8::read_lines_from_file("X");
+    //verify(&output, &correct, COARSE_RESULT_MARGIN);
+}
 
 fn run_classic() -> Vec<f32> {
     let net = ClassicNetwork::<f32>::new();
@@ -48,7 +37,7 @@ fn run_classic() -> Vec<f32> {
 }
 
 fn run_sepconv_f32() -> Vec<f32> {
-    let net = SepconvNetwork::<f32>::new(Weights::default());
+    let net = SepconvNetwork::<f32>::new(sepconv::Weights::default());
     let input_data = f32::read_bin_from_file("input/baseline/sepconv-f32-xcorr/in.bin");
     net.predict(&input_data)
 }

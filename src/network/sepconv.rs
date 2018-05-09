@@ -2,7 +2,7 @@ use super::*;
 use ocl::{Device, Platform, SpatialDims};
 use geometry::*;
 use ndarray::{Array, ShapeBuilder, arr2};
-use std::ops::Deref;
+use std::ops::{Deref, Index};
 
 pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     // TODO: revisit the names here
@@ -81,7 +81,11 @@ impl<T> SepconvNetwork<T>
 where
     T: Coeff + ReadCsv,
 {
-    pub fn create_layers(p: &SepconvHyperParams, wgts: Weights<T>) -> Layers<T> {
+    pub fn create_layers<W>(p: &SepconvHyperParams, wgts: W) -> Layers<T>
+    where
+        W: SepconvWeights<T>,
+    {
+        let wgts = wgts.into_tuple();
         // TODO: weights are read as T, independent of what's actually stored
         let in_shape = ImageGeometry::new(p.side, p.num_channels);
         let vconv1 = VConvLayer::new(p.kernel_len, in_shape, p.conv_kernel_split, wgts.0);
@@ -315,10 +319,14 @@ pub trait SepconvWeights<T>
 where
     T: Coeff,
 {
+    fn into_tuple(self) -> (Vec<T>, Vec<T>, Vec<T>, Vec<T>, Vec<T>, Vec<T>, Vec<T>);
 }
 
 impl<T> SepconvWeights<T> for Weights<T>
 where
     T: Coeff,
 {
+    fn into_tuple(self) -> (Vec<T>, Vec<T>, Vec<T>, Vec<T>, Vec<T>, Vec<T>, Vec<T>) {
+        (self.0, self.1, self.2, self.3, self.4, self.5, self.6)
+    }
 }

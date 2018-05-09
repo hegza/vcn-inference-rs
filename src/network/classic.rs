@@ -34,29 +34,15 @@ where
 {
     pub fn create_layers(params: &ClassicHyperParams) -> Layers<T> {
         let params = NetworkParams::new(params.clone());
+        let wgts = Weights::default();
         // Create a representation of the 1st convolutional layer with weights from a file
-        let conv1 = params.create_conv(
-            1,
-            T::read_bin_from_file(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR)),
-        );
+        let conv1 = params.create_conv(1, wgts.0);
         // Create a representation of the 2nd convolutional layer with weights from a file
-        let conv2 = params.create_conv(
-            2,
-            T::read_bin_from_file(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR)),
-        );
+        let conv2 = params.create_conv(2, wgts.1);
         // Create the representations of the fully-connected layers
-        let dense3 = params.create_dense(
-            3,
-            T::read_bin_from_file(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR)),
-        );
-        let dense4 = params.create_dense(
-            4,
-            T::read_bin_from_file(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR)),
-        );
-        let dense5 = params.create_dense(
-            5,
-            T::read_bin_from_file(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR)),
-        );
+        let dense3 = params.create_dense(3, wgts.2);
+        let dense4 = params.create_dense(4, wgts.3);
+        let dense5 = params.create_dense(5, wgts.4);
 
         // Verify that I/O dimensions match between layers
         verify_network_dimensions(&[&conv1, &conv2, &dense3, &dense4, &dense5]);
@@ -297,6 +283,8 @@ pub struct NetworkParams {
     fm2_shape: ImageGeometry,
 }
 
+pub struct Weights<T>(pub Vec<T>, pub Vec<T>, pub Vec<T>, pub Vec<T>, pub Vec<T>);
+
 impl NetworkParams {
     pub fn new(hyper_params: ClassicHyperParams) -> NetworkParams {
         let conv1_filter_shape = PaddedSquare::from_side(hyper_params.conv_1_filter_side);
@@ -373,5 +361,32 @@ impl Deref for NetworkParams {
 
     fn deref(&self) -> &Self::Target {
         &self.hyper_params
+    }
+}
+
+pub trait ClassicWeights<T>
+where
+    T: Coeff,
+{
+}
+
+impl<T> ClassicWeights<T> for Weights<T>
+where
+    T: Coeff,
+{
+}
+
+impl<T> Default for Weights<T>
+where
+    T: Coeff + ReadBinFromFile,
+{
+    fn default() -> Weights<T> {
+        Weights(
+            T::read_bin_from_file(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR)),
+            T::read_bin_from_file(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR)),
+            T::read_bin_from_file(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR)),
+            T::read_bin_from_file(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR)),
+            T::read_bin_from_file(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR)),
+        )
     }
 }

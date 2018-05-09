@@ -14,7 +14,7 @@ const RESULT_MARGIN: f32 = 0.000002f32;
 const COARSE_RESULT_MARGIN: f32 = 0.0035f32;
 const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
 lazy_static!{
-    static ref TEST_NETWORK: NetworkParams = NetworkParams::new(CLASSIC_HYPER_PARAMS);
+    static ref CLASSIC_PARAMS: NetworkParams = NetworkParams::new(CLASSIC_HYPER_PARAMS);
 }
 
 fn is_within_margin<T>(a: &[T], b: &[T], margin: T) -> bool
@@ -31,4 +31,14 @@ where
         }
     }
     true
+}
+
+// Wrap is_within_margin within an assert!()
+fn verify(output: &[f32], correct: &[f32], margin: f32) {
+    assert!(
+        is_within_margin(output, correct, margin),
+        "output is not within margin of correct: {:?} != {:?}",
+        output,
+        correct
+    );
 }

@@ -68,7 +68,7 @@ pub fn main() {
         };
 
         // Initialize OpenCL and the sep-conv network
-        let net = SepconvNetwork::<f32>::new(Weights::default());
+        let net = SepconvNetwork::<f32>::new(sepconv::Weights::default());
 
         // Make classifications and measure accuracy using the sep-conv network
         let (correct, total) = measure_accuracy(&net, &test_data);
@@ -96,6 +96,7 @@ pub fn main() {
             })
             .collect::<Vec<(Vec<i8>, Class)>>();
 
+        use sepconv::Weights;
         let Weights(w0, w1, w2, w3, w4, w5, w6) = Weights::default();
         // HACK: oh dog
         let weights = Weights(

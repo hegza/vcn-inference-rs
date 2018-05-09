@@ -176,33 +176,17 @@ where
     L: ClWeightedLayer<T>,
     T: Coeff,
 {
-    // Initialize OpenCL
-    let (queue, program, _context) = cl::init::<T>(&["conv_relu.cl", "mtx_mul.cl"], &[]).unwrap();
-
-    let wgts_buf = layer.create_wgts_buf(&queue);
-    let (in_buf, out_buf) = layer.create_io_bufs(
-        flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
-        flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
-        &queue,
+    let cl_layer = impl_ocl_layer(
+        layer,
+        &["conv_relu.cl", "mtx_mul.cl"],
+        kernel_func,
+        None,
+        None,
+        LocalWorkSizePolicy::UseDefault,
     );
+    cl_layer.map_input(input_data);
 
-    let kernel = Kernel::builder().program(&program).name(kernel_func)
-        .queue(queue.clone())
-        .global_work_size(layer.gws_hint())
-        // Input
-        .arg(&in_buf)
-        // Output
-        .arg(&out_buf)
-        .arg(&wgts_buf).build().unwrap();
-
-    // Write the weights and input to the global memory of the device
-    wgts_buf.write(layer.weights()).enq().unwrap();
-    unsafe {
-        cl::map_to_buf(&in_buf, input_data).unwrap();
-    }
-    queue.finish().unwrap();
-
-    Ok((kernel, out_buf, queue))
+    Ok((cl_layer.kernel, cl_layer.out_buf, cl_layer.queue))
 }
 
 /// Creates a standalone kernel for benchmarking on CPU. Uploads input data. Returns only after all commands have finished. Note that profiling is turned off by default.
@@ -211,55 +195,17 @@ pub fn create_standalone_kernel_cpu<L: ClWeightedLayer<T>, T: Coeff>(
     kernel_func: &str,
     input_data: &[T],
 ) -> ocl::Result<(Kernel, Buffer<T>, Queue)> {
-    // Custom-initialize OpenCL
-    let platform = ocl::Platform::default();
-    let devices = ocl::Device::list(platform, Some(ocl::flags::DeviceType::CPU))?;
-    let device = devices.first().unwrap();
-
-    let context = ocl::Context::builder()
-        .platform(platform)
-        .devices(device)
-        .build()?;
-
-    let mut program = ocl::Program::builder();
-    cl::configure_program::<T>(&mut program, &device);
-
-    // Input the kernel source files
-    const KERNEL_PATH: &str = "src/cl";
-    program.src_file(&format!("{}/conv_relu.cl", KERNEL_PATH));
-    program.src_file(&format!("{}/mtx_mul.cl", KERNEL_PATH));
-    let program = program.build(&context)?;
-
-    // Create the queue for the default device
-    const PROFILING: bool = false;
-    let profile_flag = match PROFILING {
-        true => Some(flags::CommandQueueProperties::PROFILING_ENABLE),
-        false => None,
-    };
-    let queue = Queue::new(&context, *device, profile_flag)?;
-
-    let wgts_buf = layer.create_wgts_buf(&queue);
-    let (in_buf, out_buf) = layer.create_io_bufs(
-        flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
-        flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
-        &queue,
+    let cl_layer = impl_ocl_layer(
+        layer,
+        &["conv_relu.cl", "mtx_mul.cl"],
+        kernel_func,
+        None,
+        Some(ocl::flags::DeviceType::CPU),
+        LocalWorkSizePolicy::UseDefault,
     );
+    cl_layer.map_input(input_data);
 
-    let kernel = Kernel::builder().program(&program).name(kernel_func)
-        .queue(queue.clone())
-        .global_work_size(layer.gws_hint())
-        // Input
-        .arg(&in_buf)
-        // Output
-        .arg(&out_buf)
-        .arg(&wgts_buf).build().unwrap();
-
-    unsafe {
-        cl::map_to_buf(&in_buf, input_data).unwrap();
-    }
-    queue.finish().unwrap();
-
-    Ok((kernel, out_buf, queue))
+    Ok((cl_layer.kernel, cl_layer.out_buf, cl_layer.queue))
 }
 
 #[derive(Clone, Debug)]

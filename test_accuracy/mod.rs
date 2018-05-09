@@ -27,6 +27,28 @@ const SEPCONV_I8_SINGLE_SHOT: bool = false;
 pub fn main() {
     env_logger::init();
 
+    let layer = classic::NetworkParams::new(CLASSIC_HYPER_PARAMS).create_conv(
+        1,
+        f32::read_bin_from_file(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR)),
+    );
+    let cl_layer = impl_ocl_layer(
+        &layer,
+        &["conv_relu.cl", "mtx_mul.cl"],
+        "conv_relu_1",
+        None,
+        Some(ocl::flags::DeviceType::CPU),
+        LocalWorkSizePolicy::UseDefault,
+    );
+    let input_data = read_image_with_padding_from_bin_in_channels(
+        &format!("input/baseline/orig-f32-all-layers/in.bin"),
+        *layer.input_shape(),
+    );
+    cl_layer.map_input(&input_data);
+    run_kernel_wait(&cl_layer.kernel, &cl_layer.queue).unwrap();
+    let output = unsafe { cl_util::read_buf(&cl_layer.out_buf).unwrap() };
+    let correct = f32::read_lines_from_file(&format!("input/baseline/orig-f32-all-layers/fm1.f"));
+    assert_eq!(output.len(), correct.len());
+
     // Figure out the existing classes for the network based on directory names
     let class_dir_names = list_dirs(INPUT_IMG_DIR).unwrap();
 

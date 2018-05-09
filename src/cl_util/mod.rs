@@ -69,9 +69,9 @@ where
         .cmplr_opt("-cl-std=CL1.2")
         .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()))
         .cmplr_opt(format!("-D CL_PRIM2={}", T::cl_vec2_type_name()))
-        .cmplr_opt(format!("-D CL_PRIM4={}", T::cl_vec2_type_name()))
-        .cmplr_opt(format!("-D CL_PRIM8={}", T::cl_vec2_type_name()))
-        .cmplr_opt(format!("-D CL_PRIM16={}", T::cl_vec2_type_name()));
+        .cmplr_opt(format!("-D CL_PRIM4={}", T::cl_vec4_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM8={}", T::cl_vec8_type_name()))
+        .cmplr_opt(format!("-D CL_PRIM16={}", T::cl_vec16_type_name()));
 }
 
 pub fn create_buffer<T>(

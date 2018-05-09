@@ -138,7 +138,6 @@ fn test_mxp() {
     assert!(is_within_margin(&cpu_out, &correct, RESULT_MARGIN));
 }
 
-// FIXME: somehow doesn't work even with ordinary mtx_mul
 #[test]
 fn test_dense3_cl_cpu_vec4() {
     // Create the representation of the fully-connected layer

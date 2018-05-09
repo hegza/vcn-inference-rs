@@ -4,7 +4,7 @@ use rand::Rng;
 #[test]
 fn classic_predicts() {
     let output = run_classic();
-    let correct = f32::read_lines_from_file(&format!("{}/out5.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/out5.f", CLASSIC_BASELINE));
 
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -12,7 +12,7 @@ fn classic_predicts() {
 #[test]
 fn sepconv_f32_predicts() {
     let output = run_sepconv_f32();
-    let correct = f32::read_lines_from_file("input/baseline/sepconv-f32-xcorr/f32/out.f");
+    let correct = f32::read_lines_from_file(&format!("{}/f32/out.f", SEPCONV_BASELINE));
 
     verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
@@ -30,7 +30,7 @@ fn sepconv_i8_runs() {
 fn run_classic() -> Vec<f32> {
     let net = ClassicNetwork::<f32>::new();
     let input_data = read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", BASELINE_DIR),
+        &format!("{}/in.bin", CLASSIC_BASELINE),
         net.input_shape().clone(),
     );
     net.predict(&input_data)
@@ -38,7 +38,7 @@ fn run_classic() -> Vec<f32> {
 
 fn run_sepconv_f32() -> Vec<f32> {
     let net = SepconvNetwork::<f32>::new(sepconv::Weights::default());
-    let input_data = f32::read_bin_from_file("input/baseline/sepconv-f32-xcorr/in.bin");
+    let input_data = f32::read_bin_from_file(&format!("{}/in.bin", SEPCONV_BASELINE));
     net.predict(&input_data)
 }
 

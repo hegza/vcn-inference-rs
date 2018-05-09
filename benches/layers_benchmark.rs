@@ -11,7 +11,8 @@ use cl_util as cl;
 
 const SAMPLE_SIZE: usize = 150;
 const NOISE_THRESHOLD: f64 = 0.08;
-const BASELINE_DIR: &'static str = "input/baseline";
+const CLASSIC_BASELINE: &'static str = "input/baseline/orig-f32-all-layers";
+const SEPCONV_BASELINE: &'static str = "input/baseline/sepconv-f32-xcorr";
 
 /// Benchmark each layer separately.
 fn per_layer_benchmark(c: &mut Criterion) {
@@ -42,8 +43,8 @@ fn bench_sepconv1(c: &mut Criterion) {
 
     let layers = SepconvNetwork::<f32>::create_layers(&p, sepconv::Weights::default());
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
-        "{}/sepconv-f32-xcorr/in.bin",
-        BASELINE_DIR
+        "{}/in.bin",
+        SEPCONV_BASELINE
     )));
 
     // Init OpenCL
@@ -107,8 +108,8 @@ fn bench_sepconv2(c: &mut Criterion) {
 
     let layers = SepconvNetwork::<f32>::create_layers(&p, sepconv::Weights::default());
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
-        "{}/sepconv-f32-xcorr/mxp1-out.bin",
-        BASELINE_DIR
+        "{}/mxp1-out.bin",
+        SEPCONV_BASELINE
     )));
 
     // Init OpenCL
@@ -172,8 +173,8 @@ fn bench_sepconv1and2(c: &mut Criterion) {
 
     let layers = SepconvNetwork::<f32>::create_layers(&p, sepconv::Weights::default());
     let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
-        "{}/sepconv-f32-xcorr/in.bin",
-        BASELINE_DIR
+        "{}/in.bin",
+        SEPCONV_BASELINE
     )));
 
     // Init OpenCL
@@ -249,7 +250,7 @@ fn bench_sepconv1and2(c: &mut Criterion) {
 
 fn bench_conv1(conv1: ConvLayer<f32>, c: &mut Criterion) {
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/orig-f32-all-layers/in.bin", BASELINE_DIR),
+        &format!("{}/in.bin", CLASSIC_BASELINE),
         *conv1.input_shape(),
     ));
     let (kernel, _, queue) = create_standalone_kernel(&conv1, "conv_relu_1", &input_data).unwrap();
@@ -260,8 +261,8 @@ fn bench_conv1(conv1: ConvLayer<f32>, c: &mut Criterion) {
 
 fn bench_conv2(conv2: ConvLayer<f32>, c: &mut Criterion) {
     let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/orig-f32-all-layers/fm1.f",
-        BASELINE_DIR
+        "{}/fm1.f",
+        CLASSIC_BASELINE
     )));
     let (kernel, _, queue) = create_standalone_kernel(&conv2, "conv_relu_2", &input_data).unwrap();
     c.bench_function("layer 2 - cl conv", move |b| {
@@ -271,7 +272,7 @@ fn bench_conv2(conv2: ConvLayer<f32>, c: &mut Criterion) {
 
 fn bench_conv1and2(conv1: ConvLayer<f32>, conv2: ConvLayer<f32>, c: &mut Criterion) {
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/orig-f32-all-layers/in.bin", BASELINE_DIR),
+        &format!("{}/in.bin", CLASSIC_BASELINE),
         *conv1.input_shape(),
     ));
 
@@ -309,8 +310,8 @@ fn bench_conv1and2(conv1: ConvLayer<f32>, conv2: ConvLayer<f32>, c: &mut Criteri
 
 fn bench_dense3_cl_gpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
     let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/orig-f32-all-layers/fm2.f",
-        BASELINE_DIR
+        "{}/fm2.f",
+        CLASSIC_BASELINE
     )));
     let (kernel, _, queue) = create_standalone_kernel(&dense3, "mtx_mul", &input_data).unwrap();
     c.bench_function("layer 3 - cl gpu mtxmul", move |b| {
@@ -320,8 +321,8 @@ fn bench_dense3_cl_gpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
 
 fn bench_dense3_cl_cpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
     let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/orig-f32-all-layers/fm2.f",
-        BASELINE_DIR
+        "{}/fm2.f",
+        CLASSIC_BASELINE
     )));
     let (kernel, _, queue) = create_standalone_kernel_cpu(&dense3, "mtx_mul", &input_data).unwrap();
     c.bench_function("layer 3 - cl cpu mtxmul", move |b| {
@@ -331,8 +332,8 @@ fn bench_dense3_cl_cpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
 
 fn bench_dense3_host(dense3: DenseLayer<f32>, c: &mut Criterion) {
     let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/orig-f32-all-layers/fm2.f",
-        BASELINE_DIR
+        "{}/fm2.f",
+        CLASSIC_BASELINE
     )));
     c.bench_function("layer 3 - host mtxmul", move |b| {
         b.iter(|| dense3.mtx_mul(&input_data))
@@ -342,8 +343,8 @@ fn bench_dense3_host(dense3: DenseLayer<f32>, c: &mut Criterion) {
 fn bench_dense3_host_ndarray(dense3: DenseLayer<f32>, cr: &mut Criterion) {
     use ndarray::*;
     let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/orig-f32-all-layers/fm2.f",
-        BASELINE_DIR
+        "{}/fm2.f",
+        CLASSIC_BASELINE
     )));
     let m = dense3.num_out();
     let n = dense3.num_in();
@@ -357,8 +358,8 @@ fn bench_dense3_host_ndarray(dense3: DenseLayer<f32>, cr: &mut Criterion) {
 
 fn bench_dense4(dense4: DenseLayer<f32>, c: &mut Criterion) {
     let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/orig-f32-all-layers/fc3.f",
-        BASELINE_DIR
+        "{}/fc3.f",
+        CLASSIC_BASELINE
     )));
     c.bench_function("layer 4 - host mtxmul", move |b| {
         b.iter(|| relu(&dense4.mtx_mul(&input_data)))
@@ -367,8 +368,8 @@ fn bench_dense4(dense4: DenseLayer<f32>, c: &mut Criterion) {
 
 fn bench_dense5(dense5: DenseLayer<f32>, c: &mut Criterion) {
     let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/orig-f32-all-layers/fc4.f",
-        BASELINE_DIR
+        "{}/fc4.f",
+        CLASSIC_BASELINE
     )));
     c.bench_function("layer 5 - host mtxmul", move |b| {
         b.iter(|| softmax(&dense5.mtx_mul(&input_data)))

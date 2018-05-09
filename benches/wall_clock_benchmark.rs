@@ -8,7 +8,7 @@ use rusty_cnn::geometry::{ImageGeometry, PaddedSquare};
 
 const SAMPLE_SIZE: usize = 10;
 const NOISE_THRESHOLD: f64 = 0.03;
-const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
+const CLASSIC_BASELINE: &'static str = "input/baseline/orig-f32-all-layers";
 
 /// Benchmark full-network with initialization included (excluding file I/O).
 fn net_wall_benchmark(c: &mut Criterion) {
@@ -23,7 +23,7 @@ fn net_wall_benchmark(c: &mut Criterion) {
 
     // Load input image with padding from disk
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", BASELINE_DIR),
+        &format!("{}/in.bin", CLASSIC_BASELINE),
         padded_input_shape,
     ));
 

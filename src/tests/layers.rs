@@ -10,12 +10,12 @@ fn test_l1() {
         f32::read_bin_from_file(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR)),
     );
     let input_data = read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", BASELINE_DIR),
+        &format!("{}/in.bin", CLASSIC_BASELINE),
         *layer.input_shape(),
     );
 
     let output = run_single_layer("conv_relu_1", &layer, &input_data);
-    let correct = f32::read_lines_from_file(&format!("{}/fm1.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/fm1.f", CLASSIC_BASELINE));
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -27,10 +27,10 @@ fn test_l2() {
         2,
         f32::read_bin_from_file(&format!("{}/conv2-f32-le.bin", WEIGHTS_DIR)),
     );
-    let input_data = f32::read_lines_from_file(&format!("{}/fm1.f", BASELINE_DIR));
+    let input_data = f32::read_lines_from_file(&format!("{}/fm1.f", CLASSIC_BASELINE));
 
     let output = run_single_layer("conv_relu_2", &layer, &input_data);
-    let correct = f32::read_lines_from_file(&format!("{}/fm2.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -42,10 +42,10 @@ fn test_l3() {
         3,
         f32::read_bin_from_file(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR)),
     );
-    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", BASELINE_DIR));
+    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
 
     let output = relu(&run_single_layer("mtx_mul", &layer, &input_data));
-    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -57,10 +57,10 @@ fn test_l4() {
         4,
         f32::read_bin_from_file(&format!("{}/fc4-f32-le.bin", WEIGHTS_DIR)),
     );
-    let input_data = f32::read_lines_from_file(&format!("{}/fc3.f", BASELINE_DIR));
+    let input_data = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
 
     let output = relu(&layer.mtx_mul(&input_data));
-    let correct = f32::read_lines_from_file(&format!("{}/fc4.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/fc4.f", CLASSIC_BASELINE));
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -72,10 +72,10 @@ fn test_l5() {
         5,
         f32::read_bin_from_file(&format!("{}/fc5-f32-le.bin", WEIGHTS_DIR)),
     );
-    let input_data = f32::read_lines_from_file(&format!("{}/fc4.f", BASELINE_DIR));
+    let input_data = f32::read_lines_from_file(&format!("{}/fc4.f", CLASSIC_BASELINE));
 
     let output = softmax(&layer.mtx_mul(&input_data));
-    let correct = f32::read_lines_from_file(&format!("{}/out5.f", BASELINE_DIR));
+    let correct = f32::read_lines_from_file(&format!("{}/out5.f", CLASSIC_BASELINE));
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -194,7 +194,7 @@ fn test_dense3_cl_cpu_vec4() {
         .arg(&out_buf)
         .arg(&wgts_buf).build().unwrap();
 
-    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", BASELINE_DIR));
+    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
     unsafe {
         cl::map_to_buf(&in_buf, &input_data).unwrap();
     }
@@ -206,7 +206,7 @@ fn test_dense3_cl_cpu_vec4() {
     queue.finish().unwrap();
 
     let res = unsafe { cl::read_buf(&out_buf).unwrap() };
-    let corr = f32::read_lines_from_file(&format!("{}/fc3.f", BASELINE_DIR));
+    let corr = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
     assert_eq!(res.len(), corr.len());
     println!("a: {:?}\nb: {:?}", &res[0..10], &corr[0..10]);
     verify(&res, &corr, RESULT_MARGIN);

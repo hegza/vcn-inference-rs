@@ -10,14 +10,14 @@ use rand::Rng;
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.05;
-const BASELINE_DIR: &'static str = "input/baseline/orig-f32-all-layers";
+const CLASSIC_BASELINE: &'static str = "input/baseline/orig-f32-all-layers";
 
 /// Benchmark writing of input to device memory.
 fn net_map_input(c: &mut Criterion) {
     let net = ClassicNetwork::<f32>::new();
 
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", BASELINE_DIR),
+        &format!("{}/in.bin", CLASSIC_BASELINE),
         *net.input_shape(),
     ));
     c.bench_function("network map input", move |b| {
@@ -29,7 +29,7 @@ fn net_map_input(c: &mut Criterion) {
 fn classic_full(c: &mut Criterion) {
     let net = ClassicNetwork::<f32>::new();
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", BASELINE_DIR),
+        &format!("{}/in.bin", CLASSIC_BASELINE),
         *net.input_shape(),
     ));
 

@@ -19,9 +19,7 @@ use num_traits::{Float, NumAssign};
 use math::GenericOps;
 use cl_util;
 
-pub trait Coeff
-    : NumAssign + GenericOps + OclPrm + cl_util::ClVecTypeName {
-}
+pub trait Coeff: NumAssign + GenericOps + OclPrm + cl_util::ClVecTypeName {}
 pub trait CoeffFloat: Float + Coeff {}
 
 /// Describes a layer of a convolutive neural network.

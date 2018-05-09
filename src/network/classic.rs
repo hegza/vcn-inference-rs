@@ -151,10 +151,10 @@ where
         let dense3_out = relu(&unsafe { cl::read_buf(&self.dense3_out_buf).unwrap() });
 
         // Run the 4th layer (fully-connected)
-        let dense4_out = relu(&self.dense4.mtx_mul(&dense3_out));
+        let dense4_out = relu(&self.dense4.compute(&dense3_out));
 
         // Run the 5th layer (fully-connected)
-        softmax(&self.dense5.mtx_mul(&dense4_out))
+        softmax(&self.dense5.compute(&dense4_out))
     }
 }
 

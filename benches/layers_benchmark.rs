@@ -336,7 +336,7 @@ fn bench_dense3_host(dense3: DenseLayer<f32>, c: &mut Criterion) {
         CLASSIC_BASELINE
     )));
     c.bench_function("layer 3 - host mtxmul", move |b| {
-        b.iter(|| dense3.mtx_mul(&input_data))
+        b.iter(|| dense3.compute(&input_data))
     });
 }
 
@@ -362,7 +362,7 @@ fn bench_dense4(dense4: DenseLayer<f32>, c: &mut Criterion) {
         CLASSIC_BASELINE
     )));
     c.bench_function("layer 4 - host mtxmul", move |b| {
-        b.iter(|| relu(&dense4.mtx_mul(&input_data)))
+        b.iter(|| relu(&dense4.compute(&input_data)))
     });
 }
 
@@ -372,7 +372,7 @@ fn bench_dense5(dense5: DenseLayer<f32>, c: &mut Criterion) {
         CLASSIC_BASELINE
     )));
     c.bench_function("layer 5 - host mtxmul", move |b| {
-        b.iter(|| softmax(&dense5.mtx_mul(&input_data)))
+        b.iter(|| softmax(&dense5.compute(&input_data)))
     });
 }
 

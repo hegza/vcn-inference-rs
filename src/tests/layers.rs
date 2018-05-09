@@ -59,7 +59,7 @@ fn test_l4() {
     );
     let input_data = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
 
-    let output = relu(&layer.mtx_mul(&input_data));
+    let output = relu(&layer.compute(&input_data));
     let correct = f32::read_lines_from_file(&format!("{}/fc4.f", CLASSIC_BASELINE));
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
@@ -74,7 +74,7 @@ fn test_l5() {
     );
     let input_data = f32::read_lines_from_file(&format!("{}/fc4.f", CLASSIC_BASELINE));
 
-    let output = softmax(&layer.mtx_mul(&input_data));
+    let output = softmax(&layer.compute(&input_data));
     let correct = f32::read_lines_from_file(&format!("{}/out5.f", CLASSIC_BASELINE));
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);

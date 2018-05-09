@@ -205,9 +205,9 @@ fn test_dense3_cl_cpu_vec4() {
     }
     queue.finish().unwrap();
 
-    let res = unsafe { cl::read_buf(&out_buf).unwrap() };
-    let corr = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
-    assert_eq!(res.len(), corr.len());
-    println!("a: {:?}\nb: {:?}", &res[0..10], &corr[0..10]);
-    verify(&res, &corr, RESULT_MARGIN);
+    let output = relu(unsafe { &cl::read_buf(&out_buf).unwrap() });
+    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
+
+    assert_eq!(output.len(), correct.len());
+    verify(&output, &correct, COARSE_RESULT_MARGIN);
 }

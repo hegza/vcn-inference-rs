@@ -155,6 +155,7 @@ pub struct LayerImpl<T>
 where
     T: Coeff,
 {
+    // TODO: reduce visibility, attempt to remove unused variables
     pub in_buf: Buffer<T>,
     pub out_buf: Buffer<T>,
     pub kernel: Kernel,

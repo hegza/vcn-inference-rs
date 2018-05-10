@@ -1,6 +1,7 @@
 use super::*;
 use geometry::*;
 use ocl::{flags, Context, Device, Kernel, Platform, Program, SpatialDims};
+use ocl::flags::DeviceType;
 
 #[test]
 fn test_l1() {
@@ -103,31 +104,17 @@ fn test_mxp() {
 
     let mxp = MaxpoolLayer::new(in_shape, 2);
 
-    // Run mxp on GPU
-    let (queue, program, _context) = cl::init::<f32>(&["test/mxp.cl"], &[]).unwrap();
-
-    let (in_buf, out_buf) = mxp.create_io_bufs(
-        flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
-        flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
-        &queue,
+    // Implement mxp on GPU if possible
+    let dev_max_wgs = cl_util::max_wgs(None);
+    let cl_impl = mxp.impl_standalone(
+        &["test/mxp.cl"],
+        "max_pool",
+        &[],
+        None,
+        LocalWorkSizePolicy::Infer { dev_max_wgs },
     );
-    let max_wgs = cl_util::max_wgs(None);
-    let mxp_krn = Kernel::builder()
-        .program(&program)
-        .name("max_pool")
-        .queue(queue.clone())
-        .global_work_size(mxp.gws_hint())
-        .local_work_size(mxp.lws_hint(max_wgs))
-        .arg(&in_buf)
-        .arg(&out_buf)
-        .build()
-        .unwrap();
-    let gpu_out = unsafe {
-        cl::map_to_buf(&in_buf, &in_img).unwrap();
-        mxp_krn.cmd().queue(&queue).enq().unwrap();
-        queue.finish().unwrap();
-        cl::read_buf(&out_buf).unwrap()
-    };
+
+    let gpu_out = cl_impl.run_with_input(&in_img);
 
     // Run maxpool on CPU
     let cpu_out = mxp.compute(&in_img);
@@ -146,68 +133,17 @@ fn test_dense3_cl_cpu_vec4() {
         f32::read_bin_from_file(&format!("{}/fc3-f32-le.bin", WEIGHTS_DIR)),
     );
 
-    // Custom-initialize OpenCL
-    let platform = Platform::default();
-    let device = Device::list(platform, Some(flags::DeviceType::CPU))
-        .unwrap()
-        .first()
-        .unwrap()
-        .clone();
-
-    let context = Context::builder()
-        .platform(platform)
-        .devices(device)
-        .build()
-        .unwrap();
-
-    let mut program_b = Program::builder();
-    cl::configure_program::<f32>(&mut program_b, &device);
-
-    program_b.cmplr_opt("-D VECN=4");
-
-    // Input the kernel source files
-    program_b.src_file("src/cl/mtx_mul_vec.cl");
-
-    let program = program_b.build(&context).unwrap();
-
-    let queue = Queue::new(&context, device, None).unwrap();
-
-    let wgts_buf =
-        cl::create_buffer::<f32>(dense3.num_weights(), flags::MEM_READ_ONLY, &queue).unwrap();
-    wgts_buf.write(dense3.weights()).enq().unwrap();
-
-    let in_buf = cl::create_buffer::<f32>(
-        dense3.num_in(),
-        flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
-        &queue,
-    ).unwrap();
-    let out_buf = cl::create_buffer::<f32>(
-        dense3.num_out(),
-        flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
-        &queue,
-    ).unwrap();
-
-    let kernel = Kernel::builder().program(&program).name("mtx_mul_vec4")
-        .queue(queue.clone())
-        .global_work_size(dense3.gws_hint())
-        // Input
-        .arg(&in_buf)
-        // Output
-        .arg(&out_buf)
-        .arg(&wgts_buf).build().unwrap();
+    let cl_impl = dense3.impl_standalone(
+        &["mtx_mul_vec.cl"],
+        "mtx_mul_vec4",
+        &["-D VECN=4"],
+        Some(DeviceType::CPU),
+        LocalWorkSizePolicy::UseDefault,
+    );
 
     let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
-    unsafe {
-        cl::map_to_buf(&in_buf, &input_data).unwrap();
-    }
-    queue.finish().unwrap();
+    let output = relu(&cl_impl.run_with_input(&input_data));
 
-    unsafe {
-        kernel.cmd().queue(&queue).enq().unwrap();
-    }
-    queue.finish().unwrap();
-
-    let output = relu(unsafe { &cl::read_buf(&out_buf).unwrap() });
     let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
 
     assert_eq!(output.len(), correct.len());

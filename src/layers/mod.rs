@@ -3,14 +3,14 @@ mod dense;
 mod sepconv;
 mod maxpool;
 mod cl;
-mod cpu;
+mod host;
 
 pub use self::conv::*;
 pub use self::dense::*;
 pub use self::sepconv::*;
 pub use self::maxpool::*;
 pub use self::cl::*;
-pub use self::cpu::*;
+pub use self::host::*;
 use geometry::*;
 use std::ops::Deref;
 use ocl::{Device, OclPrm, SpatialDims};

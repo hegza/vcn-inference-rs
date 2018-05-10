@@ -5,7 +5,7 @@ pub use self::dense::*;
 pub use self::maxpool::*;
 use super::*;
 
-pub trait ComputeOnCpu<T>: Layer
+pub trait ComputeOnHost<T>: Layer
 where
     T: Coeff,
 {

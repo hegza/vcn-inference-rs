@@ -1,7 +1,7 @@
 use super::*;
 use math::*;
 
-impl<T> ComputeOnCpu<T> for MaxpoolLayer
+impl<T> ComputeOnHost<T> for MaxpoolLayer
 where
     T: CoeffFloat,
 {

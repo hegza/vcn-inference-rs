@@ -1,7 +1,7 @@
 use super::*;
 use math::*;
 
-impl<T> ComputeOnCpu<T> for DenseLayer<T>
+impl<T> ComputeOnHost<T> for DenseLayer<T>
 where
     T: Coeff,
 {

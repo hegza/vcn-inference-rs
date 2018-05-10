@@ -86,9 +86,9 @@ where
     L: ClWeightedLayer<T>,
     T: Coeff,
 {
-    let (kernel, out_buf, queue) = create_standalone_kernel(layer, kernel_func, input).unwrap();
+    let (kernel, out_buf, queue) = create_standalone_kernel(layer, kernel_func, input);
     // Enqueue kernel and wait for it to end
-    run_kernel_wait(&kernel, &queue).unwrap();
+    run_kernel_wait(&kernel, &queue);
     unsafe { cl::read_buf(&out_buf).unwrap() }
 }
 

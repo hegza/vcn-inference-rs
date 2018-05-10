@@ -31,8 +31,7 @@ pub fn main() {
         1,
         f32::read_bin_from_file(&format!("{}/conv1-f32-le.bin", WEIGHTS_DIR)),
     );
-    let cl_layer = impl_ocl_layer(
-        &layer,
+    let cl_layer = layer.impl_standalone(
         &["conv_relu.cl", "mtx_mul.cl"],
         "conv_relu_1",
         None,

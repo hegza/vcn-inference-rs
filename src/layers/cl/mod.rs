@@ -144,6 +144,80 @@ where
         }
         builder.build().unwrap()
     }
+
+    // TODO: generalized version over N-layers
+    fn impl_standalone(
+        &self,
+        kernel_srcs: &[&str],
+        kernel_name: &str,
+        addt_cmplr_opts: Option<&[&str]>,
+        device_type: Option<DeviceType>,
+        lws_policy: LocalWorkSizePolicy,
+    ) -> LayerImpl<T> {
+        // Select device
+        let platform = Platform::default();
+        let device = match device_type {
+            Some(dt) => Device::list(platform, Some(dt))
+                .unwrap()
+                .first()
+                .unwrap()
+                .clone(),
+            None => Device::first(platform).unwrap(),
+        };
+        let context = Context::builder()
+            .platform(platform)
+            .devices(device)
+            .build()
+            .unwrap();
+        let queue = Queue::new(&context, device, None).unwrap();
+
+        let mut program_b = Program::builder();
+        // Add default compiler options
+        cl_util::configure_program::<T>(&mut program_b, &device);
+
+        // Additional compiler options
+        if let Some(opts) = addt_cmplr_opts {
+            for &opt in opts {
+                program_b.cmplr_opt(opt);
+            }
+        }
+
+        // Input the kernel source files
+        for &src in kernel_srcs {
+            program_b.src_file(&format!("src/cl/{}", src));
+        }
+
+        let program = program_b.build(&context).unwrap();
+
+        // Create buffers
+        let wgts_buf = self.create_wgts_buf(&queue);
+        let (in_buf, out_buf) = self.create_io_bufs(
+            flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
+            flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
+            &queue,
+        );
+
+        let kernel = self.create_kernel(
+            kernel_name,
+            &in_buf,
+            &out_buf,
+            &wgts_buf,
+            lws_policy,
+            &program,
+            &queue,
+        );
+
+        queue.finish().unwrap();
+
+        LayerImpl {
+            in_buf,
+            out_buf,
+            kernel,
+            queue,
+            program,
+            context,
+        }
+    }
 }
 
 // Creates a chain of buffers of which the first one is read-only + alloc host-ptr, the ones in between are read-write, and the last one is write-only + alloc host-ptr
@@ -310,5 +384,30 @@ where
         self.layer_idx += 1;
         self.wgts_idx += 1;
         kernel
+    }
+}
+
+// A standalone layer
+pub struct LayerImpl<T>
+where
+    T: Coeff,
+{
+    pub in_buf: Buffer<T>,
+    pub out_buf: Buffer<T>,
+    pub kernel: Kernel,
+    pub queue: Queue,
+    pub program: Program,
+    pub context: Context,
+}
+
+impl<T> LayerImpl<T>
+where
+    T: Coeff,
+{
+    pub fn map_input(&self, input_data: &[T]) {
+        unsafe {
+            cl_util::map_to_buf(&self.in_buf, input_data).unwrap();
+        }
+        self.queue.finish().unwrap();
     }
 }

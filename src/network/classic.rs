@@ -176,8 +176,7 @@ where
     L: ClWeightedLayer<T>,
     T: Coeff,
 {
-    let cl_layer = impl_ocl_layer(
-        layer,
+    let cl_layer = layer.impl_standalone(
         &["conv_relu.cl", "mtx_mul.cl"],
         kernel_func,
         None,
@@ -195,8 +194,7 @@ pub fn create_standalone_kernel_cpu<L: ClWeightedLayer<T>, T: Coeff>(
     kernel_func: &str,
     input_data: &[T],
 ) -> ocl::Result<(Kernel, Buffer<T>, Queue)> {
-    let cl_layer = impl_ocl_layer(
-        layer,
+    let cl_layer = layer.impl_standalone(
         &["conv_relu.cl", "mtx_mul.cl"],
         kernel_func,
         None,

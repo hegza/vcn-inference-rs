@@ -42,9 +42,7 @@ pub fn main() {
         &format!("input/baseline/orig-f32-all-layers/in.bin"),
         *layer.input_shape(),
     );
-    cl_layer.map_input(&input_data);
-    run_kernel_wait(&cl_layer.kernel, &cl_layer.queue);
-    let output = unsafe { cl_util::read_buf(&cl_layer.out_buf).unwrap() };
+    let output = cl_layer.run_with_input(&input_data);
     let correct = f32::read_lines_from_file(&format!("input/baseline/orig-f32-all-layers/fm1.f"));
     assert_eq!(output.len(), correct.len());
 

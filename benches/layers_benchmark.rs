@@ -7,6 +7,7 @@ extern crate rusty_cnn;
 use criterion::Criterion;
 use rusty_cnn::*;
 use ocl::{Device, SpatialDims};
+use ocl::flags::*;
 use cl_util as cl;
 
 const SAMPLE_SIZE: usize = 150;
@@ -249,25 +250,27 @@ fn bench_sepconv1and2(c: &mut Criterion) {
 }
 
 fn bench_conv1(conv1: ConvLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", CLASSIC_BASELINE),
-        *conv1.input_shape(),
-    ));
-    let (kernel, _, queue) = create_standalone_kernel(&conv1, "conv_relu_1", &input_data);
-    c.bench_function("layer 1 - cl conv", move |b| {
-        b.iter(|| run_kernel_wait(&kernel, &queue))
-    });
+    let cl_layer = conv1.impl_standalone(
+        &["conv_relu.cl", "mtx_mul.cl"],
+        "conv_relu_1",
+        &[],
+        None,
+        LocalWorkSizePolicy::UseDefault,
+    );
+
+    c.bench_function("layer 1 - cl conv", move |b| b.iter(|| cl_layer.dry_run()));
 }
 
 fn bench_conv2(conv2: ConvLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/fm1.f",
-        CLASSIC_BASELINE
-    )));
-    let (kernel, _, queue) = create_standalone_kernel(&conv2, "conv_relu_2", &input_data);
-    c.bench_function("layer 2 - cl conv", move |b| {
-        b.iter(|| run_kernel_wait(&kernel, &queue))
-    });
+    let cl_layer = conv2.impl_standalone(
+        &["conv_relu.cl", "mtx_mul.cl"],
+        "conv_relu_2",
+        &[],
+        None,
+        LocalWorkSizePolicy::UseDefault,
+    );
+
+    c.bench_function("layer 2 - cl conv", move |b| b.iter(|| cl_layer.dry_run()));
 }
 
 fn bench_conv1and2(conv1: ConvLayer<f32>, conv2: ConvLayer<f32>, c: &mut Criterion) {
@@ -309,24 +312,30 @@ fn bench_conv1and2(conv1: ConvLayer<f32>, conv2: ConvLayer<f32>, c: &mut Criteri
 }
 
 fn bench_dense3_cl_gpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/fm2.f",
-        CLASSIC_BASELINE
-    )));
-    let (kernel, _, queue) = create_standalone_kernel(&dense3, "mtx_mul", &input_data);
+    let cl_layer = dense3.impl_standalone(
+        &["mtx_mul.cl"],
+        "mtx_mul",
+        &[],
+        None,
+        LocalWorkSizePolicy::UseDefault,
+    );
+
     c.bench_function("layer 3 - cl gpu mtxmul", move |b| {
-        b.iter(|| run_kernel_wait(&kernel, &queue))
+        b.iter(|| cl_layer.dry_run())
     });
 }
 
 fn bench_dense3_cl_cpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/fm2.f",
-        CLASSIC_BASELINE
-    )));
-    let (kernel, _, queue) = create_standalone_kernel_cpu(&dense3, "mtx_mul", &input_data);
+    let cl_layer = dense3.impl_standalone(
+        &["mtx_mul.cl"],
+        "mtx_mul",
+        &[],
+        Some(DeviceType::CPU),
+        LocalWorkSizePolicy::UseDefault,
+    );
+
     c.bench_function("layer 3 - cl cpu mtxmul", move |b| {
-        b.iter(|| run_kernel_wait(&kernel, &queue))
+        b.iter(|| cl_layer.dry_run())
     });
 }
 

@@ -180,4 +180,10 @@ where
         self.queue.finish().unwrap();
         output
     }
+    pub fn dry_run(&self) {
+        unsafe {
+            self.kernel.cmd().queue(&self.queue).enq().unwrap();
+        }
+        self.queue.finish().unwrap();
+    }
 }

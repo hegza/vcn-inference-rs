@@ -158,57 +158,6 @@ where
     }
 }
 
-// TODO: replace with the LayerImpl-version
-/// Runs the kernel but returns only after it has finished.
-pub fn run_kernel_wait(kernel: &Kernel, queue: &Queue) {
-    unsafe {
-        kernel.cmd().queue(&queue).enq().unwrap();
-    }
-    queue.finish().unwrap()
-}
-
-// TODO: replace with the LayerImpl-version
-/// Creates a standalone kernel for benchmarking. Uploads input data. Returns only after all commands have finished.
-pub fn create_standalone_kernel<L, T>(
-    layer: &L,
-    kernel_func: &str,
-    input_data: &[T],
-) -> (Kernel, Buffer<T>, Queue)
-where
-    L: ClWeightedLayer<T>,
-    T: Coeff,
-{
-    let cl_layer = layer.impl_standalone(
-        &["conv_relu.cl", "mtx_mul.cl"],
-        kernel_func,
-        &[],
-        None,
-        LocalWorkSizePolicy::UseDefault,
-    );
-    cl_layer.map_input(input_data);
-
-    (cl_layer.kernel, cl_layer.out_buf, cl_layer.queue)
-}
-
-// TODO: replace with the LayerImpl-version
-/// Creates a standalone kernel for benchmarking on CPU. Uploads input data. Returns only after all commands have finished. Note that profiling is turned off by default.
-pub fn create_standalone_kernel_cpu<L: ClWeightedLayer<T>, T: Coeff>(
-    layer: &L,
-    kernel_func: &str,
-    input_data: &[T],
-) -> (Kernel, Buffer<T>, Queue) {
-    let cl_layer = layer.impl_standalone(
-        &["conv_relu.cl", "mtx_mul.cl"],
-        kernel_func,
-        &[],
-        Some(ocl::flags::DeviceType::CPU),
-        LocalWorkSizePolicy::UseDefault,
-    );
-    cl_layer.map_input(input_data);
-
-    (cl_layer.kernel, cl_layer.out_buf, cl_layer.queue)
-}
-
 #[derive(Clone, Debug)]
 pub struct ClassicHyperParams {
     pub source_side: usize,

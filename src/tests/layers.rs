@@ -86,10 +86,16 @@ where
     L: ClWeightedLayer<T>,
     T: Coeff,
 {
-    let (kernel, out_buf, queue) = create_standalone_kernel(layer, kernel_func, input);
-    // Enqueue kernel and wait for it to end
-    run_kernel_wait(&kernel, &queue);
-    unsafe { cl::read_buf(&out_buf).unwrap() }
+    let cl_layer = layer.impl_standalone(
+        &["conv_relu.cl", "mtx_mul.cl"],
+        kernel_func,
+        &[],
+        None,
+        LocalWorkSizePolicy::UseDefault,
+    );
+
+    // Enqueue kernel and wait for it to end, return the result
+    cl_layer.run_with_input(&input)
 }
 
 // Test that Maxpool + ReLU produces the correct output

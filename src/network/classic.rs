@@ -179,7 +179,7 @@ where
     let cl_layer = layer.impl_standalone(
         &["conv_relu.cl", "mtx_mul.cl"],
         kernel_func,
-        None,
+        &[],
         None,
         LocalWorkSizePolicy::UseDefault,
     );
@@ -197,7 +197,7 @@ pub fn create_standalone_kernel_cpu<L: ClWeightedLayer<T>, T: Coeff>(
     let cl_layer = layer.impl_standalone(
         &["conv_relu.cl", "mtx_mul.cl"],
         kernel_func,
-        None,
+        &[],
         Some(ocl::flags::DeviceType::CPU),
         LocalWorkSizePolicy::UseDefault,
     );

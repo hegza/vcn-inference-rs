@@ -34,7 +34,7 @@ pub fn main() {
     let cl_layer = layer.impl_standalone(
         &["conv_relu.cl", "mtx_mul.cl"],
         "conv_relu_1",
-        None,
+        &[],
         Some(ocl::flags::DeviceType::CPU),
         LocalWorkSizePolicy::UseDefault,
     );

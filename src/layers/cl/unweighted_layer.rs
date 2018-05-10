@@ -42,11 +42,12 @@ where
         }
         builder.build().unwrap()
     }
+    /// Passing None as device_type uses default device (usually GPU if available).
     fn impl_standalone(
         &self,
         kernel_srcs: &[&str],
         kernel_name: &str,
-        addt_cmplr_opts: Option<&[&str]>,
+        addt_cmplr_opts: &[&str],
         device_type: Option<DeviceType>,
         lws_policy: LocalWorkSizePolicy,
     ) -> LayerImpl<T> {
@@ -71,10 +72,8 @@ where
         cl_util::configure_program::<T>(&mut program_b, &device);
 
         // Additional compiler options
-        if let Some(opts) = addt_cmplr_opts {
-            for &opt in opts {
-                program_b.cmplr_opt(opt);
-            }
+        for &opt in addt_cmplr_opts {
+            program_b.cmplr_opt(opt);
         }
 
         // Input the kernel source files

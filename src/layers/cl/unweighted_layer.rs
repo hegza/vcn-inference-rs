@@ -102,8 +102,6 @@ where
             out_buf,
             kernel,
             queue,
-            program,
-            context,
         }
     }
 }

@@ -113,8 +113,6 @@ where
             out_buf,
             kernel,
             queue,
-            program,
-            context,
         }
     }
     /// Create a read-only buffer on-device for weights and write the weights

@@ -155,23 +155,29 @@ pub struct LayerImpl<T>
 where
     T: Coeff,
 {
-    // TODO: reduce visibility, attempt to remove unused variables
-    pub in_buf: Buffer<T>,
+    in_buf: Buffer<T>,
     pub out_buf: Buffer<T>,
     pub kernel: Kernel,
     pub queue: Queue,
-    pub program: Program,
-    pub context: Context,
 }
 
 impl<T> LayerImpl<T>
 where
     T: Coeff,
 {
-    pub fn map_input(&self, input_data: &[T]) {
+    pub fn map_input(&self, input: &[T]) {
         unsafe {
-            cl_util::map_to_buf(&self.in_buf, input_data).unwrap();
+            cl_util::map_to_buf(&self.in_buf, input).unwrap();
         }
         self.queue.finish().unwrap();
+    }
+    pub fn run_with_input(&self, input: &[T]) -> Vec<T> {
+        let output = unsafe {
+            cl::map_to_buf(&self.in_buf, &input).unwrap();
+            self.kernel.cmd().queue(&self.queue).enq().unwrap();
+            cl::read_buf(&self.out_buf).unwrap()
+        };
+        self.queue.finish().unwrap();
+        output
     }
 }

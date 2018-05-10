@@ -21,7 +21,7 @@
 #define C2 7
 #define C3 32
 
-__kernel void row_conv(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, __constant CL_PRIM *c_rowKernel) {
+__kernel void row_conv(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, __constant CL_PRIM *c_rowKernel) {
 
     __local CL_PRIM l_data[ROWS_BLOCKDIM_Y][ROWS_BLOCKDIM_X + KERNEL_RADIUS * 2];
 
@@ -65,7 +65,7 @@ __kernel void row_conv(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, __const
     d_Dst[dst_idx] = sum;
 }
 
-__kernel void col_conv(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, __constant CL_PRIM *c_colKernel) {
+__kernel void col_conv(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, __constant CL_PRIM *c_colKernel) {
 
     __local CL_PRIM l_data[COLUMNS_BLOCKDIM_Y + KERNEL_RADIUS * 2][COLUMNS_BLOCKDIM_X];
     const int lix = get_local_id(0);
@@ -139,7 +139,7 @@ __kernel void col_conv(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, __const
     d_Dst[dst_idx] = sum;
 }
 
-__kernel void row_conv_2(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
+__kernel void row_conv_2(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
                        __constant CL_PRIM *c_row2Kernel) {
 
     __local CL_PRIM l_data[ROWS_2_BLOCKDIM_Y][ROWS_2_BLOCKDIM_X + KERNEL_RADIUS * 2];
@@ -185,7 +185,7 @@ __kernel void row_conv_2(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
     d_Dst[dst_idx] = sum;
 }
 
-__kernel void col_conv_2(__global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
+__kernel void col_conv_2(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
                        __constant CL_PRIM *c_col2Kernel) {
 
     __local CL_PRIM l_data[COLUMNS_2_BLOCKDIM_Y + KERNEL_RADIUS * 2][COLUMNS_2_BLOCKDIM_X];

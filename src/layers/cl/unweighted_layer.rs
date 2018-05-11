@@ -65,7 +65,6 @@ where
             .devices(device)
             .build()
             .unwrap();
-        let queue = Queue::new(&context, device, None).unwrap();
 
         let mut program_b = Program::builder();
         // Add default compiler options
@@ -84,6 +83,7 @@ where
         }
 
         let program = program_b.build(&context).unwrap();
+        let queue = Queue::new(&context, device, None).unwrap();
 
         // Create buffers
         let (in_buf, out_buf) = self.create_io_bufs(

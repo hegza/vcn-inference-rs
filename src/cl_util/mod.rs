@@ -7,56 +7,60 @@ use ocl;
 use ocl::builders::*;
 use ocl::enums::*;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
+use ocl::flags::*;
 pub use self::cl_types::*;
 pub use self::info::*;
 
 const PROFILING: bool = false;
 const KERNEL_PATH: &str = "src/cl";
 
-/// Define which platform and device(s) to use. Create a context, queue, and program.
 pub fn init<T>(
-    kernel_files: &[&str],
-    addt_cmplr_defs: &[(&str, i32)],
-) -> ocl::Result<(Queue, Program, Context)>
+    kernel_srcs: &[&str],
+    addt_cmplr_opts: &[&str],
+    device_type: Option<DeviceType>,
+) -> (Queue, Program, Context)
 where
     T: ClVecTypeName,
 {
-    let platform = ocl::Platform::default();
-    let devices = ocl::Device::list_all(&platform).unwrap();
-    let device_names: Vec<String> = devices
-        .iter()
-        .map(|&device| device.name().unwrap())
-        .collect();
-    debug!("Available OpenCL devices: {:?}.", device_names);
-
-    let device = Device::first(platform)?;
-    describe_device(&device)?;
-
+    // Select device
+    let platform = Platform::default();
+    let device = match device_type {
+        Some(dt) => Device::list(platform, Some(dt))
+            .unwrap()
+            .first()
+            .unwrap()
+            .clone(),
+        None => Device::first(platform).unwrap(),
+    };
     let context = Context::builder()
         .platform(platform)
         .devices(device)
-        .build()?;
+        .build()
+        .unwrap();
 
-    let mut program = Program::builder();
-    configure_program::<T>(&mut program, &device);
-    // Input the user-defined compiler definitions
-    addt_cmplr_defs.iter().for_each(|&(name, val)| {
-        program.cmplr_def(name, val);
-    });
+    let mut program_b = Program::builder();
+    // Add default compiler options
+    configure_program::<T>(&mut program_b, &device);
+
+    // Additional compiler options
+    for &opt in addt_cmplr_opts {
+        program_b.cmplr_opt(opt);
+    }
+
     // Input the kernel source files
-    kernel_files.iter().for_each(|&src| {
-        program.src_file(&format!("{}/{}", KERNEL_PATH, src));
-    });
-    let program = program.build(&context)?;
+    for src in kernel_srcs {
+        program_b.src_file(&format!("src/cl/{}", src));
+    }
+
+    let program = program_b.build(&context).unwrap();
 
     // Create the queue for the default device
     let profile_flag = match PROFILING {
         true => Some(flags::CommandQueueProperties::PROFILING_ENABLE),
         false => None,
     };
-    let queue = Queue::new(&context, device, profile_flag)?;
-
-    Ok((queue, program, context))
+    let queue = Queue::new(&context, device, profile_flag).unwrap();
+    (queue, program, context)
 }
 
 pub fn configure_program<T>(program_b: &mut ProgramBuilder, device: &Device)

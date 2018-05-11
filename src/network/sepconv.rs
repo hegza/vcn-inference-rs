@@ -127,8 +127,12 @@ where
         // Init OpenCL
         let (queue, program, _context) = cl::init::<T>(
             &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
-            &SepconvNetwork::<T>::compile_flags(&p, &layers),
-        ).expect(COMPILE_ERR_MSG);
+            &SepconvNetwork::<T>::compile_flags(&p, &layers)
+                .iter()
+                .map(AsRef::as_ref)
+                .collect::<Vec<&str>>(),
+            None,
+        );
 
         // Create shorthands (and move)
         let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3, dense4, dense5) = layers;
@@ -220,19 +224,19 @@ where
             warn!("using halved dimension for horizontal convolution 1");
         }
     }
-    pub fn compile_flags(p: &SepconvHyperParams, layers: &Layers<T>) -> Vec<(&'static str, i32)> {
+    pub fn compile_flags(p: &SepconvHyperParams, layers: &Layers<T>) -> Vec<String> {
         let max_wgs = cl::max_wgs(Some(&PRIMARY_DEVICE));
         let mxp1_lws = layers.mxp1().lws_hint(max_wgs).to_lens().unwrap()[0];
         let mxp2_lws = layers.mxp2().lws_hint(max_wgs).to_lens().unwrap()[0];
 
         vec![
-            ("WIDTH", p.side as i32),
-            ("HEIGHT", p.side as i32),
-            ("MP1_BLOCK_DIM", mxp1_lws as i32),
-            ("MP2_BLOCK_DIM", mxp2_lws as i32),
-            ("ROWS_BLOCKDIM_Y", p.hconv1_blockdim_y as i32),
-            ("ROWS_2_BLOCKDIM_Y", p.hconv2_blockdim_y as i32),
-            ("INJECT_RELU_AFTER_MXP", 1 as i32),
+            format!("-D WIDTH={}", p.side as i32),
+            format!("-D HEIGHT={}", p.side as i32),
+            format!("-D MP1_BLOCK_DIM={}", mxp1_lws as i32),
+            format!("-D MP2_BLOCK_DIM={}", mxp2_lws as i32),
+            format!("-D ROWS_BLOCKDIM_Y={}", p.hconv1_blockdim_y as i32),
+            format!("-D ROWS_2_BLOCKDIM_Y={}", p.hconv2_blockdim_y as i32),
+            format!("-D INJECT_RELU_AFTER_MXP={}", 1 as i32),
         ]
     }
 }
@@ -273,8 +277,6 @@ where
         softmax(&dense5_out)
     }
 }
-
-const COMPILE_ERR_MSG: &str = "unable to compile program. It's possible that not all hyper parameters were passed in as compiler definitions. See OpenCL error-message for more info.";
 
 trait SepconvLayers<T>
 where

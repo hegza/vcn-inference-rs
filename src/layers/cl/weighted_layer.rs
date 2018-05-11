@@ -54,38 +54,7 @@ where
         device_type: Option<DeviceType>,
         lws_policy: LocalWorkSizePolicy,
     ) -> LayerImpl<T> {
-        // Select device
-        let platform = Platform::default();
-        let device = match device_type {
-            Some(dt) => Device::list(platform, Some(dt))
-                .unwrap()
-                .first()
-                .unwrap()
-                .clone(),
-            None => Device::first(platform).unwrap(),
-        };
-        let context = Context::builder()
-            .platform(platform)
-            .devices(device)
-            .build()
-            .unwrap();
-
-        let mut program_b = Program::builder();
-        // Add default compiler options
-        cl_util::configure_program::<T>(&mut program_b, &device);
-
-        // Additional compiler options
-        for &opt in addt_cmplr_opts {
-            program_b.cmplr_opt(opt);
-        }
-
-        // Input the kernel source files
-        for &src in kernel_srcs {
-            program_b.src_file(&format!("src/cl/{}", src));
-        }
-
-        let program = program_b.build(&context).unwrap();
-        let queue = Queue::new(&context, device, None).unwrap();
+        let (queue, program, _context) = cl::init::<T>(kernel_srcs, addt_cmplr_opts, device_type);
 
         // Create buffers
         let wgts_buf = self.create_wgts_buf(&queue);

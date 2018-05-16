@@ -6,6 +6,6 @@ where
     T: Coeff,
 {
     fn compute(&self, in_buf: &[T]) -> Vec<T> {
-        mtx_mul(self.weights(), in_buf, self.num_out(), self.num_in(), 1)
+        mtx_mul(self.weights(), in_buf, self.num_out(), 1)
     }
 }

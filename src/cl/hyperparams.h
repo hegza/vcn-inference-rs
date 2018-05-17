@@ -1,5 +1,6 @@
 #pragma once
 
+// TODO: move to compiler definitions
 #define CHANNELS 3
 #define PATCH1 96
 #define PATCH1SQ (PATCH1 * PATCH1)
@@ -19,6 +20,3 @@
 #define CLASSES 4
 #define SL1SIZE (FM_COUNT * PATCH1SQ)
 #define PAD_NUM 2
-
-#define matrix(pointer, length, row, col) pointer[row * length + col]
-#define matrix1(pointer, offset, length, row, col) pointer[offset + row * length + col]

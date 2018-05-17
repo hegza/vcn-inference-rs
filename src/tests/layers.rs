@@ -140,8 +140,8 @@ fn dense3_cl_cpu_vec4_returns_baseline() {
     );
 
     let cl_impl = dense3.impl_standalone(
-        &["mtx_mul_vec.cl"],
-        "mtx_mul_vec",
+        &["mtx_mul.cl"],
+        "mtx_mul",
         &["-D VECN=4"],
         Some(DeviceType::CPU),
         LocalWorkSizePolicy::UseDefault,

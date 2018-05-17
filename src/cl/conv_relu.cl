@@ -1,5 +1,7 @@
-// TODO: figure out the cnn.h dependency thing
-#include "cnn.h"
+// TODO: figure out the hyperparams.h dependency thing
+#include "hyperparams.h"
+
+#define matrix1(pointer, offset, length, row, col) pointer[offset + row * length + col]
 
 __kernel void conv_relu_1(
     __global float* restrict fifo_in,

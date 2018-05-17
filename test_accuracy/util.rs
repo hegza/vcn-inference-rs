@@ -118,3 +118,15 @@ where
     }
     return;
 }
+
+/// Converts data of type `S` in `source` into type `D` into file `destination` using `cb` to process the data.
+pub fn convert_csv<S, D, ProcessF>(source: &str, destination: &str, cb: ProcessF)
+where
+    S: ReadCsv,
+    D: WriteCsv,
+    ProcessF: Fn(&S) -> D,
+{
+    let src = S::read_csv(source);
+    let converted = src.iter().map(cb).collect::<Vec<D>>();
+    D::write_csv(destination, &converted);
+}

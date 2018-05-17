@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod test;
+
 use std;
 use util::*;
 use num_traits::{Float, Num, NumAssign, PrimInt, Zero};
@@ -97,5 +100,16 @@ impl GenericOps for i8 {
     }
     fn generic_exp(self) -> f32 {
         (self as f32).exp()
+    }
+}
+
+pub trait Quantize<T> {
+    fn quantize(&self) -> T;
+}
+
+impl Quantize<i8> for f32 {
+    /// Input must be bounded between -1.0 and 1.0
+    fn quantize(&self) -> i8 {
+        (self * (std::i8::MAX as Self)) as i8
     }
 }

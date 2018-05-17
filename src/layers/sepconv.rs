@@ -1,4 +1,3 @@
-use util::*;
 use geometry::*;
 use super::*;
 use std::ops::Deref;

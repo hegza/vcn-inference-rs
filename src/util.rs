@@ -150,7 +150,7 @@ impl WriteLinesIntoFile for i8 {
 
 impl<T> ReadCsv for T
 where
-    T: Num + FromStr,
+    T: FromStr,
     <T as FromStr>::Err: Debug,
 {
     fn read_csv(filename: &str) -> Vec<T> {
@@ -170,7 +170,7 @@ where
 
 impl<T> WriteCsv for T
 where
-    T: Num + FromStr + std::fmt::Display,
+    T: FromStr + std::fmt::Display,
     <T as FromStr>::Err: Debug,
 {
     fn write_csv(filename: &str, buf: &[T]) {

@@ -27,6 +27,6 @@ __kernel void MTX_MUL_VEC(
         const size_t wgt_idx = DATA_SIZE * gid + data_idx;
         acc += dot(weights[wgt_idx], input[data_idx]);
     }
-    output[gid] = acc;
+    output[gid] = acc > 0 ? acc : 0;
 
 }

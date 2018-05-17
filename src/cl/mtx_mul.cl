@@ -18,5 +18,5 @@ __kernel void mtx_mul(
     for (int data_idx = 0; data_idx != DATA_SIZE; ++data_idx) {
         acc += weights[DATA_SIZE*gid + data_idx] * input[data_idx];
     }
-    output[gid] = acc;
+    output[gid] = acc > 0 ? acc : 0;
 }

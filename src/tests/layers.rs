@@ -148,7 +148,7 @@ fn dense3_cl_cpu_vec4_returns_baseline() {
     );
 
     let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
-    let output = relu(&cl_impl.run_with_input(&input_data));
+    let output = &cl_impl.run_with_input(&input_data);
 
     let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
 

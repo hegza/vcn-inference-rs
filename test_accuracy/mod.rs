@@ -116,17 +116,8 @@ pub fn main() {
             .collect::<Vec<(Vec<i8>, Class)>>();
 
         use sepconv::Weights;
-        let Weights(w0, w1, w2, w3, w4, w5, w6) = Weights::default();
-        // HACK: oh dog
-        let weights = Weights(
-            w0.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
-            w1.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
-            w2.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
-            w3.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
-            w4.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
-            w5.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
-            w6.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
-        );
+        let weights = Weights::<i8>::default();
+
         // Initialize OpenCL and the sep-conv network
         let net = SepconvNetwork::<i8>::new(weights);
 

@@ -127,12 +127,10 @@ where
         let layers: Layers<T> = SepconvNetwork::create_layers(&p, wgts);
 
         // Init OpenCL
+        let flags = SepconvNetwork::<T>::compile_flags(&p, &layers);
         let (queue, program, _context) = cl::init::<T>(
             &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
-            &SepconvNetwork::<T>::compile_flags(&p, &layers)
-                .iter()
-                .map(AsRef::as_ref)
-                .collect::<Vec<&str>>(),
+            &flags.iter().map(AsRef::as_ref).collect::<Vec<&str>>(),
             None,
         );
 

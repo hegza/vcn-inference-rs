@@ -1,10 +1,10 @@
-// Compiled with:
-//  #define WIDTH                   i32
-//  #define HEIGHT                  i32
-//  #define ROWS_BLOCKDIM_Y         i32
-//  #define ROWS_2_BLOCKDIM_Y       i32
-//  #define CL_PRIM                 type {float, char, ...}
-//  #define CL_PRIM<N>              vector type (eg. float2, char2)
+// Compile with:
+//  -D WIDTH                i32
+//  -D HEIGHT               i32
+//  -D ROWS_BLOCKDIM_Y      i32
+//  -D ROWS_2_BLOCKDIM_Y    i32
+//  -D CL_PRIM              type {float, char, ...}
+//  -D CL_PRIM<N>           vector type (eg. float2, char2)
 
 #define ROWS_BLOCKDIM_X 96
 #define ROWS_2_BLOCKDIM_X 48

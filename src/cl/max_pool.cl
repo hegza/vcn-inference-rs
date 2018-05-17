@@ -1,11 +1,11 @@
-// Compiled with:
-//  #define WIDTH                   i32
-//  #define HEIGHT                  i32
-//  #define MP1_BLOCK_DIM           i32
-//  #define MP2_BLOCK_DIM           i32
-//  #define INJECT_RELU_AFTER_MXP
-//  #define CL_PRIM                 type (eg. float, char)
-//  #define CL_PRIM<N>              vector type (eg. float2, char2)
+// Compile with:
+//  -D WIDTH                    i32
+//  -D HEIGHT                   i32
+//  -D MP1_BLOCK_DIM            i32
+//  -D MP2_BLOCK_DIM            i32
+//  -D INJECT_RELU_AFTER_MXP    (optional) if one should relu after executing the layer
+//  -D CL_PRIM                  type (eg. float, char)
+//  -D CL_PRIM<N>               vector type (eg. float2, char2)
 
 // Update test_mxp.cl if this is changed
 __kernel void max_pool_1(__global const CL_PRIM *src, __global CL_PRIM *dst) {

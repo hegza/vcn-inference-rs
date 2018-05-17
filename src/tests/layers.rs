@@ -4,7 +4,7 @@ use ocl::{flags, Context, Device, Kernel, Platform, Program, SpatialDims};
 use ocl::flags::DeviceType;
 
 #[test]
-fn test_l1() {
+fn l1_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
     let layer = CLASSIC_PARAMS.create_conv(
         1,
@@ -22,7 +22,7 @@ fn test_l1() {
 }
 
 #[test]
-fn test_l2() {
+fn l2_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
     let layer = CLASSIC_PARAMS.create_conv(
         2,
@@ -37,7 +37,7 @@ fn test_l2() {
 }
 
 #[test]
-fn test_l3() {
+fn l3_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = CLASSIC_PARAMS.create_dense(
         3,
@@ -45,14 +45,14 @@ fn test_l3() {
     );
     let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
 
-    let output = relu(&run_single_layer("mtx_mul", &layer, &input_data));
+    let output = &run_single_layer("mtx_mul", &layer, &input_data);
     let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
 
 #[test]
-fn test_l4() {
+fn l4_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = CLASSIC_PARAMS.create_dense(
         4,
@@ -67,7 +67,7 @@ fn test_l4() {
 }
 
 #[test]
-fn test_l5() {
+fn l5_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = CLASSIC_PARAMS.create_dense(
         5,
@@ -100,7 +100,7 @@ where
 
 // Test that Maxpool + ReLU produces the correct output
 #[test]
-fn test_mxp() {
+fn mxp_returns_baseline() {
     let in_img = f32::read_csv("src/tests/in/img-4x4_mono-norm.csv");
     const SIDE: usize = 4;
     let in_shape = ImageGeometry::new(SIDE, 1);
@@ -132,7 +132,7 @@ fn test_mxp() {
 }
 
 #[test]
-fn test_dense3_cl_cpu_vec4() {
+fn dense3_cl_cpu_vec4_returns_baseline() {
     // Create the representation of the fully-connected layer
     let dense3 = CLASSIC_PARAMS.create_dense(
         3,

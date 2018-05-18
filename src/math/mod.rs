@@ -103,13 +103,14 @@ impl GenericOps for i8 {
     }
 }
 
-pub trait Quantize<T> {
-    fn quantize(&self) -> T;
+pub trait QuantizeInto<T> {
+    /// Input must be bounded between min and max, it will then be scaled into the target type's range
+    fn quantize(&self, min: Self, max: Self) -> T;
 }
 
-impl Quantize<i8> for f32 {
-    /// Input must be bounded between -1.0 and 1.0
-    fn quantize(&self) -> i8 {
-        (self * (std::i8::MAX as Self)) as i8
+impl QuantizeInto<i8> for f32 {
+    fn quantize(&self, min: f32, max: f32) -> i8 {
+        debug_assert!(self >= &min && self <= &max);
+        ((std::i8::MAX as i32 - std::i8::MIN as i32) as f32 / (max - min) * self) as i8
     }
 }

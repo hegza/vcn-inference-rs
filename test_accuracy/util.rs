@@ -127,6 +127,32 @@ where
     ProcessF: Fn(&S) -> D,
 {
     let src = S::read_csv(source);
-    let converted = src.iter().map(cb).collect::<Vec<D>>();
+    let converted = convert_vec(&src, cb);
     D::write_csv(destination, &converted);
+}
+
+pub fn convert_vec<S, D, ProcessF>(source: &[S], cb: ProcessF) -> Vec<D>
+where
+    ProcessF: Fn(&S) -> D,
+{
+    source.iter().map(cb).collect::<Vec<D>>()
+}
+
+pub fn quantize_vec<S, D>(source: &[S]) -> Vec<D>
+where
+    S: QuantizeInto<D> + GenericOps + Copy,
+    D: Copy,
+{
+    let max = *source
+        .iter()
+        .max_by(|a, b| a.generic_partial_cmp(b).unwrap())
+        .unwrap();
+    let min = *source
+        .iter()
+        .max_by(|a, b| b.generic_partial_cmp(a).unwrap())
+        .unwrap();
+    source
+        .iter()
+        .map(|f| f.quantize(min.clone(), max.clone()))
+        .collect::<Vec<D>>()
 }

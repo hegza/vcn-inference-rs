@@ -9,10 +9,9 @@
 // This allows us to generate the type independent implementations.
 #define CAT_I(a,b) a##b
 #define CAT(a,b) CAT_I(a, b)
-#define MTX_MUL_VEC CAT(mtx_mul_vec, VECN)
 #define CL_PRIMN CAT(CL_PRIM, VECN)
 
-__kernel void MTX_MUL_VEC(
+__kernel void mtx_mul_vec(
         __global CL_PRIMN* restrict input,
         __global CL_PRIM* restrict output,
         __global CL_PRIMN* restrict weights) {

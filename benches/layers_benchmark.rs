@@ -28,7 +28,6 @@ fn per_layer_benchmark(c: &mut Criterion) {
     // TODO: cl_[c|g]pu_vec16
     bench_dense3_cl_cpu(dense3.clone(), c);
     bench_dense3_host_ndarray(dense3.clone(), c);
-    bench_dense3_host(dense3, c);
     bench_dense4(dense4, c);
     bench_dense5(dense5, c);
     bench_sepconv1(c);
@@ -348,16 +347,6 @@ fn bench_dense3_cl_cpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
 
     c.bench_function("layer 3 - cl cpu mtxmul", move |b| {
         b.iter(|| cl_layer.dry_run())
-    });
-}
-
-fn bench_dense3_host(dense3: DenseLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_lines_from_file(&format!(
-        "{}/fm2.f",
-        CLASSIC_BASELINE
-    )));
-    c.bench_function("layer 3 - host mtxmul", move |b| {
-        b.iter(|| dense3.compute(&input_data))
     });
 }
 

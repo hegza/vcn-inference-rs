@@ -2,13 +2,15 @@
 extern crate criterion;
 extern crate rusty_cnn;
 
+mod common;
+
+use common::*;
 use criterion::Criterion;
 use rusty_cnn::*;
 use rusty_cnn::geometry::{ImageGeometry, PaddedSquare};
 
 const SAMPLE_SIZE: usize = 10;
 const NOISE_THRESHOLD: f64 = 0.03;
-const CLASSIC_BASELINE: &'static str = "input/baseline/orig-f32-all-layers";
 
 /// Benchmark full-network with initialization included (excluding file I/O).
 fn net_wall_benchmark(c: &mut Criterion) {
@@ -27,7 +29,7 @@ fn net_wall_benchmark(c: &mut Criterion) {
         padded_input_shape,
     ));
 
-    c.bench_function("network wall", move |b| {
+    c.bench_function("classic-f32 wall", move |b| {
         b.iter(|| {
             let net = ClassicNetwork::<f32>::new();
             net.predict(&input_data)

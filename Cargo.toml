@@ -23,13 +23,17 @@ name = "test_accuracy"
 path = "test_accuracy/mod.rs"
 
 [[bench]]
-name = "wall_clock_benchmark"
+name = "wall_clock"
 harness = false
 
 [[bench]]
-name = "network_benchmark"
+name = "network"
 harness = false
 
 [[bench]]
-name = "layers_benchmark"
+name = "cpu_layers"
+harness = false
+
+[[bench]]
+name = "gpu_layers"
 harness = false

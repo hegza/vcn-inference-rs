@@ -1,16 +1,21 @@
 #[macro_use]
 extern crate criterion;
+extern crate num_traits;
 extern crate rand;
 extern crate rusty_cnn;
 
+mod common;
+
+use common::*;
 use criterion::Criterion;
 use rusty_cnn::*;
 use rusty_cnn::cl_util as cl;
 use rand::Rng;
+use num_traits::bounds::Bounded;
+use rand::distributions::range::SampleRange;
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.05;
-const CLASSIC_BASELINE: &'static str = "input/baseline/orig-f32-all-layers";
 
 /// Benchmark writing of input to device memory.
 fn net_map_input(c: &mut Criterion) {
@@ -52,48 +57,37 @@ fn sepconv_f32_full(c: &mut Criterion) {
 
 /// Benchmark full computations of sepconv implementation.
 fn sepconv_i8_full(c: &mut Criterion) {
-    use std::i8;
-    let mut rng = rand::thread_rng();
-
     // HACK: Random-generate weights for now
     let wgts = sepconv::Weights(
         // H/V convs
-        (0..5 * 1 * 3 * 7)
-            .map(|_| rng.gen_range(i8::MIN, i8::MAX))
-            .collect(),
-        (0..1 * 5 * 7 * 32)
-            .map(|_| rng.gen_range(i8::MIN, i8::MAX))
-            .collect(),
-        (0..5 * 1 * 32 * 7)
-            .map(|_| rng.gen_range(i8::MIN, i8::MAX))
-            .collect(),
-        (0..1 * 5 * 7 * 32)
-            .map(|_| rng.gen_range(i8::MIN, i8::MAX))
-            .collect(),
+        rng_vec(5 * 1 * 3 * 7),
+        rng_vec(5 * 1 * 3 * 32),
+        rng_vec(5 * 1 * 32 * 7),
+        rng_vec(1 * 5 * 7 * 32),
         // Dense layers
-        (0..100 * 24 * 24 * 32)
-            .map(|_| rng.gen_range(i8::MIN, i8::MAX))
-            .collect(),
-        (0..100 * 100)
-            .map(|_| rng.gen_range(i8::MIN, i8::MAX))
-            .collect(),
-        (0..100 * 4)
-            .map(|_| rng.gen_range(i8::MIN, i8::MAX))
-            .collect(),
+        rng_vec(100 * 24 * 24 * 32),
+        rng_vec(100 * 100),
+        rng_vec(100 * 4),
     );
 
     let net = SepconvNetwork::<i8>::new(wgts);
     // TODO: load real input data
     //let input_data = i8::read_bin_from_file("input/baseline/sepconv-f32-xcorr/in.bin");
-    let input_data: Vec<i8> = criterion::black_box(
-        (0..96 * 96 * 3)
-            .map(|_| rng.gen_range(i8::MIN, i8::MAX))
-            .collect(),
-    );
+    let input_data: Vec<i8> = criterion::black_box(rng_vec(96 * 96 * 3));
 
     c.bench_function("sepconv-i8 full", move |b| {
         b.iter(|| net.predict(&input_data))
     });
+}
+
+fn rng_vec<T>(len: usize) -> Vec<T>
+where
+    T: Bounded + PartialOrd + SampleRange,
+{
+    let mut rng = rand::thread_rng();
+    (0..len)
+        .map(|_| rng.gen_range(T::min_value(), T::max_value()))
+        .collect()
 }
 
 criterion_group!{

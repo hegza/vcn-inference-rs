@@ -111,6 +111,9 @@ pub trait QuantizeInto<T> {
 impl QuantizeInto<i8> for f32 {
     fn quantize(&self, min: f32, max: f32) -> i8 {
         debug_assert!(self >= &min && self <= &max);
-        ((std::i8::MAX as i32 - std::i8::MIN as i32) as f32 / (max - min) * self) as i8
+        let p_range: f32 = max - min;
+        let frac: f32 = (self - min) / p_range;
+        let n_range: i32 = std::i8::MAX as i32 - std::i8::MIN as i32;
+        ((frac * n_range as f32).round() as i32 + std::i8::MIN as i32) as i8
     }
 }

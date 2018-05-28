@@ -3,6 +3,7 @@ use ocl::{Device, Platform, SpatialDims};
 use geometry::*;
 use ndarray::{Array, ShapeBuilder, arr2};
 use std::ops::{Deref, Index};
+use std::ops::AddAssign;
 
 pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     // TODO: revisit the names here
@@ -243,10 +244,44 @@ where
 
 impl<T> Predict<T> for SepconvNetwork<T>
 where
-    T: Coeff,
+    T: CoeffFloat,
 {
     // Maps the input buffer, and runs the network, returning the result.
     fn predict(&self, input_data: &[T]) -> Vec<f32> {
+        let q = &self.queue;
+
+        /*let buf = */
+        unsafe {
+            cl::map_to_buf(&self.in_buf, input_data).unwrap();
+
+            self.krn_vconv1.cmd().queue(q).enq().unwrap();
+            self.krn_hconv1.cmd().queue(q).enq().unwrap();
+            self.krn_max_pool1.cmd().queue(q).enq().unwrap();
+            self.krn_vconv2.cmd().queue(q).enq().unwrap();
+            self.krn_hconv2.cmd().queue(q).enq().unwrap();
+            self.krn_max_pool2.cmd().queue(q).enq().unwrap();
+            self.krn_dense3.cmd().queue(q).enq().unwrap();
+        }
+
+        // Wait for all on-device calculations to finish
+        q.finish().unwrap();
+
+        // Load the 3rd layer from the GPU and Run ReLU on it
+        let dense3_out = unsafe { cl::read_buf(&self.dense3_out_buf).unwrap() };
+
+        // Run the 4th layer (fully-connected)
+        let dense4_out = relu(&self.dense4.compute(&dense3_out));
+
+        // Run the 5th layer (fully-connected)
+        let dense5_out = self.dense5.compute(&dense4_out);
+
+        softmax(&dense5_out)
+    }
+}
+
+impl Predict<i8> for SepconvNetwork<i8> {
+    // Maps the input buffer, and runs the network, returning the result.
+    fn predict(&self, input_data: &[i8]) -> Vec<f32> {
         let q = &self.queue;
 
         /*let buf = */

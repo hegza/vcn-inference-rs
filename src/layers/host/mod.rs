@@ -5,9 +5,7 @@ pub use self::dense::*;
 pub use self::maxpool::*;
 use super::*;
 
-pub trait ComputeOnHost<T>: Layer
-where
-    T: Coeff,
-{
+/// Implement layer computations on host with floating-point values.
+pub trait ComputeOnHost<T>: Layer {
     fn compute(&self, in_buf: &[T]) -> Vec<T>;
 }

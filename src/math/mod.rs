@@ -4,8 +4,9 @@ mod test;
 use std;
 use util::*;
 use num_traits::{Float, Num, NumAssign, PrimInt, Zero};
-use std::ops::Mul;
+use std::ops::{AddAssign, Mul};
 use std::cmp::Ordering;
+use std::mem::size_of;
 
 /// Combines the max operations of integral and float types.
 pub trait GenericOps {
@@ -20,14 +21,14 @@ pub trait GenericOps {
 /// Convert negative values in source to zero
 pub fn relu<T>(source: &[T]) -> Vec<T>
 where
-    T: Num + GenericOps + Copy,
+    T: Zero + GenericOps + Copy,
 {
     source.iter().map(|&x| x.generic_max(&T::zero())).collect()
 }
 
-pub fn mtx_mul<T>(v: &[T], b: &[T], m_dim: usize, k_dim: usize) -> Vec<T>
+pub fn mtx_mul<'a, T>(v: &'a [T], b: &[T], m_dim: usize, k_dim: usize) -> Vec<T>
 where
-    T: NumAssign + Mul + Zero + Copy,
+    T: NumAssign + Zero + Copy,
 {
     let mut c_mul = vec![Zero::zero(); m_dim * k_dim];
     for i in 0..m_dim {
@@ -35,6 +36,21 @@ where
             for z in 0..b.len() {
                 *c_mul.elem_mut(k_dim, i, j) += *v.elem(b.len(), i, z) * *b.elem(k_dim, z, j);
             }
+        }
+    }
+    c_mul
+}
+
+/// Variant of matrix multiplication where the integers are normalized in the way described by van Houcke et al. (2011)
+pub fn mtx_mul_normint(v: &[i8], b: &[i8], m_dim: usize, k_dim: usize) -> Vec<i8> {
+    let mut c_mul = vec![Zero::zero(); m_dim * k_dim];
+    for i in 0..m_dim {
+        for j in 0..k_dim {
+            let mut accumulator: i32 = Zero::zero();
+            for z in 0..b.len() {
+                accumulator += *v.elem(b.len(), i, z) as i32 * *b.elem(k_dim, z, j) as i32;
+            }
+            *c_mul.elem_mut(k_dim, i, j) = (accumulator >> 24) as i8;
         }
     }
     c_mul

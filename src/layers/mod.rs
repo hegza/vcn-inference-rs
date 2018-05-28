@@ -15,13 +15,14 @@ use geometry::*;
 use std::ops::Deref;
 use ocl::*;
 use util::*;
-use num_traits::{Float, NumAssign};
+use num_traits::{Float, NumAssign, PrimInt};
 use math::GenericOps;
 use cl_util;
+use cl_util::ClVecTypeName;
 use flags::DeviceType;
 
-pub trait Coeff: NumAssign + GenericOps + OclPrm + cl_util::ClVecTypeName {}
-pub trait CoeffFloat: Float + Coeff {}
+pub trait Coeff: NumAssign + GenericOps + OclPrm + ClVecTypeName {}
+pub trait CoeffFloat: Coeff + Float {}
 
 /// Describes a layer of a convolutive neural network.
 pub trait Layer {

@@ -10,7 +10,7 @@
 #ifdef NORM_INT
     // TODO: see if changing between int and short produces any effect
     // TODO: this should likely be defined on the host
-    #define ACCUMULATOR_T short
+    #define ACCUMULATOR_T int
 #else
     #define ACCUMULATOR_T CL_PRIM
 #endif
@@ -34,7 +34,7 @@ __kernel void mtx_mul(
 
     const ACCUMULATOR_T with_relu = acc > 0 ? acc : 0;
 #ifdef NORM_INT
-    output[gid] = with_relu >> (8 * sizeof(CL_PRIM));
+    output[gid] = with_relu >> 24);
 #else
     output[gid] = with_relu;
 #endif

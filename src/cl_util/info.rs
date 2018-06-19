@@ -7,7 +7,7 @@ use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
 /// Returns the max work-group-size of the primary OpenCL device.
 pub fn max_wgs(device: Option<&Device>) -> usize {
     let device = match device {
-        Some(d) => d.clone(),
+        Some(d) => *d,
         None => {
             let platform = Platform::default();
             Device::first(platform).unwrap()
@@ -20,7 +20,7 @@ pub fn max_wgs(device: Option<&Device>) -> usize {
     }
 }
 
-pub fn describe_device(device: &Device) -> ocl::Result<()> {
+pub fn describe_device(device: Device) -> ocl::Result<()> {
     let device_type = match device.info(DeviceInfo::Type)? {
         DeviceInfoResult::Type(t) => match t {
             flags::DeviceType::CPU => "CPU",

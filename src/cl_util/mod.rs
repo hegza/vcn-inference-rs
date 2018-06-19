@@ -25,11 +25,7 @@ where
     // Select device
     let platform = Platform::default();
     let device = match device_type {
-        Some(dt) => Device::list(platform, Some(dt))
-            .unwrap()
-            .first()
-            .unwrap()
-            .clone(),
+        Some(dt) => *Device::list(platform, Some(dt)).unwrap().first().unwrap(),
         None => Device::first(platform).unwrap(),
     };
     let context = Context::builder()

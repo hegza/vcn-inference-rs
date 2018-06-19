@@ -13,6 +13,7 @@ extern crate num_traits;
 extern crate ocl;
 extern crate rand;
 
+/// Usage: println!("{}", format_result!(expression));
 #[macro_use]
 #[allow(unused_macros)]
 macro_rules! format_result {
@@ -32,7 +33,7 @@ pub mod geometry;
 pub mod network;
 mod layers;
 mod util;
-mod math;
+pub mod math;
 #[cfg(test)]
 mod tests;
 

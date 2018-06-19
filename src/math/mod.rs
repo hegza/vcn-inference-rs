@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod test;
+mod quantize;
 
+pub use self::quantize::*;
 use std;
 use util::*;
 use num_traits::{Float, Num, NumAssign, PrimInt, Zero};

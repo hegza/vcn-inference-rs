@@ -5,6 +5,7 @@ use std::io;
 use std::fs::*;
 use std::path::*;
 use rusty_cnn::*;
+use rusty_cnn::math;
 use super::class::Class;
 
 pub fn load_jpeg<P>(file: P) -> Vec<f32>

@@ -121,22 +121,15 @@ where
 }
 
 /// Converts data of type `S` in `source` into type `D` into file `destination` using `cb` to process the data.
-pub fn convert_csv<S, D, ProcessF>(source: &str, destination: &str, cb: ProcessF)
+pub fn quantize_csv<S, D, ProcessF>(source: &str, destination: &str, cb: ProcessF)
 where
     S: ReadCsv,
     D: WriteCsv,
-    ProcessF: Fn(&S) -> D,
+    ProcessF: Fn(&[S]) -> Vec<D>,
 {
     let src = S::read_csv(source);
-    let converted = convert_vec(&src, cb);
+    let converted = cb(&src);
     D::write_csv(destination, &converted);
-}
-
-pub fn convert_vec<S, D, ProcessF>(source: &[S], cb: ProcessF) -> Vec<D>
-where
-    ProcessF: Fn(&S) -> D,
-{
-    source.iter().map(cb).collect::<Vec<D>>()
 }
 
 pub fn quantize_vec_u8(source: &[f32]) -> Vec<u8> {

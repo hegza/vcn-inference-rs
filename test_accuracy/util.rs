@@ -139,11 +139,7 @@ where
     source.iter().map(cb).collect::<Vec<D>>()
 }
 
-pub fn quantize_vec<S, D>(source: &[S]) -> Vec<D>
-where
-    S: QuantizeInto<D> + GenericOps + Copy,
-    D: Copy,
-{
+pub fn quantize_vec_u8(source: &[f32]) -> Vec<u8> {
     let max = *source
         .iter()
         .max_by(|a, b| a.generic_partial_cmp(b).unwrap())
@@ -152,8 +148,19 @@ where
         .iter()
         .max_by(|a, b| b.generic_partial_cmp(a).unwrap())
         .unwrap();
-    source
+    let params = QuantizationParams::<f32, u8>::choose(min, max);
+    math::quantize_vec_u8(&params, &source)
+}
+
+pub fn quantize_vec_i8(source: &[f32]) -> Vec<i8> {
+    let max = *source
         .iter()
-        .map(|f| f.quantize(min.clone(), max.clone()))
-        .collect::<Vec<D>>()
+        .max_by(|a, b| a.generic_partial_cmp(b).unwrap())
+        .unwrap();
+    let min = *source
+        .iter()
+        .max_by(|a, b| b.generic_partial_cmp(a).unwrap())
+        .unwrap();
+    let params = QuantizationParams::<f32, i8>::choose(min, max);
+    math::quantize_vec_i8(&params, &source)
 }

@@ -28,15 +28,15 @@ where
     source.iter().map(|&x| x.generic_max(&T::zero())).collect()
 }
 
-pub fn mtx_mul<'a, T>(v: &'a [T], b: &[T], m_dim: usize, k_dim: usize) -> Vec<T>
+pub fn mtx_mul<'lhs, T>(lhs: &'lhs [T], rhs: &[T], m_dim: usize, k_dim: usize) -> Vec<T>
 where
     T: NumAssign + Zero + Copy,
 {
     let mut c_mul = vec![Zero::zero(); m_dim * k_dim];
     for i in 0..m_dim {
         for j in 0..k_dim {
-            for z in 0..b.len() {
-                *c_mul.elem_mut(k_dim, i, j) += *v.elem(b.len(), i, z) * *b.elem(k_dim, z, j);
+            for z in 0..rhs.len() {
+                *c_mul.elem_mut(k_dim, i, j) += *lhs.elem(rhs.len(), i, z) * *rhs.elem(k_dim, z, j);
             }
         }
     }
@@ -44,13 +44,13 @@ where
 }
 
 /// Variant of matrix multiplication where the integers are normalized in the way described by van Houcke et al. (2011)
-pub fn mtx_mul_normint(v: &[i8], b: &[i8], m_dim: usize, k_dim: usize) -> Vec<i8> {
+pub fn mtx_mul_normint(lhs: &[i8], rhs: &[i8], m_dim: usize, k_dim: usize) -> Vec<i8> {
     let mut c_mul = vec![Zero::zero(); m_dim * k_dim];
     for i in 0..m_dim {
         for j in 0..k_dim {
             let mut accumulator: i32 = Zero::zero();
-            for z in 0..b.len() {
-                accumulator += *v.elem(b.len(), i, z) as i32 * *b.elem(k_dim, z, j) as i32;
+            for z in 0..rhs.len() {
+                accumulator += *lhs.elem(rhs.len(), i, z) as i32 * *rhs.elem(k_dim, z, j) as i32;
             }
             *c_mul.elem_mut(k_dim, i, j) = (accumulator >> 24) as i8;
         }
@@ -118,20 +118,5 @@ impl GenericOps for i8 {
     }
     fn generic_exp(self) -> f32 {
         (self as f32).exp()
-    }
-}
-
-pub trait QuantizeInto<T> {
-    /// Input must be bounded between min and max, it will then be scaled into the target type's range
-    fn quantize(&self, min: Self, max: Self) -> T;
-}
-
-impl QuantizeInto<i8> for f32 {
-    fn quantize(&self, min: f32, max: f32) -> i8 {
-        debug_assert!(self >= &min && self <= &max);
-        let p_range: f32 = max - min;
-        let frac: f32 = (self - min) / p_range;
-        let n_range: i32 = std::i8::MAX as i32 - std::i8::MIN as i32;
-        ((frac * n_range as f32).round() as i32 + std::i8::MIN as i32) as i8
     }
 }

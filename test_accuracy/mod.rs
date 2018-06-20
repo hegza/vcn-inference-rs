@@ -33,7 +33,7 @@ pub fn main() {
     if TEST_CLASSIC {
         debug!("Loading input images for original network...");
 
-        let load_fun = |file: &String| -> Vec<f32> { load_jpeg_with_padding(file) };
+        let load_fun = |file: &String| -> Vec<f32> { load_jpeg_as_f32_with_padding(file) };
         let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
         if CLASSIC_SINGLE_SHOT {
             test_data = test_data
@@ -54,7 +54,7 @@ pub fn main() {
 
     debug!("Loading input images for sepconv networks...");
 
-    let load_fun = |file: &String| -> Vec<f32> { load_jpeg(file) };
+    let load_fun = |file: &String| -> Vec<f32> { load_jpeg_as_f32(file) };
     let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
 
     if TEST_SEPCONV_F32 {
@@ -158,7 +158,7 @@ fn idx_to_class(idx: usize) -> Class {
     }
 }
 
-fn load_jpeg_with_padding(file: &str) -> Vec<f32> {
+fn load_jpeg_as_f32_with_padding(file: &str) -> Vec<f32> {
     let input_shape = ImageGeometry::new(
         CLASSIC_HYPER_PARAMS.source_side,
         CLASSIC_HYPER_PARAMS.num_source_channels,
@@ -169,5 +169,5 @@ fn load_jpeg_with_padding(file: &str) -> Vec<f32> {
     let padding = padded_image_shape.padding();
 
     // Load input as a vector of floats in the network format
-    with_edge_padding_by_channel(&load_jpeg(file), &input_shape, padding)
+    with_edge_padding_by_channel(&load_jpeg_as_f32(file), &input_shape, padding)
 }

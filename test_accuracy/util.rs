@@ -5,10 +5,9 @@ use std::io;
 use std::fs::*;
 use std::path::*;
 use rusty_cnn::*;
-use rusty_cnn::math;
 use super::class::Class;
 
-pub fn load_jpeg<P>(file: P) -> Vec<f32>
+pub fn load_jpeg_as_f32<P>(file: P) -> Vec<f32>
 where
     P: AsRef<Path>,
 {
@@ -33,6 +32,29 @@ where
         .chain(blue_channel)
         .chain(green_channel)
         .collect::<Vec<f32>>()
+}
+
+pub fn load_jpeg_as_u8_lossless<P>(file: P) -> Vec<u8>
+where
+    P: AsRef<Path>,
+{
+    let img = image::open(file).unwrap();
+    let num_pixels = (img.width() * img.height()) as usize;
+    let mut red_channel = Vec::with_capacity(num_pixels);
+    let mut blue_channel = Vec::with_capacity(num_pixels);
+    let mut green_channel = Vec::with_capacity(num_pixels);
+    for pixel in img.pixels() {
+        let rgb = pixel.2.to_rgb();
+        let (r, g, b) = (rgb[0], rgb[1], rgb[2]);
+        red_channel.push(r);
+        blue_channel.push(g);
+        green_channel.push(b);
+    }
+    red_channel
+        .into_iter()
+        .chain(blue_channel)
+        .chain(green_channel)
+        .collect::<Vec<u8>>()
 }
 
 pub fn list_dirs<P>(dir: P) -> io::Result<Vec<String>>

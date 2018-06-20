@@ -92,3 +92,18 @@ impl GenericOps for i8 {
         (self as f32).exp()
     }
 }
+
+impl GenericOps for u8 {
+    fn generic_max(self, other: &Self) -> Self {
+        self.max(*other)
+    }
+    fn generic_abs(self) -> Self {
+        self
+    }
+    fn generic_partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.partial_cmp(other)
+    }
+    fn generic_exp(self) -> f32 {
+        (self as f32).exp()
+    }
+}

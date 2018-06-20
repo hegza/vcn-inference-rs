@@ -47,3 +47,4 @@ pub trait WeightedLayer<T>: Layer {
 impl Coeff for f32 {}
 impl CoeffFloat for f32 {}
 impl Coeff for i8 {}
+impl Coeff for u8 {}

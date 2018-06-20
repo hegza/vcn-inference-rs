@@ -17,7 +17,7 @@ pub trait GenericOps {
     /// Returns the higher value of the two.
     fn generic_max(self, other: &Self) -> Self;
     /// Returns the absolute value of the variable.
-    fn generic_abs(&self) -> Self;
+    fn generic_abs(self) -> Self;
     fn generic_partial_cmp(&self, other: &Self) -> Option<Ordering>;
     fn generic_exp(self) -> f32;
 }
@@ -52,7 +52,7 @@ impl GenericOps for f32 {
     fn generic_max(self, other: &f32) -> f32 {
         self.max(*other)
     }
-    fn generic_abs(&self) -> Self {
+    fn generic_abs(self) -> Self {
         self.abs()
     }
     fn generic_partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -67,7 +67,7 @@ impl GenericOps for i32 {
     fn generic_max(self, other: &i32) -> i32 {
         self.max(*other)
     }
-    fn generic_abs(&self) -> Self {
+    fn generic_abs(self) -> Self {
         self.abs()
     }
     fn generic_partial_cmp(&self, other: &Self) -> Option<Ordering> {
@@ -79,10 +79,10 @@ impl GenericOps for i32 {
 }
 
 impl GenericOps for i8 {
-    fn generic_max(self, other: &i8) -> i8 {
+    fn generic_max(self, other: &Self) -> Self {
         self.max(*other)
     }
-    fn generic_abs(&self) -> Self {
+    fn generic_abs(self) -> Self {
         self.abs()
     }
     fn generic_partial_cmp(&self, other: &Self) -> Option<Ordering> {

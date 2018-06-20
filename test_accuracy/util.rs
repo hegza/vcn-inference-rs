@@ -66,6 +66,8 @@ where
     Ok(files)
 }
 
+/// Loads test data from per-class subdirectories `class_dirs` of a parent directory `dir` using
+/// `load_fun`.
 pub fn load_test_data<P, LoadF, T>(
     dir: P,
     class_dirs: &[String],

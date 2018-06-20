@@ -2,9 +2,11 @@ use super::*;
 
 pub mod classic;
 pub mod sepconv;
+pub mod quantized;
 
 pub use classic::*;
 pub use sepconv::*;
+pub use quantized::*;
 pub use geometry::ImageGeometry;
 
 /// A trait for networks that are able to create a prediction distribution

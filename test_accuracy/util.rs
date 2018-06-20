@@ -133,29 +133,3 @@ where
     let converted = cb(&src);
     D::write_csv(destination, &converted);
 }
-
-pub fn quantize_vec_u8(source: &[f32]) -> Vec<u8> {
-    let max = *source
-        .iter()
-        .max_by(|a, b| a.generic_partial_cmp(b).unwrap())
-        .unwrap();
-    let min = *source
-        .iter()
-        .max_by(|a, b| b.generic_partial_cmp(a).unwrap())
-        .unwrap();
-    let params = QuantizationParams::<f32, u8>::choose(min, max);
-    math::quantize_vec_u8(&params, &source)
-}
-
-pub fn quantize_vec_i8(source: &[f32]) -> Vec<i8> {
-    let max = *source
-        .iter()
-        .max_by(|a, b| a.generic_partial_cmp(b).unwrap())
-        .unwrap();
-    let min = *source
-        .iter()
-        .max_by(|a, b| b.generic_partial_cmp(a).unwrap())
-        .unwrap();
-    let params = QuantizationParams::<f32, i8>::choose(min, max);
-    math::quantize_vec_i8(&params, &source)
-}

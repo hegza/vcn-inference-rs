@@ -3,6 +3,7 @@
 // TODO: refactor comments to follow my conventions (passive voice)
 
 use std::ops::{Mul, Sub};
+use math::GenericOps;
 use num_traits::Zero;
 use num_traits::bounds::Bounded;
 
@@ -149,14 +150,28 @@ impl QuantizeInto<i8> for f32 {
     }
 }
 
-pub fn quantize_vec_u8(params: &QuantizationParams<f32, u8>, src: &[f32]) -> Vec<u8> {
+pub fn quantize_vec_u8(src: &[f32]) -> Vec<u8> {
+    let max = *src.iter()
+        .max_by(|a, b| a.generic_partial_cmp(b).unwrap())
+        .unwrap();
+    let min = *src.iter()
+        .max_by(|a, b| b.generic_partial_cmp(a).unwrap())
+        .unwrap();
+    let params = QuantizationParams::<f32, u8>::choose(min, max);
     src.iter()
-        .map(|&val| val.quantize(params))
+        .map(|&val| val.quantize(&params))
         .collect::<Vec<u8>>()
 }
 
-pub fn quantize_vec_i8(params: &QuantizationParams<f32, i8>, src: &[f32]) -> Vec<i8> {
+pub fn quantize_vec_i8(src: &[f32]) -> Vec<i8> {
+    let max = *src.iter()
+        .max_by(|a, b| a.generic_partial_cmp(b).unwrap())
+        .unwrap();
+    let min = *src.iter()
+        .max_by(|a, b| b.generic_partial_cmp(a).unwrap())
+        .unwrap();
+    let params = QuantizationParams::<f32, i8>::choose(min, max);
     src.iter()
-        .map(|&val| val.quantize(params))
+        .map(|&val| val.quantize(&params))
         .collect::<Vec<i8>>()
 }

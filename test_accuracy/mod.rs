@@ -19,10 +19,10 @@ const INPUT_IMG_DIR: &str = "input/images";
 
 const TEST_CLASSIC: bool = true;
 const TEST_SEPCONV_F32: bool = true;
-const TEST_SEPCONV_I8: bool = true;
+//const TEST_SEPCONV_I8: bool = true;
 const CLASSIC_SINGLE_SHOT: bool = false;
 const SEPCONV_F32_SINGLE_SHOT: bool = false;
-const SEPCONV_I8_SINGLE_SHOT: bool = false;
+//const SEPCONV_I8_SINGLE_SHOT: bool = false;
 
 pub fn main() {
     env_logger::init();
@@ -77,24 +77,23 @@ pub fn main() {
         println!("{} ({}/{})", accuracy, correct, total);
     }
 
+    /*
+    let load_fun = |file: &String| -> Vec<u8> { load_jpeg_as_u8_lossless(file) };
+    let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
+
     if TEST_SEPCONV_I8 {
         let test_data = match SEPCONV_I8_SINGLE_SHOT {
             true => test_data
                 .iter()
                 .cloned()
                 .take(1)
-                .collect::<Vec<(Vec<f32>, Class)>>(),
+                .collect::<Vec<(Vec<u8>, Class)>>(),
             false => test_data.iter().cloned().collect(),
         };
         let test_data = test_data
             .into_iter()
-            .map(|(vec, c)| {
-                (
-                    vec.into_iter().map(|x: f32| x as i8).collect::<Vec<i8>>(),
-                    c,
-                )
-            })
-            .collect::<Vec<(Vec<i8>, Class)>>();
+            .map(|(vec, c)| (math::quantize_vec_i8(&vec), c))
+            .collect::<Vec<(Vec<u8>, Class)>>();
 
         use sepconv::Weights;
         let weights = Weights::<i8>::default();
@@ -108,6 +107,7 @@ pub fn main() {
         println!("sepconv-i8 network accuracy:");
         println!("{} ({}/{})", accuracy, correct, total);
     }
+    */
 }
 
 /// Returns (num_correct, num_total)

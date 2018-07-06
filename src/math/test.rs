@@ -4,6 +4,8 @@ const ONE: f32 = 1f32;
 const ZERO: f32 = 0f32;
 const MINUS_ONE: f32 = -1f32;
 
+// `cargo test --feature test_quantize` to run this test
+#[cfg_attr(not(feature = "test_quantize"), ignore)]
 #[test]
 fn f32_quantizes_into_u8() {
     // Test regular quantization
@@ -31,6 +33,8 @@ fn f32_quantizes_into_u8() {
     assert!(q_custom_min == 0 || q_custom_min == 1);
 }
 
+// `cargo test --feature test_quantize` to run this test
+#[cfg_attr(not(feature = "test_quantize"), ignore)]
 #[test]
 fn f32_quantizes_into_i8() {
     // Test regular quantization

@@ -58,7 +58,7 @@ pub fn verify(output: &[f32], correct: &[f32], margin: f32) {
         )
     } else {
         format!(
-            "{:?}.. {:?}{}\n!=\n{:?}.. {:?}",
+            "{:?}...{:?}{}\n!=\n{:?}...{:?}",
             &output[0..VEC_DISPLAY_ELEMENTS_MAX / 2],
             &output[output.len() - VEC_DISPLAY_ELEMENTS_MAX / 2..output.len()],
             display_nan_msg,

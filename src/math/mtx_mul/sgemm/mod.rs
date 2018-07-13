@@ -1,7 +1,16 @@
-// Matrix multiplication based on https://cnugteren.github.io/tutorial/
-// NOTE: all matrices are assumed to be multiples of 32 to fit into OpenCL work-groups
-
 #![allow(non_snake_case)]
+#![allow(dead_code)]
+
+//! Matrix multiplication based on https://cnugteren.github.io/tutorial/
+//! NOTE: all matrices are assumed to be multiples of 32 to fit into OpenCL work-groups
+//!
+//! Matrices are all column-major
+//!
+//! * C := A * B
+//! * A is K by M
+//! * B is N by K
+//! * C is M by N
+//!
 
 #[cfg(test)]
 mod test;
@@ -12,13 +21,6 @@ use ocl::{flags, Buffer, Context, Device, Kernel, OclPrm, Platform, Program, Que
 
 // Column-major into row-major would be to switch A and B and N and M
 /// Naive matrix multiplication
-///
-/// Matrices are all column-major
-///
-/// * C := A * B
-/// * A is K by M
-/// * B is N by K
-/// * C is M by N
 pub fn mtx_mul_1_naive_host(M: usize, N: usize, K: usize, A: &[f32], B: &[f32], C: &mut [f32]) {
     for m in 0..M {
         for n in 0..N {
@@ -74,8 +76,8 @@ where
         // This is 32 in the original example; that would produce gws of 1024, but the maximum of
         // my desktop GPU is 256 (16x16).
         let TS: usize = 16;
-        println!("lws: {}x{}", TS, TS);
-        println!("gws: {}x{}", M, N);
+        println!("SGEMM1 lws: {}x{}", TS, TS);
+        println!("SGEMM1 gws: {}x{}", M, N);
         let kernel = Kernel::builder()
             .program(&program)
             .name("myGEMM1")

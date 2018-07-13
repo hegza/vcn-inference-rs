@@ -1,4 +1,4 @@
-// First naive implementation
+// Naive implementation of cnugteren's matrix multiplication
 __kernel void myGEMM1(const int M, const int N, const int K,
                         const __global float* A,
                         const __global float* B,

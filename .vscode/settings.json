@@ -1,7 +1,3 @@
 {
-    "terminal.integrated.env.linux": {
-        "RUST_BACKTRACE": "1",
-        "RUST_LOG": "export RUST_LOG=warn,rusty_cnn=trace"
-    },
     "rust.clear_env_rust_log": false,
 }

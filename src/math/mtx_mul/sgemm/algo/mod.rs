@@ -99,14 +99,24 @@ impl Naive1GemmKernel {
             // This is 32 in the original example; that would produce gws of 1024, but the maximum of
             // my desktop GPU is 256 (16x16).
             let TS: usize = 16;
-            println!("SGEMM1 lws: {}x{}", TS, TS);
-            println!("SGEMM1 gws: {}x{}", M, N);
+            let lws = SpatialDims::Two(TS, TS);
+            let gws = SpatialDims::Two(M, N);
+            println!(
+                "SGEMM-1 lws: {}x{}",
+                lws.to_lens().unwrap()[0],
+                lws.to_lens().unwrap()[1]
+            );
+            println!(
+                "SGEMM-1 gws: {}x{}",
+                gws.to_lens().unwrap()[0],
+                gws.to_lens().unwrap()[1]
+            );
             Kernel::builder()
                 .program(&program)
                 .name("myGEMM1")
                 .queue(queue.clone())
-                .local_work_size(SpatialDims::Two(TS, TS))
-                .global_work_size(SpatialDims::Two(M, N))
+                .local_work_size(lws)
+                .global_work_size(gws)
                 .arg(M as i32)
                 .arg(N as i32)
                 .arg(K as i32)
@@ -195,8 +205,16 @@ impl Vectors4GemmKernel {
 
             let lws = SpatialDims::Two(TS / WIDTH, TS);
             let gws = SpatialDims::Two(M / WIDTH, N);
-            println!("SGEMM4 lws: {:?}", lws);
-            println!("SGEMM4 gws: {:?}", gws);
+            println!(
+                "SGEMM-4 lws: {}x{}",
+                lws.to_lens().unwrap()[0],
+                lws.to_lens().unwrap()[1]
+            );
+            println!(
+                "SGEMM-4 gws: {}x{}",
+                gws.to_lens().unwrap()[0],
+                gws.to_lens().unwrap()[1]
+            );
             Kernel::builder()
                 .program(&program)
                 .name("myGEMM4")
@@ -316,8 +334,16 @@ impl Transpose5GemmKernel {
 
             let lws = SpatialDims::Two(TS, TS / WPT);
             let gws = SpatialDims::Two(M, N / WPT);
-            println!("SGEMM5 lws: {:?}", lws);
-            println!("SGEMM5 gws: {:?}", gws);
+            println!(
+                "SGEMM-5 lws: {}x{}",
+                lws.to_lens().unwrap()[0],
+                lws.to_lens().unwrap()[1]
+            );
+            println!(
+                "SGEMM-5 gws: {}x{}",
+                gws.to_lens().unwrap()[0],
+                gws.to_lens().unwrap()[1]
+            );
 
             // Build kernel for transposing B
             (
@@ -464,8 +490,16 @@ impl Tiling6GemmKernel {
 
             let lws = SpatialDims::Two(TSM / WPTM, TSN / WPTN);
             let gws = SpatialDims::Two(M / WPTM, N / WPTN);
-            println!("SGEMM6 lws: {:?}", lws);
-            println!("SGEMM6 gws: {:?}", gws);
+            println!(
+                "SGEMM-6 lws: {}x{}",
+                lws.to_lens().unwrap()[0],
+                lws.to_lens().unwrap()[1]
+            );
+            println!(
+                "SGEMM-6 gws: {}x{}",
+                gws.to_lens().unwrap()[0],
+                gws.to_lens().unwrap()[1]
+            );
 
             // Build kernel for transposing B
             (

@@ -6,7 +6,7 @@ mod test;
 use ocl;
 use ocl::{flags, Buffer, Context, Device, Kernel, OclPrm, Platform, Program, Queue, SpatialDims};
 
-/// Naive matrix multiplication on the CPU
+/// Naive matrix multiplication on the host
 pub fn gemm_naive(M: usize, N: usize, K: usize, A: &[f32], B: &[f32], C: &mut [f32]) {
     for m in 0..M {
         for n in 0..N {
@@ -53,7 +53,10 @@ impl Naive1GemmKernel {
         let src = String::from_utf8_lossy(include_bytes!("cl/1_naive.cl"));
 
         let platform = Platform::default();
-        let device = Device::first(platform).unwrap();
+        let device = *Device::list(platform, Some(flags::DeviceType::GPU))
+            .unwrap()
+            .first()
+            .unwrap();
         let context = Context::builder()
             .platform(platform)
             .devices(device.clone())
@@ -151,7 +154,10 @@ impl Vectors4GemmKernel {
         let src = String::from_utf8_lossy(include_bytes!("cl/4_wider_data_types.cl"));
 
         let platform = Platform::default();
-        let device = Device::first(platform).unwrap();
+        let device = *Device::list(platform, Some(flags::DeviceType::GPU))
+            .unwrap()
+            .first()
+            .unwrap();
         let context = Context::builder()
             .platform(platform)
             .devices(device.clone())
@@ -256,7 +262,10 @@ impl Transpose5GemmKernel {
         let src_mtx_mul = String::from_utf8_lossy(include_bytes!("cl/5_transpose.cl"));
 
         let platform = Platform::default();
-        let device = Device::first(platform).unwrap();
+        let device = *Device::list(platform, Some(flags::DeviceType::GPU))
+            .unwrap()
+            .first()
+            .unwrap();
         let context = Context::builder()
             .platform(platform)
             .devices(device.clone())
@@ -399,7 +408,10 @@ impl Tiling6GemmKernel {
         let src_mtx_mul = String::from_utf8_lossy(include_bytes!("cl/6_register_tiling.cl"));
 
         let platform = Platform::default();
-        let device = Device::first(platform).unwrap();
+        let device = *Device::list(platform, Some(flags::DeviceType::GPU))
+            .unwrap()
+            .first()
+            .unwrap();
         let context = Context::builder()
             .platform(platform)
             .devices(device.clone())

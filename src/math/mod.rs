@@ -1,16 +1,17 @@
+mod quantize;
 #[cfg(test)]
 mod test;
-mod quantize;
-mod mtx_mul;
+// HACK: being pub might be hacky
+pub mod mtx_mul;
 
-pub use self::quantize::*;
 pub use self::mtx_mul::*;
-use std;
-use util::*;
+pub use self::quantize::*;
 use num_traits::{Float, Num, NumAssign, PrimInt, Zero};
-use std::ops::{AddAssign, Mul};
+use std;
 use std::cmp::Ordering;
 use std::mem::size_of;
+use std::ops::{AddAssign, Mul};
+use util::*;
 
 /// Combines the max operations of integral and float types.
 pub trait GenericOps {

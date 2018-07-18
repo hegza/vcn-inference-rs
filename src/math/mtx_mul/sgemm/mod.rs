@@ -52,32 +52,32 @@
 /// let preexisting_out_buf: ocl::Buffer<f32> = ...;
 /// let my_matrix = (0..32*32).map(|x| f32::into(x)).collect::<Vec<f32>>();
 ///
-/// let device = ocl::flags::DeviceType::gpu();
-/// let gemm_kernel = OclGemmLoader::new(M, N, K, device).set_buffers(GemmInput::OclBuffer(&preexisting_out_buf), GemmInput::Slice(&my_matrix), GemmOutput::Slice(&mut c));
+/// let device = DeviceType::GPU;
+/// let gemm_kernel = OclGemm::uninitialized(M, N, K, device).set_buffers(GemmInput::OclBuffer(&preexisting_out_buf), GemmInput::Slice(&my_matrix), GemmOutput::Slice(&mut c));
 /// ```
 ///
 /// Run multiple chained kernels
 /// ```ignore
-/// let device_a = ocl::flags::DeviceType::gpu();
-/// let device_b = ocl::flags::DeviceType::cpu();
+/// let device_a = DeviceType::GPU;
+/// let device_b = DeviceType::CPU;
 ///
 ///
 /// network.run();
 /// ```
-
 // Converting column-major into row-major would be by switching A and B and N and M
 
-mod algo;
+// HACK: being pub here is hack
+pub mod algo;
 
-// TODO: re-export relevant interfaces here as public
-pub use self::algo::gemm_naive;
+// Re-export the used (or best) algorithm here
+pub use self::algo::Tiling6GemmKernel as GemmKernel;
 
 use layers::Coeff;
 use ocl;
 use ocl::{flags, Buffer, Context, Device, Kernel, OclPrm, Platform, Program, Queue, SpatialDims};
 
 /*
-use ocl::flags::DeviceType;
+pub use ocl::flags::DeviceType;
 
 // Represents a reference to an input matrix whether it's a slice on a host or data on a physical
 // device represented by an ocl::Buffer.

@@ -38,3 +38,7 @@ harness = false
 [[bench]]
 name = "gpu_layers"
 harness = false
+
+[[bench]]
+name = "sgemm"
+harness = false

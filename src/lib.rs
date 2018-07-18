@@ -20,29 +20,27 @@ macro_rules! format_result {
     // This macro takes an expression of type `expr` and prints
     // it as a string along with its result.
     // The `expr` designator is used for expressions.
-    ($expression:expr) => (
+    ($expression:expr) => {
         // `stringify!` will convert the expression *as it is* into a string.
-        format!("{:?} = {:?}",
-                 stringify!($expression),
-                 $expression);
-    )
+        format!("{:?} = {:?}", stringify!($expression), $expression);
+    };
 }
 
 pub mod cl_util;
 pub mod geometry;
-pub mod network;
 mod layers;
-mod util;
 pub mod math;
+pub mod network;
 #[cfg(test)]
 mod tests;
+mod util;
 
-pub use util::*;
+use cl_util as cl;
 pub use layers::*;
 pub use math::*;
 pub use network::*;
-use ocl::{flags, Buffer, Kernel, OclPrm, Program, Queue};
-use cl_util as cl;
 use num_traits::{Float, Num, NumAssign, Zero};
-use std::ops::Mul;
+use ocl::{flags, Buffer, Kernel, OclPrm, Program, Queue};
 use std::ops::Deref;
+use std::ops::Mul;
+pub use util::*;

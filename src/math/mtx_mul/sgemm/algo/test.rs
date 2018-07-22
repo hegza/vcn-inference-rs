@@ -98,7 +98,7 @@ fn mtx_mul_6_register_tiling_cl_is_correct() {
     let mut out = vec![0f32; D * D];
     let (a_large, b_large, c_large_correct) = abc_matrices();
 
-    let kernel = Tiling6GemmKernel::new(D, D, D, &a_large, &b_large, &mut out);
+    let kernel = Tiling6GemmKernel::new(D, D, D, &a_large, &b_large, &mut out, None);
     kernel.run_wait();
     verify(&out, &c_large_correct, COARSE_RESULT_MARGIN);
 }

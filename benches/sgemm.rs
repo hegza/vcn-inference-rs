@@ -66,8 +66,6 @@ fn bench_sgemm_variants(c: &mut Criterion) {
         .filter_map(|res| res.ok())
         .collect::<Vec<f32>>();
 
-    // TODO: ParameterizedBenchmark to compare vector size
-    // TODO: parameterize over device
     // TODO: bench upload + execute separately
 
     const GROUP: &str = "sgemm-f32 (64x64)";
@@ -170,20 +168,23 @@ fn bench_sgemm_variants(c: &mut Criterion) {
     }),
     );
 
-    // Setup
-    let mut sgemm_6_gpu_out = vec![0f32; D * D];
-    let sgemm_6 = Tiling6GemmKernel::new(D, D, D, &input_a, &input_b, &mut sgemm_6_gpu_out);
+    let sgemm_6_cpu = setup_cnugteren_6(&input_a, &input_b, &correct_c, DeviceType::CPU);
 
-    // Verify Result
-    sgemm_6.write(&input_a, &input_b);
-    sgemm_6.run_wait();
-    verify(&sgemm_6_gpu_out, &correct_c, COARSE_RESULT_MARGIN);
+    // Create benchmark-closure
+    let bench = bench.with_function(
+        "cnugteren_6_tiling (CPU)",
+        enclose!((input_a, input_b) move |be| {
+        be.iter_with_setup(|| sgemm_6_cpu.write(&input_a, &input_b), |_| sgemm_6_cpu.run_wait())
+    }),
+    );
+
+    let sgemm_6_gpu = setup_cnugteren_6(&input_a, &input_b, &correct_c, DeviceType::GPU);
 
     // Create benchmark-closure
     let bench = bench.with_function(
         "cnugteren_6_tiling (GPU)",
         enclose!((input_a, input_b) move |be| {
-        be.iter_with_setup(|| sgemm_6.write(&input_a, &input_b), |_| sgemm_6.run_wait())
+        be.iter_with_setup(|| sgemm_6_gpu.write(&input_a, &input_b), |_| sgemm_6_gpu.run_wait())
     }),
     );
 
@@ -193,6 +194,33 @@ fn bench_sgemm_variants(c: &mut Criterion) {
             std::mem::size_of::<f32>() as u32 * 64 * 64,
         )),
     );
+}
+
+// TODO: ParameterizedBenchmark to compare vector size
+fn setup_cnugteren_6(
+    input_a: &[f32],
+    input_b: &[f32],
+    correct_c: &[f32],
+    device: DeviceType,
+) -> Tiling6GemmKernel {
+    // Setup
+    let mut sgemm_6_gpu_out = vec![0f32; D * D];
+    let sgemm_6 = Tiling6GemmKernel::new(
+        D,
+        D,
+        D,
+        input_a,
+        input_b,
+        &mut sgemm_6_gpu_out,
+        Some(device),
+    );
+
+    // Verify Result
+    sgemm_6.write(input_a, input_b);
+    sgemm_6.run_wait();
+    verify(&sgemm_6_gpu_out, correct_c, COARSE_RESULT_MARGIN);
+
+    sgemm_6
 }
 
 criterion_group!{

@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod test;
 
+pub use ocl::flags::DeviceType;
+
 // HACK: one should un-pub most of the elements here; or use a higher scope to select the correct algorithm
 
 use ocl;
@@ -428,6 +430,7 @@ impl Tiling6GemmKernel {
         A: &[f32],
         B: &[f32],
         C: &mut [f32],
+        device: Option<DeviceType>,
     ) -> Tiling6GemmKernel {
         // The tile-size in dimension M
         const TSM: usize = 32;
@@ -447,10 +450,10 @@ impl Tiling6GemmKernel {
         let src_mtx_mul = String::from_utf8_lossy(include_bytes!("cl/6_register_tiling.cl"));
 
         let platform = Platform::default();
-        let device = *Device::list(platform, Some(flags::DeviceType::GPU))
-            .unwrap()
-            .first()
-            .unwrap();
+        let device = match device {
+            Some(dt) => *Device::list(platform, Some(dt)).unwrap().first().unwrap(),
+            None => Device::first(platform).unwrap(),
+        };
         let context = Context::builder()
             .platform(platform)
             .devices(device.clone())

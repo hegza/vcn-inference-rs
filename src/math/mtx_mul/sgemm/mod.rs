@@ -70,15 +70,13 @@
 pub mod algo;
 
 // Re-export the used (or best) algorithm here
-pub use self::algo::Tiling6GemmKernel as GemmKernel;
+pub use self::algo::{DeviceType, Tiling6GemmKernel as GemmKernel};
 
 use layers::Coeff;
 use ocl;
 use ocl::{flags, Buffer, Context, Device, Kernel, OclPrm, Platform, Program, Queue, SpatialDims};
 
 /*
-pub use ocl::flags::DeviceType;
-
 // Represents a reference to an input matrix whether it's a slice on a host or data on a physical
 // device represented by an ocl::Buffer.
 pub enum GemmInput<'a> {

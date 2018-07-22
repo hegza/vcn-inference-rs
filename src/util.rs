@@ -2,19 +2,20 @@
  * Trivial to understand utility functions that need not clutter other namespaces.
 */
 #![allow(dead_code)]
+use byteorder::{LittleEndian, ReadBytesExt};
+use geometry::{ImageGeometry, Square};
+use layers::Layer;
+use math::GenericOps;
+use num_traits::{Num, Zero};
 use std;
+use std::fmt::Debug;
 use std::fs::{create_dir_all, File};
-use std::path::Path;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::time::Instant;
-use std::str::FromStr;
-use std::fmt::Debug;
+use std::path::Path;
 use std::slice::from_raw_parts_mut;
-use byteorder::{LittleEndian, ReadBytesExt};
-use layers::Layer;
-use geometry::{ImageGeometry, Square};
-use num_traits::{Num, Zero};
+use std::str::FromStr;
+use std::time::Instant;
 use Coeff;
 
 /// Reads a file into a string.
@@ -307,4 +308,61 @@ where
 pub fn duration_between(start: Instant, end: Instant) -> f64 {
     let duration = end.duration_since(start);
     duration.as_secs() as f64 + f64::from(duration.subsec_nanos()) * 0.000_000_001f64
+}
+
+const VEC_DISPLAY_ELEMENTS_MAX: usize = 6;
+
+// Wrap is_within_margin within an assert!()
+pub fn verify(output: &[f32], correct: &[f32], margin: f32) {
+    assert_eq!(output.len(), correct.len());
+
+    if is_within_margin(output, correct, margin) {
+        return;
+    }
+
+    // Contains NaN?
+    let display_nan_msg = if output.iter().any(|&x| x.is_nan()) {
+        ", vector contains NaN"
+    } else {
+        ""
+    };
+
+    let display = if output.len() <= VEC_DISPLAY_ELEMENTS_MAX {
+        format!(
+            "{:?}{}\n!=\n{:?}",
+            &output[..],
+            display_nan_msg,
+            &correct[..]
+        )
+    } else {
+        format!(
+            "{:?}...{:?}{}\n!=\n{:?}...{:?}",
+            &output[0..VEC_DISPLAY_ELEMENTS_MAX / 2],
+            &output[output.len() - VEC_DISPLAY_ELEMENTS_MAX / 2..output.len()],
+            display_nan_msg,
+            &correct[0..VEC_DISPLAY_ELEMENTS_MAX / 2],
+            &correct[correct.len() - VEC_DISPLAY_ELEMENTS_MAX / 2..correct.len()],
+        )
+    };
+
+    assert!(
+        false,
+        "output is not within margin of correct:\n{}",
+        display
+    );
+}
+
+pub fn is_within_margin<T>(a: &[T], b: &[T], margin: T) -> bool
+where
+    T: Num + GenericOps + PartialOrd + Copy,
+{
+    // Assume that the inputs are equally long.
+    debug_assert_eq!(a.len(), b.len());
+
+    for (idx, item) in a.iter().enumerate() {
+        if (b[idx] - *item).generic_abs() > margin {
+            return false;
+        }
+    }
+    true
 }

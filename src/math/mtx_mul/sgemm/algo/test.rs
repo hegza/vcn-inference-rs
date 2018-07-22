@@ -1,7 +1,8 @@
 #![allow(non_snake_case)]
 
 use super::*;
-use tests::{verify, COARSE_RESULT_MARGIN};
+use tests::COARSE_RESULT_MARGIN;
+use verify;
 
 const M: usize = 2;
 const N: usize = 1;

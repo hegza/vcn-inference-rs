@@ -4,6 +4,16 @@ const ONE: f32 = 1f32;
 const ZERO: f32 = 0f32;
 const MINUS_ONE: f32 = -1f32;
 
+const M: usize = 2;
+const N: usize = 1;
+const K: usize = 3;
+static A_SMALL: [f32; M * K] = [11f32, 21f32, 12f32, 22f32, 13f32, 23f32];
+static B_SMALL: [f32; K * N] = [11f32, 21f32, 31f32];
+static C_SMALL: [f32; M * N] = [
+    11f32 * 11f32 + 12f32 * 21f32 + 13f32 * 31f32,
+    21f32 * 11f32 + 22f32 * 21f32 + 23f32 * 31f32,
+];
+
 // `cargo test --feature test_quantize` to run this test
 #[cfg_attr(not(feature = "test_quantize"), ignore)]
 #[test]
@@ -70,3 +80,10 @@ fn mtx_mul_normint_works() {
     assert_eq!(c, vec![255; 1]);
 }
 */
+
+#[test]
+fn gemm_naive_small_is_correct() {
+    let mut out = vec![0f32; M * N];
+    gemm_naive(M, N, K, &A_SMALL, &B_SMALL, &mut out);
+    assert_eq!(&C_SMALL, &out[..]);
+}

@@ -9,10 +9,11 @@ extern crate rusty_cnn;
 extern crate enclose;
 
 use criterion::{Benchmark, Criterion, Throughput};
-use rusty_cnn::math::mtx_mul::sgemm::algo::*;
+use rusty_cnn::math::mtx_mul::gemm::*;
+use rusty_cnn::math::mtx_mul::gemm_naive;
 use rusty_cnn::verify;
 
-const SAMPLE_SIZE: usize = 100;
+const SAMPLE_SIZE: usize = 50;
 const NOISE_THRESHOLD: f64 = 0.06;
 const COARSE_RESULT_MARGIN: f32 = 0.0035f32;
 
@@ -67,6 +68,8 @@ fn bench_sgemm_variants(c: &mut Criterion) {
         .collect::<Vec<f32>>();
 
     // TODO: bench upload + execute separately
+    // Benchmarks with kernel initialized at with_setup take around 10 times as long to run. There's probably some lazy evaluation going on in OpenCL.
+    // TODO: I could try swapping inputs for each iteration by generating random data; this would make sure I'm measuring the right thing
 
     const GROUP: &str = "sgemm-f32 (64x64)";
 
@@ -119,74 +122,83 @@ fn bench_sgemm_variants(c: &mut Criterion) {
 
     // Setup
     let mut sgemm_1_gpu_out = vec![0f32; D * D];
-    let sgemm_1 = Naive1GemmKernel::new(D, D, D, &input_a, &input_b, &mut sgemm_1_gpu_out);
+    let sgemm_1 = Naive1GemmKernel::from_slices(
+        D,
+        D,
+        D,
+        &input_a,
+        &input_b,
+        &mut sgemm_1_gpu_out,
+        DeviceType::ALL,
+    );
 
     // Verify Result
-    sgemm_1.write(&input_a, &input_b);
-    sgemm_1.run_wait();
+    sgemm_1.calculate_wait();
     verify(&sgemm_1_gpu_out, &correct_c, COARSE_RESULT_MARGIN);
 
     // Create benchmark-closure
-    let bench = bench.with_function(
-        "cnugteren_1_naive (GPU)",
-        enclose!((input_a, input_b) move |be| {
-        be.iter_with_setup(|| sgemm_1.write(&input_a, &input_b), |_| sgemm_1.run_wait())
-    }),
-    );
+    let bench = bench.with_function("cnugteren_1_naive (GPU)", move |be| {
+        be.iter(|| sgemm_1.calculate_wait())
+    });
 
     //  Setup
     let mut sgemm_4_gpu_out = vec![0f32; D * D];
-    let sgemm_4 = Vectors4GemmKernel::new(D, D, D, &input_a, &input_b, &mut sgemm_4_gpu_out);
+    let sgemm_4 = Vectors4GemmKernel::from_slices(
+        D,
+        D,
+        D,
+        &input_a,
+        &input_b,
+        &mut sgemm_4_gpu_out,
+        DeviceType::ALL,
+    );
 
     // Verify Result
-    sgemm_4.write(&input_a, &input_b);
-    sgemm_4.run_wait();
+    sgemm_4.calculate_wait();
     verify(&sgemm_4_gpu_out, &correct_c, COARSE_RESULT_MARGIN);
 
     // Create benchmark-closure
-    let bench = bench.with_function(
-        "cnugteren_4_vectors (GPU)",
-        enclose!((input_a, input_b) move |be| {
-        be.iter_with_setup(|| sgemm_4.write(&input_a, &input_b), |_| sgemm_4.run_wait())
-    }),
-    );
+    let bench = bench.with_function("cnugteren_4_vectors (GPU)", move |be| {
+        be.iter(|| sgemm_4.calculate_wait())
+    });
 
     // Setup
     let mut sgemm_5_gpu_out = vec![0f32; D * D];
-    let sgemm_5 = Transpose5GemmKernel::new(D, D, D, &input_a, &input_b, &mut sgemm_5_gpu_out);
+    let sgemm_5 = Transpose5GemmKernel::from_slices(
+        D,
+        D,
+        D,
+        &input_a,
+        &input_b,
+        &mut sgemm_5_gpu_out,
+        DeviceType::ALL,
+    );
 
     // Verify Result
-    sgemm_5.write(&input_a, &input_b);
-    sgemm_5.run_wait();
+    sgemm_5.calculate_wait();
     verify(&sgemm_5_gpu_out, &correct_c, COARSE_RESULT_MARGIN);
 
     // Create benchmark-closure
     let bench = bench.with_function(
         "cnugteren_5_transpose (GPU)",
         enclose!((input_a, input_b) move |be| {
-        be.iter_with_setup(|| sgemm_5.write(&input_a, &input_b), |_| sgemm_5.run_wait())
+        be.iter_with_setup(|| sgemm_5.set_buffers_from_slices(&input_a, &input_b), |_| sgemm_5.calculate_wait())
     }),
     );
 
     let sgemm_6_cpu = setup_cnugteren_6(&input_a, &input_b, &correct_c, DeviceType::CPU);
 
     // Create benchmark-closure
-    let bench = bench.with_function(
-        "cnugteren_6_tiling (CPU)",
-        enclose!((input_a, input_b) move |be| {
-        be.iter_with_setup(|| sgemm_6_cpu.write(&input_a, &input_b), |_| sgemm_6_cpu.run_wait())
-    }),
-    );
+    let bench = bench.with_function("cnugteren_6_tiling (CPU)", move |be| {
+        be.iter(|| sgemm_6_cpu.calculate_wait())
+    });
 
     let sgemm_6_gpu = setup_cnugteren_6(&input_a, &input_b, &correct_c, DeviceType::GPU);
 
     // Create benchmark-closure
-    let bench = bench.with_function(
-        "cnugteren_6_tiling (GPU)",
-        enclose!((input_a, input_b) move |be| {
-        be.iter_with_setup(|| sgemm_6_gpu.write(&input_a, &input_b), |_| sgemm_6_gpu.run_wait())
-    }),
-    );
+    let bench = bench.with_function("cnugteren_6_tiling (GPU)", move |be| {
+        be.iter(|| sgemm_6_gpu.calculate_wait())
+    });
 
     c.bench(
         GROUP,
@@ -205,19 +217,12 @@ fn setup_cnugteren_6(
 ) -> Tiling6GemmKernel {
     // Setup
     let mut sgemm_6_gpu_out = vec![0f32; D * D];
-    let sgemm_6 = Tiling6GemmKernel::new(
-        D,
-        D,
-        D,
-        input_a,
-        input_b,
-        &mut sgemm_6_gpu_out,
-        Some(device),
-    );
+    let sgemm_6 =
+        Tiling6GemmKernel::from_slices(D, D, D, input_a, input_b, &mut sgemm_6_gpu_out, device);
 
     // Verify Result
-    sgemm_6.write(input_a, input_b);
-    sgemm_6.run_wait();
+    sgemm_6.set_buffers_from_slices(input_a, input_b);
+    sgemm_6.calculate_wait();
     verify(&sgemm_6_gpu_out, correct_c, COARSE_RESULT_MARGIN);
 
     sgemm_6

@@ -2,7 +2,7 @@
 1. Install the vendor specific OpenCL drivers and SDK.
 2. Install the Rust toolchain by following the instructions at [www.rustup.rs/]().
 3. Ask a good mate to provide you with some suitable input data at rusty-cnn/input. File locations are all hard-coded so don't try to do this at home.
-4. Compile and run the accuracy tests with `cargo run`, or unit tests with `cargo test` or benchmarks with `cargo bench`. Have a GPU for the last one or you're gonna have a bad time.
+4. `export RUSTFLAGS="-C target-cpu=native"` to make sure all CPU features are used (eg. AVX?). Compile and run the accuracy tests with `cargo run`, or unit tests with `cargo test` or benchmarks with `cargo bench`. Have a GPU for the last one or you're gonna have a bad time.
 
 Also, Windows users need to make sure to have OpenCL.lib in the project root directory since I don't think they've yet to figure out a standard place to put their libraries on Windows.
 

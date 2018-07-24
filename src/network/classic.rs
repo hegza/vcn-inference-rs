@@ -57,7 +57,8 @@ where
         let layers = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
 
         // Initialize OpenCL
-        let (queue, program, _context) = cl::init::<T>(&["conv_relu.cl", "mtx_mul.cl"], &[], None);
+        let (queue, program, _context) =
+            cl::init::<T>(&["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"], &[], None);
 
         // Create shorthands (and move)
         let (conv1, conv2, dense3, dense4, dense5) = layers;

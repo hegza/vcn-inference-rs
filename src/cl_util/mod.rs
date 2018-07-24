@@ -2,19 +2,32 @@
 mod cl_types;
 mod info;
 
-use util::*;
+pub use self::cl_types::*;
+pub use self::info::*;
 use ocl;
 use ocl::builders::*;
 use ocl::enums::*;
-use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
 use ocl::flags::*;
-pub use self::cl_types::*;
-pub use self::info::*;
+use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
+use std::fs;
+use std::io::prelude::*;
+use util::*;
 
 const PROFILING: bool = false;
-const KERNEL_PATH: &str = "src/cl";
+const KERNEL_PATH_PREFIX: &str = "";
 
 pub fn init<T>(
+    kernel_srcs: &[&str],
+    addt_cmplr_opts: &[&str],
+    device_type: Option<DeviceType>,
+) -> (Queue, Program, Context)
+where
+    T: ClVecTypeName,
+{
+    init_from_file::<T>(kernel_srcs, addt_cmplr_opts, device_type)
+}
+
+pub fn init_from_sources<T>(
     kernel_srcs: &[&str],
     addt_cmplr_opts: &[&str],
     device_type: Option<DeviceType>,
@@ -44,8 +57,8 @@ where
     }
 
     // Input the kernel source files
-    for src in kernel_srcs {
-        program_b.src_file(&format!("src/cl/{}", src));
+    for &src in kernel_srcs {
+        program_b.src(src);
     }
 
     let program = program_b.build(&context).unwrap();
@@ -57,6 +70,30 @@ where
     };
     let queue = Queue::new(&context, device, profile_flag).unwrap();
     (queue, program, context)
+}
+
+pub fn init_from_file<T>(
+    kernel_files: &[&str],
+    addt_cmplr_opts: &[&str],
+    device_type: Option<DeviceType>,
+) -> (Queue, Program, Context)
+where
+    T: ClVecTypeName,
+{
+    let sources = kernel_files
+        .iter()
+        .map(|&fname| {
+            let mut f = fs::File::open(&format!("{}{}", KERNEL_PATH_PREFIX, fname)).unwrap();
+            let mut contents = String::new();
+            f.read_to_string(&mut contents).unwrap();
+            contents
+        })
+        .collect::<Vec<String>>();
+    init_from_sources::<T>(
+        &sources.iter().map(AsRef::as_ref).collect::<Vec<&str>>(),
+        addt_cmplr_opts,
+        device_type,
+    )
 }
 
 pub fn configure_program<T>(program_b: &mut ProgramBuilder, device: &Device)
@@ -97,10 +134,10 @@ pub unsafe fn read_buf<T: OclPrm>(buf: &Buffer<T>) -> ocl::Result<Vec<T>> {
 }
 
 pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<()> {
-    // Create a host-accessible input buffer for writing the image into device memory
+    // Create a host-accessible input buffer for writing the data into device memory
     let mut mem_map = buf.map().flags(flags::MAP_WRITE).len(buf.len()).enq()?;
 
-    // Read the input image into the input_buf as T
+    // Read the input into the input_buf as T
     for (idx, f) in data.into_iter().enumerate() {
         // TODO: the mapping could be done in float4's
         mem_map[idx] = *f;

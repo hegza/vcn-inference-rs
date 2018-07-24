@@ -87,7 +87,7 @@ where
     T: Coeff,
 {
     let cl_layer = layer.impl_standalone(
-        &["conv_relu.cl", "mtx_mul.cl"],
+        &["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"],
         kernel_func,
         &[],
         None,
@@ -113,7 +113,7 @@ fn mxp_returns_baseline() {
     // Implement mxp on GPU if possible
     let dev_max_wgs = cl_util::max_wgs(None);
     let cl_impl = mxp.impl_standalone(
-        &["test/mxp.cl"],
+        &["src/cl/test/mxp.cl"],
         "max_pool",
         &[],
         None,
@@ -140,7 +140,7 @@ fn dense3_cl_cpu_vec4_returns_baseline() {
     );
 
     let cl_impl = dense3.impl_standalone(
-        &["mtx_mul.cl"],
+        &["src/cl/mtx_mul.cl"],
         "mtx_mul",
         &["-D VECN=4"],
         Some(DeviceType::CPU),

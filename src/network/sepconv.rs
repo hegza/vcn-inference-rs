@@ -130,7 +130,11 @@ where
         // Init OpenCL
         let flags = SepconvNetwork::<T>::compile_flags(&p, &layers);
         let (queue, program, _context) = cl::init::<T>(
-            &["sepconv.cl", "max_pool.cl", "mtx_mul.cl"],
+            &[
+                "src/cl/sepconv.cl",
+                "src/cl/max_pool.cl",
+                "src/cl/mtx_mul.cl",
+            ],
             &flags.iter().map(AsRef::as_ref).collect::<Vec<&str>>(),
             None,
         );

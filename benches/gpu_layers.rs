@@ -51,7 +51,7 @@ fn bench_sepconv1(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
 
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
-        &["sepconv.cl", "max_pool.cl"],
+        &["src/cl/sepconv.cl", "src/cl/max_pool.cl"],
         &SepconvNetwork::<f32>::compile_flags(&p, &layers)
             .iter()
             .map(AsRef::as_ref)
@@ -114,7 +114,7 @@ fn bench_sepconv2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
 
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
-        &["sepconv.cl", "max_pool.cl"],
+        &["src/cl/sepconv.cl", "src/cl/max_pool.cl"],
         &SepconvNetwork::<f32>::compile_flags(&p, &layers)
             .iter()
             .map(AsRef::as_ref)
@@ -177,7 +177,7 @@ fn bench_sepconv1and2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: 
 
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
-        &["sepconv.cl", "max_pool.cl"],
+        &["src/cl/sepconv.cl", "src/cl/max_pool.cl"],
         &SepconvNetwork::<f32>::compile_flags(&p, &layers)
             .iter()
             .map(AsRef::as_ref)
@@ -259,7 +259,7 @@ fn bench_sepconv1and2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: 
 
 fn bench_conv1(conv1: &ConvLayer<f32>, c: &mut Criterion) {
     let cl_layer = conv1.impl_standalone(
-        &["conv_relu.cl", "mtx_mul.cl"],
+        &["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"],
         "conv_relu_1",
         &[],
         None,
@@ -273,7 +273,7 @@ fn bench_conv1(conv1: &ConvLayer<f32>, c: &mut Criterion) {
 
 fn bench_conv2(conv2: &ConvLayer<f32>, c: &mut Criterion) {
     let cl_layer = conv2.impl_standalone(
-        &["conv_relu.cl", "mtx_mul.cl"],
+        &["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"],
         "conv_relu_2",
         &[],
         None,
@@ -291,7 +291,8 @@ fn bench_conv1and2(conv1: &ConvLayer<f32>, conv2: &ConvLayer<f32>, c: &mut Crite
         *conv1.input_shape(),
     ));
 
-    let (queue, program, _context) = cl::init::<f32>(&["conv_relu.cl", "mtx_mul.cl"], &[], None);
+    let (queue, program, _context) =
+        cl::init::<f32>(&["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"], &[], None);
 
     let wgts_bufs = create_weights_bufs(&[conv1, conv2], &queue);
     let bufs = create_buffer_chain(&[conv1, conv2], &queue);
@@ -329,7 +330,7 @@ fn bench_conv1and2(conv1: &ConvLayer<f32>, conv2: &ConvLayer<f32>, c: &mut Crite
 /*
 fn bench_dense3_cl_gpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
     let cl_layer = dense3.impl_standalone(
-        &["mtx_mul.cl"],
+        &["src/cl/mtx_mul.cl"],
         "mtx_mul",
         &[],
         None,

@@ -31,7 +31,7 @@ fn per_layer_benchmark(c: &mut Criterion) {
 
 fn bench_dense3_cl_cpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
     let cl_layer = dense3.impl_standalone(
-        &["mtx_mul.cl"],
+        &["src/cl/mtx_mul.cl"],
         "mtx_mul",
         &[],
         Some(DeviceType::CPU),

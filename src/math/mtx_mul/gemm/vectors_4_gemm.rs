@@ -22,7 +22,7 @@ impl OclGemm<Vectors4GemmKernel> for Vectors4GemmKernel {
         debug_assert_eq!(b.len(), n * k);
         debug_assert_eq!(c.len(), m * n);
 
-        // Share inputs within host memory on CPU's
+        // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
         let use_host_ptr = device.contains(DeviceType::CPU);
 
         // The width of the OpenCL vector-type (in number of floats)
@@ -32,25 +32,15 @@ impl OclGemm<Vectors4GemmKernel> for Vectors4GemmKernel {
 
         let src = String::from_utf8_lossy(include_bytes!("cl/4_wider_data_types.cl"));
 
-        let platform = Platform::default();
-        let device = *Device::list(platform, Some(flags::DeviceType::GPU))
-            .unwrap()
-            .first()
-            .unwrap();
-        let context = Context::builder()
-            .platform(platform)
-            .devices(device.clone())
-            .build()
-            .unwrap();
-        let program = Program::builder()
-            .devices(device)
-            .cmplr_opt("-I./src/math/mtx_mul/gemm/cl")
-            .cmplr_def("WIDTH", WIDTH as i32)
-            .cmplr_def("TS", TS as i32)
-            .src(src)
-            .build(&context)
-            .unwrap();
-        let queue = Queue::new(&context, device, None).unwrap();
+        let (queue, program, _context) = cl_util::init_from_sources::<f32>(
+            &[&src],
+            &[
+                "-I./src/math/mtx_mul/gemm/cl",
+                &format!("-D WIDTH={}", WIDTH as i32),
+                &format!("-D TS={}", TS as i32),
+            ],
+            Some(device),
+        );
 
         let (mut a_buf, mut b_buf, c_buf) = unsafe {
             (
@@ -112,12 +102,16 @@ impl OclGemm<Vectors4GemmKernel> for Vectors4GemmKernel {
     }
 
     fn set_buffers_from_slices(&self, a: &[f32], b: &[f32]) {
-        debug_assert!(
-            !self.use_host_ptr,
-            "memory region for buffers has already been set via ocl::BufferBuilder::use_host_ptr"
-        );
-        self.a_buf.write(a).enq().unwrap();
-        self.b_buf.write(b).enq().unwrap();
+        match self.use_host_ptr {
+            true => unsafe {
+                cl_util::map_to_buf(&self.a_buf, a).unwrap();
+                cl_util::map_to_buf(&self.b_buf, b).unwrap();
+            },
+            false => {
+                self.a_buf.write(a).enq().unwrap();
+                self.b_buf.write(b).enq().unwrap();
+            }
+        }
     }
 
     fn calculate(&self) {

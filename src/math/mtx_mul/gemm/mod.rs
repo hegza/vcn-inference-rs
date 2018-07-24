@@ -23,6 +23,7 @@ pub use self::transpose_5_gemm::*;
 pub use self::vectors_4_gemm::*;
 pub use ocl::flags::DeviceType;
 
+use cl_util;
 use layers::Coeff;
 use ocl;
 use ocl::{flags, Buffer, Context, Device, Kernel, OclPrm, Platform, Program, Queue, SpatialDims};

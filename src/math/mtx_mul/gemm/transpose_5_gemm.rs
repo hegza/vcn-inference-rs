@@ -23,7 +23,7 @@ impl OclGemm<Transpose5GemmKernel> for Transpose5GemmKernel {
         debug_assert_eq!(b.len(), n * k);
         debug_assert_eq!(c.len(), m * n);
 
-        // Share inputs within host memory on CPU's
+        // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
         let use_host_ptr = device.contains(DeviceType::CPU);
 
         // The square-root of the 2D tile-size (== work-group dims)
@@ -39,29 +39,18 @@ impl OclGemm<Transpose5GemmKernel> for Transpose5GemmKernel {
         let src_transpose = String::from_utf8_lossy(include_bytes!("cl/transpose.cl"));
         let src_mtx_mul = String::from_utf8_lossy(include_bytes!("cl/5_transpose.cl"));
 
-        let platform = Platform::default();
-        let device = *Device::list(platform, Some(flags::DeviceType::GPU))
-            .unwrap()
-            .first()
-            .unwrap();
-        let context = Context::builder()
-            .platform(platform)
-            .devices(device.clone())
-            .build()
-            .unwrap();
-        let program = Program::builder()
-            .devices(device)
-            .cmplr_opt("-I./src/math/mtx_mul/gemm/cl")
-            .cmplr_def("TS", TS as i32)
-            .cmplr_def("WPT", WPT as i32)
-            .cmplr_def("TSDK", TSDK as i32)
-            .cmplr_def("TRANSPOSEX", TRANSPOSEX as i32)
-            .cmplr_def("TRANSPOSEY", TRANSPOSEY as i32)
-            .src(src_transpose)
-            .src(src_mtx_mul)
-            .build(&context)
-            .unwrap();
-        let queue = Queue::new(&context, device, None).unwrap();
+        let (queue, program, _context) = cl_util::init_from_sources::<f32>(
+            &[&src_transpose, &src_mtx_mul],
+            &[
+                "-I./src/math/mtx_mul/gemm/cl",
+                &format!("-D TS={}", TS),
+                &format!("-D WPT={}", WPT),
+                &format!("-D TSDK={}", TSDK),
+                &format!("-D TRANSPOSEX={}", TRANSPOSEX),
+                &format!("-D TRANSPOSEY={}", TRANSPOSEY),
+            ],
+            Some(device),
+        );
 
         let (mut a_buf, mut b_untransposed_buf, b_buf, c_buf) = unsafe {
             (
@@ -147,12 +136,16 @@ impl OclGemm<Transpose5GemmKernel> for Transpose5GemmKernel {
 
     /// a and b are column-major (b will be transposed automatically into row-major by the algorithm)
     fn set_buffers_from_slices(&self, a: &[f32], b: &[f32]) {
-        debug_assert!(
-            !self.use_host_ptr,
-            "memory region for buffers has already been set via ocl::BufferBuilder::use_host_ptr"
-        );
-        self.a_buf.write(a).enq().unwrap();
-        self.b_untransposed_buf.write(b).enq().unwrap();
+        match self.use_host_ptr {
+            true => unsafe {
+                cl_util::map_to_buf(&self.a_buf, a).unwrap();
+                cl_util::map_to_buf(&self.b_untransposed_buf, b).unwrap();
+            },
+            false => {
+                self.a_buf.write(a).enq().unwrap();
+                self.b_untransposed_buf.write(b).enq().unwrap();
+            }
+        }
     }
 
     fn calculate(&self) {

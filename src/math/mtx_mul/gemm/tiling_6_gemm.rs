@@ -26,7 +26,7 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
         debug_assert_eq!(b.len(), n * k);
         debug_assert_eq!(c.len(), m * n);
 
-        // Share inputs within host memory on CPU's
+        // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
         let use_host_ptr = device.contains(DeviceType::CPU);
 
         // The tile-size in dimension m
@@ -46,31 +46,20 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
         let src_transpose = String::from_utf8_lossy(include_bytes!("cl/transpose.cl"));
         let src_mtx_mul = String::from_utf8_lossy(include_bytes!("cl/6_register_tiling.cl"));
 
-        let platform = Platform::default();
-        let device = *Device::list(platform, Some(device))
-            .unwrap()
-            .first()
-            .unwrap();
-        let context = Context::builder()
-            .platform(platform)
-            .devices(device.clone())
-            .build()
-            .unwrap();
-        let program = Program::builder()
-            .devices(device)
-            .cmplr_opt("-I./src/math/mtx_mul/gemm/cl")
-            .cmplr_def("TSM", TSM as i32)
-            .cmplr_def("TSN", TSN as i32)
-            .cmplr_def("TSK", TSK as i32)
-            .cmplr_def("WPTM", WPTM as i32)
-            .cmplr_def("WPTN", WPTN as i32)
-            .cmplr_def("TRANSPOSEX", TRANSPOSEX as i32)
-            .cmplr_def("TRANSPOSEY", TRANSPOSEY as i32)
-            .src(src_transpose)
-            .src(src_mtx_mul)
-            .build(&context)
-            .unwrap();
-        let queue = Queue::new(&context, device, None).unwrap();
+        let (queue, program, _context) = cl_util::init_from_sources::<f32>(
+            &[&src_transpose, &src_mtx_mul],
+            &[
+                "-I./src/math/mtx_mul/gemm/cl",
+                &format!("-D TSM={}", TSM),
+                &format!("-D TSN={}", TSN),
+                &format!("-D TSK={}", TSK),
+                &format!("-D WPTM={}", WPTM),
+                &format!("-D WPTN={}", WPTN),
+                &format!("-D TRANSPOSEX={}", TRANSPOSEX),
+                &format!("-D TRANSPOSEY={}", TRANSPOSEY),
+            ],
+            Some(device),
+        );
 
         let (mut a_buf, mut b_untransposed_buf, b_buf, c_buf) = unsafe {
             (
@@ -160,12 +149,16 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
     ///
     /// a and b are column-major (b will be transposed automatically into row-major by the algorithm)
     fn set_buffers_from_slices(&self, a: &[f32], b: &[f32]) {
-        debug_assert!(
-            !self.use_host_ptr,
-            "memory region for buffers has already been set via ocl::BufferBuilder::use_host_ptr"
-        );
-        self.input_a.write(a).enq().unwrap();
-        self.input_b.write(b).enq().unwrap();
+        match self.use_host_ptr {
+            true => unsafe {
+                cl_util::map_to_buf(&self.input_a, a).unwrap();
+                cl_util::map_to_buf(&self.input_b, b).unwrap();
+            },
+            false => {
+                self.input_a.write(a).enq().unwrap();
+                self.input_b.write(b).enq().unwrap();
+            }
+        }
     }
 
     /*

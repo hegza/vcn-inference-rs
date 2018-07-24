@@ -19,6 +19,8 @@ const COARSE_RESULT_MARGIN: f32 = 0.0035f32;
 
 const D: usize = 64;
 
+const BASELINE: &str = "baseline 24-07-2018";
+
 /// On notation:
 /// host =  compiled Rust.
 /// GPU =   OpenCL / GPU.
@@ -70,8 +72,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // TODO: bench upload + execute separately
 
     const GROUP: &str = "gemm-f32";
-    //let input_sizes: Vec<usize> = vec![128, 64, 32];
-    let input_sizes: Vec<usize> = vec![128, 64];
+    let input_sizes: Vec<usize> = vec![256, 128, 64, 32];
 
     let mut naive_out = vec![0f32; D * D];
 
@@ -146,13 +147,11 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .map(|&ds| {
             (
                 ds,
-                Naive1GemmKernel::from_slices(
+                Naive1GemmKernel::uninitialized(
                     ds,
                     ds,
                     ds,
-                    &create_random_vec(ds * ds),
-                    &create_random_vec(ds * ds),
-                    &mut gemm_1_gpu_out.get_mut(&ds).unwrap(),
+                    gemm_1_gpu_out.get_mut(&ds).unwrap(),
                     DeviceType::ALL,
                 ),
             )
@@ -185,13 +184,11 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .map(|&ds| {
             (
                 ds,
-                Vectors4GemmKernel::from_slices(
+                Vectors4GemmKernel::uninitialized(
                     ds,
                     ds,
                     ds,
-                    &input_a,
-                    &input_b,
-                    &mut gemm_4_gpu_out.get_mut(&ds).unwrap(),
+                    gemm_4_gpu_out.get_mut(&ds).unwrap(),
                     DeviceType::ALL,
                 ),
             )
@@ -199,6 +196,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .collect::<HashMap<usize, Vectors4GemmKernel>>();
 
     // Verify Result
+    gemm_4[&D].set_buffers_from_slices(&input_a, &input_b);
     gemm_4[&D].calculate_wait();
     verify(&gemm_4_gpu_out[&D], &correct_c, COARSE_RESULT_MARGIN);
 
@@ -223,13 +221,11 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .map(|&ds| {
             (
                 ds,
-                Transpose5GemmKernel::from_slices(
+                Transpose5GemmKernel::uninitialized(
                     ds,
                     ds,
                     ds,
-                    &input_a,
-                    &input_b,
-                    &mut gemm_5_gpu_out.get_mut(&ds).unwrap(),
+                    gemm_5_gpu_out.get_mut(&ds).unwrap(),
                     DeviceType::ALL,
                 ),
             )
@@ -237,6 +233,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .collect::<HashMap<usize, Transpose5GemmKernel>>();
 
     // Verify Result
+    gemm_5[&D].set_buffers_from_slices(&input_a, &input_b);
     gemm_5[&D].calculate_wait();
     verify(&gemm_5_gpu_out[&D], &correct_c, COARSE_RESULT_MARGIN);
 
@@ -254,20 +251,18 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // Setup
     let mut gemm_6_cpu_out = input_sizes
         .iter()
-        .map(|&ds| (ds, vec![0f32; ds]))
+        .map(|&ds| (ds, vec![0f32; ds * ds]))
         .collect::<HashMap<usize, Vec<f32>>>();
     let gemm_6_cpu = input_sizes
         .iter()
         .map(|&ds| {
             (
                 ds,
-                Tiling6GemmKernel::from_slices(
+                Tiling6GemmKernel::uninitialized(
                     ds,
                     ds,
                     ds,
-                    &input_a,
-                    &input_b,
-                    &mut gemm_6_cpu_out.get_mut(&ds).unwrap(),
+                    gemm_6_cpu_out.get_mut(&ds).unwrap(),
                     DeviceType::CPU,
                 ),
             )
@@ -292,20 +287,18 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // Setup
     let mut gemm_6_gpu_out = input_sizes
         .iter()
-        .map(|&ds| (ds, vec![0f32; ds]))
+        .map(|&ds| (ds, vec![0f32; ds * ds]))
         .collect::<HashMap<usize, Vec<f32>>>();
     let gemm_6_gpu = input_sizes
         .iter()
         .map(|&ds| {
             (
                 ds,
-                Tiling6GemmKernel::from_slices(
+                Tiling6GemmKernel::uninitialized(
                     ds,
                     ds,
                     ds,
-                    &input_a,
-                    &input_b,
-                    &mut gemm_6_gpu_out.get_mut(&ds).unwrap(),
+                    gemm_6_gpu_out.get_mut(&ds).unwrap(),
                     DeviceType::GPU,
                 ),
             )
@@ -331,6 +324,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     c.bench(
         GROUP,
         bench.throughput(|&ds| {
+            // Output throughput is size of matrix times size of data-type
             Throughput::Bytes(std::mem::size_of::<f32>() as u32 * ds as u32 * ds as u32)
         }),
     );
@@ -343,7 +337,7 @@ fn create_random_vec(len: usize) -> Vec<f32> {
 
 criterion_group!{
     name = benches;
-    config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
+    config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD).retain_baseline(BASELINE.to_string());
     targets = bench_gemm_variants
 }
 criterion_main!(benches);

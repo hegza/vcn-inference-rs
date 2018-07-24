@@ -86,7 +86,13 @@ use ocl::{flags, Buffer, Context, Device, Kernel, OclPrm, Platform, Program, Que
 /// ```
 /// Converting column-major into row-major would be by switching A and B and n and m
 pub trait OclGemm<SuperKernel> {
-    fn uninitialized(m: usize, n: usize, k: usize, device: DeviceType) -> SuperKernel;
+    fn uninitialized(
+        m: usize,
+        n: usize,
+        k: usize,
+        out: &mut [f32],
+        device: DeviceType,
+    ) -> SuperKernel;
     fn from_slices(
         m: usize,
         n: usize,
@@ -105,19 +111,3 @@ pub trait OclGemm<SuperKernel> {
         self.queue().finish().unwrap();
     }
 }
-
-/*
-// Represents a reference to an input matrix whether it's a slice on a host or data on a physical
-// device represented by an ocl::Buffer.
-pub enum GemmInput<'a> {
-    Slice(&'a [f32]),
-    OclBuffer(&'a ocl::Buffer<f32>),
-}
-
-// Represents a reference to an output matrix whether it's a slice on a host or data on a physical
-// device represented by an ocl::Buffer.
-pub enum GemmOutput<'a> {
-    Slice(&'a mut [f32]),
-    OclBuffer(&'a ocl::Buffer<f32>),
-}
-*/

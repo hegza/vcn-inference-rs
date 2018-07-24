@@ -1,6 +1,7 @@
 use super::*;
 
 // TODO: Implement a version for pretransposed b-matrix. Measure performance. This, because in a neural net, the weights matrices (b's) can be consistently pre-transposed.
+/// Minimum matrix size: 32x32
 pub struct Tiling6GemmKernel {
     transpose_kernel: Kernel,
     main_kernel: Kernel,
@@ -13,7 +14,16 @@ pub struct Tiling6GemmKernel {
 }
 
 impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
-    fn uninitialized(m: usize, n: usize, k: usize, device: DeviceType) -> Tiling6GemmKernel {
+    fn uninitialized(
+        m: usize,
+        n: usize,
+        k: usize,
+        out: &mut [f32],
+        device: DeviceType,
+    ) -> Tiling6GemmKernel {
+        // Make sure enough space is reserved for the output buffer
+        debug_assert_eq!(out.len(), m * n);
+
         // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
         let use_host_ptr = device.contains(DeviceType::CPU);
 
@@ -49,7 +59,7 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
             Some(device),
         );
 
-        let (a_buf, b_untransposed_buf, b_buf, c_buf) = (
+        let (a_buf, b_untransposed_buf, b_buf) = (
             Buffer::<f32>::builder()
                 .queue(queue.clone())
                 .flags(flags::MEM_READ_ONLY)
@@ -68,13 +78,16 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
                 .len(n * k)
                 .build()
                 .unwrap(),
+        );
+        let c_buf = unsafe {
             Buffer::<f32>::builder()
                 .queue(queue.clone())
                 .flags(flags::MEM_WRITE_ONLY)
                 .len(m * n)
+                .use_host_slice(&out)
                 .build()
-                .unwrap(),
-        );
+                .unwrap()
+        };
 
         let (transpose_kernel, main_kernel) = {
             let lws = SpatialDims::Two(TSM / WPTM, TSN / WPTN);
@@ -133,21 +146,10 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
     ) -> Tiling6GemmKernel {
         debug_assert_eq!(a.len(), k * m);
         debug_assert_eq!(b.len(), n * k);
-        debug_assert_eq!(c.len(), m * n);
 
-        let mut kernel = Tiling6GemmKernel::uninitialized(m, n, k, device);
+        let mut kernel = Tiling6GemmKernel::uninitialized(m, n, k, c, device);
         {
             let queue = &kernel.queue;
-
-            let c_buf = unsafe {
-                Buffer::<f32>::builder()
-                    .queue(queue.clone())
-                    .flags(flags::MEM_WRITE_ONLY)
-                    .len(m * n)
-                    .use_host_slice(&c)
-                    .build()
-                    .unwrap()
-            };
 
             // Re-create buffers as use-host-ptr if necessary
             if kernel.use_host_ptr {
@@ -175,7 +177,6 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
             } else {
                 kernel.set_buffers_from_slices(&a, &b);
             }
-            kernel.main_kernel.set_arg("c", &c_buf).unwrap();
         }
 
         kernel

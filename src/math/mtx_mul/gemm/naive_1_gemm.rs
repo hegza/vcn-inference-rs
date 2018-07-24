@@ -9,7 +9,16 @@ pub struct Naive1GemmKernel {
 }
 
 impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
-    fn uninitialized(m: usize, n: usize, k: usize, device: DeviceType) -> Naive1GemmKernel {
+    fn uninitialized(
+        m: usize,
+        n: usize,
+        k: usize,
+        out: &mut [f32],
+        device: DeviceType,
+    ) -> Naive1GemmKernel {
+        // Make sure enough space is reserved for the output buffer
+        debug_assert_eq!(out.len(), m * n);
+
         // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
         let use_host_ptr = device.contains(DeviceType::CPU);
 
@@ -18,7 +27,7 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
         let (queue, program, _context) =
             cl_util::init_from_sources::<f32>(&[&src], &[], Some(device));
 
-        let (a_buf, b_buf, c_buf) = (
+        let (a_buf, b_buf) = (
             Buffer::<f32>::builder()
                 .queue(queue.clone())
                 .flags(flags::MEM_READ_ONLY)
@@ -31,13 +40,16 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
                 .len(n * k)
                 .build()
                 .unwrap(),
+        );
+        let c_buf = unsafe {
             Buffer::<f32>::builder()
                 .queue(queue.clone())
                 .flags(flags::MEM_WRITE_ONLY)
                 .len(m * n)
+                .use_host_slice(&out)
                 .build()
-                .unwrap(),
-        );
+                .unwrap()
+        };
 
         let kernel = {
             // This is 32 in the original example; that would produce gws of 1024, but the maximum of
@@ -81,21 +93,10 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
     ) -> Naive1GemmKernel {
         debug_assert_eq!(a.len(), k * m);
         debug_assert_eq!(b.len(), n * k);
-        debug_assert_eq!(c.len(), m * n);
 
-        let mut kernel = Naive1GemmKernel::uninitialized(m, n, k, device);
+        let mut kernel = Naive1GemmKernel::uninitialized(m, n, k, c, device);
         {
             let queue = &kernel.queue;
-
-            let c_buf = unsafe {
-                Buffer::<f32>::builder()
-                    .queue(queue.clone())
-                    .flags(flags::MEM_WRITE_ONLY)
-                    .len(m * n)
-                    .use_host_slice(&c)
-                    .build()
-                    .unwrap()
-            };
 
             // Re-create buffers as use-host-ptr if necessary
             if kernel.use_host_ptr {
@@ -120,7 +121,6 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
             } else {
                 kernel.set_buffers_from_slices(&a, &b);
             }
-            kernel.kernel.set_arg("c", &c_buf).unwrap();
         }
 
         kernel

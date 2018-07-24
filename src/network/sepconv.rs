@@ -1,9 +1,9 @@
 use super::*;
-use ocl::{Device, Platform, SpatialDims};
 use geometry::*;
-use ndarray::{Array, ShapeBuilder, arr2};
-use std::ops::{Deref, Index};
+use ndarray::{arr2, Array, ShapeBuilder};
+use ocl::{Device, Platform, SpatialDims};
 use std::ops::AddAssign;
+use std::ops::{Deref, Index};
 
 pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     // TODO: revisit the names here
@@ -108,15 +108,7 @@ where
         let dense5 = DenseLayer::new(dense4.num_out(), p.num_output_classes, wgts.6);
 
         (
-            vconv1,
-            hconv1,
-            mxp1,
-            vconv2,
-            hconv2,
-            mxp2,
-            dense3,
-            dense4,
-            dense5,
+            vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3, dense4, dense5,
         )
     }
     pub fn new(wgts: Weights<T>) -> SepconvNetwork<T> {

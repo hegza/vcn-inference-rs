@@ -8,8 +8,8 @@ mod common;
 
 use common::*;
 use criterion::Criterion;
-use rusty_cnn::*;
 use ocl::flags::*;
+use rusty_cnn::*;
 
 // Sample size of 150 puts the max-min of the benches at around 30 us at worst, and exec time at
 // 1 min max per bench.

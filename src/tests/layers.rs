@@ -1,7 +1,7 @@
 use super::*;
 use geometry::*;
-use ocl::{flags, Context, Device, Kernel, Platform, Program, SpatialDims};
 use ocl::flags::DeviceType;
+use ocl::{flags, Context, Device, Kernel, Platform, Program, SpatialDims};
 
 #[test]
 fn l1_returns_baseline() {

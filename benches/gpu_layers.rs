@@ -6,11 +6,11 @@ extern crate rusty_cnn;
 
 mod common;
 
+use cl_util as cl;
 use common::*;
 use criterion::Criterion;
-use rusty_cnn::*;
 use ocl::{Device, SpatialDims};
-use cl_util as cl;
+use rusty_cnn::*;
 
 // Sample size of 100 puts the max-min of the benches at around 10 us at worst.
 const SAMPLE_SIZE: usize = 100;
@@ -186,12 +186,7 @@ fn bench_sepconv1and2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: 
     );
 
     let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2) = (
-        &layers.0,
-        &layers.1,
-        &layers.2,
-        &layers.3,
-        &layers.4,
-        &layers.5,
+        &layers.0, &layers.1, &layers.2, &layers.3, &layers.4, &layers.5,
     );
 
     let wgts_bufs = create_weights_bufs(&[vconv1, hconv1, vconv2, hconv2], &queue);

@@ -6,26 +6,14 @@ pub struct Tiling6GemmKernel {
     main_kernel: Kernel,
     queue: Queue,
     // Buffer A
-    input_a: Buffer<f32>,
+    a_buf: Buffer<f32>,
     // Untransposed buffer B
-    input_b: Buffer<f32>,
+    b_untransposed_buf: Buffer<f32>,
     use_host_ptr: bool,
 }
 
 impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
-    fn from_slices(
-        m: usize,
-        n: usize,
-        k: usize,
-        a: &[f32],
-        b: &[f32],
-        c: &mut [f32],
-        device: DeviceType,
-    ) -> Tiling6GemmKernel {
-        debug_assert_eq!(a.len(), k * m);
-        debug_assert_eq!(b.len(), n * k);
-        debug_assert_eq!(c.len(), m * n);
-
+    fn uninitialized(m: usize, n: usize, k: usize, device: DeviceType) -> Tiling6GemmKernel {
         // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
         let use_host_ptr = device.contains(DeviceType::CPU);
 
@@ -61,39 +49,31 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
             Some(device),
         );
 
-        let (mut a_buf, mut b_untransposed_buf, b_buf, c_buf) = unsafe {
-            (
-                Buffer::<f32>::builder()
-                    .queue(queue.clone())
-                    .flags(flags::MEM_READ_ONLY)
-                    .len(a.len()),
-                Buffer::<f32>::builder()
-                    .queue(queue.clone())
-                    .flags(flags::MEM_READ_ONLY)
-                    .len(b.len()),
-                Buffer::<f32>::builder()
-                    .queue(queue.clone())
-                    .flags(flags::MEM_READ_WRITE)
-                    .len(b.len()),
-                Buffer::<f32>::builder()
-                    .queue(queue.clone())
-                    .use_host_slice(c)
-                    .flags(flags::MEM_WRITE_ONLY)
-                    .len(c.len()),
-            )
-        };
-        if use_host_ptr {
-            a_buf = unsafe { a_buf.use_host_slice(&a) };
-            b_untransposed_buf = unsafe { b_untransposed_buf.use_host_slice(&b) };
-        } else {
-            a_buf = a_buf.copy_host_slice(&a);
-            b_untransposed_buf = b_untransposed_buf.copy_host_slice(&b);
-        }
         let (a_buf, b_untransposed_buf, b_buf, c_buf) = (
-            a_buf.build().unwrap(),
-            b_untransposed_buf.build().unwrap(),
-            b_buf.build().unwrap(),
-            c_buf.build().unwrap(),
+            Buffer::<f32>::builder()
+                .queue(queue.clone())
+                .flags(flags::MEM_READ_ONLY)
+                .len(k * m)
+                .build()
+                .unwrap(),
+            Buffer::<f32>::builder()
+                .queue(queue.clone())
+                .flags(flags::MEM_READ_ONLY)
+                .len(n * k)
+                .build()
+                .unwrap(),
+            Buffer::<f32>::builder()
+                .queue(queue.clone())
+                .flags(flags::MEM_READ_WRITE)
+                .len(n * k)
+                .build()
+                .unwrap(),
+            Buffer::<f32>::builder()
+                .queue(queue.clone())
+                .flags(flags::MEM_WRITE_ONLY)
+                .len(m * n)
+                .build()
+                .unwrap(),
         );
 
         let (transpose_kernel, main_kernel) = {
@@ -110,8 +90,8 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
                     .global_work_size(SpatialDims::Two(k, n))
                     .arg(k as i32)
                     .arg(n as i32)
-                    .arg(&b_untransposed_buf)
-                    .arg(&b_buf)
+                    .arg_named("b_untransposed", &b_untransposed_buf)
+                    .arg_named("b", &b_buf)
                     .build()
                     .unwrap(),
                 // Build kernel for mtx_mul
@@ -124,9 +104,9 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
                     .arg(m as i32)
                     .arg(n as i32)
                     .arg(k as i32)
-                    .arg(&a_buf)
-                    .arg(&b_buf)
-                    .arg(&c_buf)
+                    .arg_named("a", &a_buf)
+                    .arg_named("b", &b_buf)
+                    .arg_named("c", &c_buf)
                     .build()
                     .unwrap(),
             )
@@ -137,10 +117,68 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
             transpose_kernel: transpose_kernel,
             main_kernel: main_kernel,
             queue: queue,
-            input_a: a_buf,
-            input_b: b_untransposed_buf,
+            a_buf: a_buf,
+            b_untransposed_buf: b_untransposed_buf,
             use_host_ptr,
         }
+    }
+    fn from_slices(
+        m: usize,
+        n: usize,
+        k: usize,
+        a: &[f32],
+        b: &[f32],
+        c: &mut [f32],
+        device: DeviceType,
+    ) -> Tiling6GemmKernel {
+        debug_assert_eq!(a.len(), k * m);
+        debug_assert_eq!(b.len(), n * k);
+        debug_assert_eq!(c.len(), m * n);
+
+        let mut kernel = Tiling6GemmKernel::uninitialized(m, n, k, device);
+        {
+            let queue = &kernel.queue;
+
+            let c_buf = unsafe {
+                Buffer::<f32>::builder()
+                    .queue(queue.clone())
+                    .flags(flags::MEM_WRITE_ONLY)
+                    .len(m * n)
+                    .use_host_slice(&c)
+                    .build()
+                    .unwrap()
+            };
+
+            // Re-create buffers as use-host-ptr if necessary
+            if kernel.use_host_ptr {
+                unsafe {
+                    kernel.a_buf = Buffer::<f32>::builder()
+                        .queue(queue.clone())
+                        .flags(flags::MEM_READ_ONLY)
+                        .len(k * m)
+                        .use_host_slice(&a)
+                        .build()
+                        .unwrap();
+                    kernel.b_untransposed_buf = Buffer::<f32>::builder()
+                        .queue(queue.clone())
+                        .flags(flags::MEM_READ_ONLY)
+                        .len(n * k)
+                        .use_host_slice(&b)
+                        .build()
+                        .unwrap();
+                }
+                kernel.main_kernel.set_arg("a", &kernel.a_buf).unwrap();
+                kernel
+                    .transpose_kernel
+                    .set_arg("b_untransposed", &kernel.b_untransposed_buf)
+                    .unwrap();
+            } else {
+                kernel.set_buffers_from_slices(&a, &b);
+            }
+            kernel.main_kernel.set_arg("c", &c_buf).unwrap();
+        }
+
+        kernel
     }
 
     // TODO: comment is misleading; is this how it should be implemented though?
@@ -151,12 +189,12 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
     fn set_buffers_from_slices(&self, a: &[f32], b: &[f32]) {
         match self.use_host_ptr {
             true => unsafe {
-                cl_util::map_to_buf(&self.input_a, a).unwrap();
-                cl_util::map_to_buf(&self.input_b, b).unwrap();
+                cl_util::map_to_buf(&self.a_buf, a).unwrap();
+                cl_util::map_to_buf(&self.b_untransposed_buf, b).unwrap();
             },
             false => {
-                self.input_a.write(a).enq().unwrap();
-                self.input_b.write(b).enq().unwrap();
+                self.a_buf.write(a).enq().unwrap();
+                self.b_untransposed_buf.write(b).enq().unwrap();
             }
         }
     }

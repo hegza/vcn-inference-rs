@@ -86,6 +86,7 @@ use ocl::{flags, Buffer, Context, Device, Kernel, OclPrm, Platform, Program, Que
 /// ```
 /// Converting column-major into row-major would be by switching A and B and n and m
 pub trait OclGemm<SuperKernel> {
+    fn uninitialized(m: usize, n: usize, k: usize, device: DeviceType) -> SuperKernel;
     fn from_slices(
         m: usize,
         n: usize,
@@ -96,7 +97,7 @@ pub trait OclGemm<SuperKernel> {
         device: DeviceType,
     ) -> SuperKernel;
     fn set_buffers_from_slices(&self, a: &[f32], b: &[f32]);
-    // TODO: this should probably return some kind of a future or such to allow checking ready state
+    // TODO: this should probably return some kind of a future or such to allow checking ready state; see ocl
     fn calculate(&self);
     fn queue(&self) -> &Queue;
     fn calculate_wait(&self) {

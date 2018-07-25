@@ -249,42 +249,6 @@ fn bench_gemm_variants(c: &mut Criterion) {
     });
 
     // Setup
-    let mut gemm_6_cpu_out = input_sizes
-        .iter()
-        .map(|&ds| (ds, vec![0f32; ds * ds]))
-        .collect::<HashMap<usize, Vec<f32>>>();
-    let gemm_6_cpu = input_sizes
-        .iter()
-        .map(|&ds| {
-            (
-                ds,
-                Tiling6GemmKernel::uninitialized(
-                    ds,
-                    ds,
-                    ds,
-                    gemm_6_cpu_out.get_mut(&ds).unwrap(),
-                    DeviceType::CPU,
-                ),
-            )
-        })
-        .collect::<HashMap<usize, Tiling6GemmKernel>>();
-
-    // Verify Result
-    gemm_6_cpu[&D].set_buffers_from_slices(&input_a, &input_b);
-    gemm_6_cpu[&D].calculate_wait();
-    verify(&gemm_6_cpu_out[&D], &correct_c, COARSE_RESULT_MARGIN);
-
-    // Create benchmark-closure
-    let bench = bench.with_function("cnugteren_6_tiling (CPU)", move |be, &ds| {
-        be.iter_with_setup(
-            || {
-                // TODO: interface bug for CPU: can't write new values basically
-            },
-            |_| gemm_6_cpu[&ds].calculate_wait(),
-        )
-    });
-
-    // Setup
     let mut gemm_6_gpu_out = input_sizes
         .iter()
         .map(|&ds| (ds, vec![0f32; ds * ds]))

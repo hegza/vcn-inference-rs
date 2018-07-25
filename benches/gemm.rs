@@ -72,7 +72,8 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // TODO: bench upload + execute separately
 
     const GROUP: &str = "gemm-f32";
-    let input_sizes: Vec<usize> = vec![256, 128, 64, 32];
+    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+    let input_sizes: Vec<usize> = vec![1024, 512, 256, 128, 64, 32];
 
     let mut naive_out = vec![0f32; D * D];
 
@@ -287,10 +288,12 @@ fn bench_gemm_variants(c: &mut Criterion) {
 
     c.bench(
         GROUP,
-        bench.throughput(|&ds| {
-            // Output throughput is size of matrix times size of data-type
-            Throughput::Bytes(std::mem::size_of::<f32>() as u32 * ds as u32 * ds as u32)
-        }),
+        bench
+            .throughput(|&ds| {
+                // Output throughput is size of matrix times size of data-type
+                Throughput::Bytes(std::mem::size_of::<f32>() as u32 * ds as u32 * ds as u32)
+            })
+            .plot_config(plot_config),
     );
 }
 

@@ -6,14 +6,14 @@ extern crate num_traits;
 extern crate rand;
 extern crate rusty_cnn;
 
-use criterion::{Criterion, ParameterizedBenchmark, Throughput};
+use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
 use rand::Rng;
+use rusty_cnn::math::gemm_naive;
 use rusty_cnn::math::mtx_mul::gemm::*;
-use rusty_cnn::math::mtx_mul::gemm_naive;
 use rusty_cnn::verify;
 use std::collections::HashMap;
 
-const SAMPLE_SIZE: usize = 50;
+const SAMPLE_SIZE: usize = 20;
 const NOISE_THRESHOLD: f64 = 0.06;
 const COARSE_RESULT_MARGIN: f32 = 0.0035f32;
 
@@ -299,7 +299,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
                     ds,
                     ds,
                     gemm_6_gpu_out.get_mut(&ds).unwrap(),
-                    DeviceType::GPU,
+                    DeviceType::ALL,
                 ),
             )
         })

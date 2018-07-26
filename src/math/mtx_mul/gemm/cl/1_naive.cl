@@ -1,8 +1,8 @@
 // Naive implementation of cnugteren's matrix multiplication
 __kernel void myGEMM1(const int M, const int N, const int K,
-                        const __global float* A,
-                        const __global float* B,
-                        __global float* C) {
+                      const __global float* A,
+                      const __global float* B,
+                      __global float* C) {
 
     // Thread identifiers
     const int globalRow = get_global_id(0); // Row ID of C (0..M)

@@ -53,7 +53,7 @@ __kernel void row_conv(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, _
 
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
             C_sum += c_rowKernel[KERNEL_RADIUS + j + c * KERNEL_LENGTH +
-                                 get_group_id(2) * KERNEL_LENGTH * C2] *
+                                               get_group_id(2) * KERNEL_LENGTH * C2] *
                      l_data[liy][lix + j + KERNEL_RADIUS];
         }
 
@@ -107,7 +107,7 @@ __kernel void col_conv(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, _
 
                 l_data[liy + COLUMNS_BLOCKDIM_Y][lix] =
                     d_Src[lix - KERNEL_RADIUS * WIDTH + COLUMNS_BLOCKDIM_Y * WIDTH +
-                          c * WIDTH * HEIGHT];
+                              c * WIDTH * HEIGHT];
         }
 
         else {
@@ -118,7 +118,7 @@ __kernel void col_conv(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, _
 
                 l_data[liy + COLUMNS_BLOCKDIM_Y][lix] =
                     d_Src[lix - KERNEL_RADIUS * WIDTH + COLUMNS_BLOCKDIM_Y * WIDTH +
-                          c * WIDTH * HEIGHT];
+                              c * WIDTH * HEIGHT];
         }
 
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -128,7 +128,7 @@ __kernel void col_conv(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, _
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
 
             C_sum += c_colKernel[KERNEL_RADIUS + j + c * KERNEL_LENGTH +
-                                 get_group_id(2) * KERNEL_LENGTH * C1] *
+                                               get_group_id(2) * KERNEL_LENGTH * C1] *
                      l_data[liy + j + KERNEL_RADIUS][lix];
         }
         sum += C_sum;
@@ -140,7 +140,7 @@ __kernel void col_conv(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst, _
 }
 
 __kernel void row_conv_2(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
-                       __constant CL_PRIM *c_row2Kernel) {
+                         __constant CL_PRIM *c_row2Kernel) {
 
     __local CL_PRIM l_data[ROWS_2_BLOCKDIM_Y][ROWS_2_BLOCKDIM_X + KERNEL_RADIUS * 2];
     const int lix = get_local_id(0);
@@ -173,7 +173,7 @@ __kernel void row_conv_2(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
 
             C_sum += c_row2Kernel[KERNEL_RADIUS + j + c * KERNEL_LENGTH +
-                                  get_group_id(2) * KERNEL_LENGTH * C2] *
+                                                get_group_id(2) * KERNEL_LENGTH * C2] *
                      l_data[liy][lix + j + KERNEL_RADIUS];
         }
 
@@ -186,7 +186,7 @@ __kernel void row_conv_2(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
 }
 
 __kernel void col_conv_2(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
-                       __constant CL_PRIM *c_col2Kernel) {
+                         __constant CL_PRIM *c_col2Kernel) {
 
     __local CL_PRIM l_data[COLUMNS_2_BLOCKDIM_Y + KERNEL_RADIUS * 2][COLUMNS_2_BLOCKDIM_X];
     const int lix = get_local_id(0);
@@ -228,7 +228,7 @@ __kernel void col_conv_2(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
 
                 l_data[liy + COLUMNS_2_BLOCKDIM_Y][lix] =
                     d_Src[lix - KERNEL_RADIUS * WIDTH / 2 + COLUMNS_2_BLOCKDIM_Y * WIDTH / 2 +
-                          c * WIDTH / 2 * HEIGHT / 2];
+                              c * WIDTH / 2 * HEIGHT / 2];
         }
 
         else {
@@ -239,7 +239,7 @@ __kernel void col_conv_2(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
 
                 l_data[liy + COLUMNS_2_BLOCKDIM_Y][lix] =
                     d_Src[lix - KERNEL_RADIUS * WIDTH / 2 + COLUMNS_2_BLOCKDIM_Y * WIDTH / 2 +
-                          c * WIDTH / 2 * HEIGHT / 2];
+                              c * WIDTH / 2 * HEIGHT / 2];
         }
 
         barrier(CLK_LOCAL_MEM_FENCE);
@@ -249,7 +249,7 @@ __kernel void col_conv_2(const __global CL_PRIM *d_Src, __global CL_PRIM *d_Dst,
         for (int j = -KERNEL_RADIUS; j <= KERNEL_RADIUS; j++) {
 
             C_sum += c_col2Kernel[KERNEL_RADIUS + j + c * KERNEL_LENGTH +
-                                  get_group_id(2) * KERNEL_LENGTH * C3] *
+                                                get_group_id(2) * KERNEL_LENGTH * C3] *
                      l_data[liy + j + KERNEL_RADIUS][lix];
         }
         sum += C_sum;

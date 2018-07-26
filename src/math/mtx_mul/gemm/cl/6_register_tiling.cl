@@ -36,9 +36,9 @@ __kernel void myGEMM6(const int M, const int N, const int K,
     float acc[WPTM][WPTN];
 
     // Initialise the accumulation registers
-    #pragma unroll
+#pragma unroll
     for (int wm=0; wm<WPTM; wm++) {
-        #pragma unroll
+#pragma unroll
         for (int wn=0; wn<WPTN; wn++) {
             acc[wm][wn] = 0.0f;
         }
@@ -49,10 +49,11 @@ __kernel void myGEMM6(const int M, const int N, const int K,
     int t=0;
     do {
         // Load one tile of A and B into local memory
-        #pragma unroll
+#pragma unroll
         for (int la=0; la<LPTA; la++) {
             int tid = tidn*RTSM + tidm;
-            // TODO: test what happens if one puts a volatile in here
+            // This can be either `volatile int id` or `int id`, makes no difference on a
+            // AMD Radeon HD 7800 Series.
             int id = la*RTSN*RTSM + tid;
             int row = MOD2(id,TSM);
             int col = DIV2(id,TSM);
@@ -68,18 +69,18 @@ __kernel void myGEMM6(const int M, const int N, const int K,
         for (int k=0; k<TSK; k++) {
 
             // Cache the values of Bsub in registers
-            #pragma unroll
+#pragma unroll
             for (int wn=0; wn<WPTN; wn++) {
                 int col = tidn + wn*RTSN;
                 Breg[wn] = Bsub[col][k];
             }
 
             // Perform the computation
-            #pragma unroll
+#pragma unroll
             for (int wm=0; wm<WPTM; wm++) {
                 int row = tidm + wm*RTSM;
                 Areg = Asub[k][row];
-                #pragma unroll
+#pragma unroll
                 for (int wn=0; wn<WPTN; wn++) {
                     acc[wm][wn] += Areg * Breg[wn];
                 }
@@ -94,11 +95,10 @@ __kernel void myGEMM6(const int M, const int N, const int K,
     } while (t<numTiles);
 
     // Store the final results in C
-    // FIXME: This loop causes the segfault
-    #pragma unroll
+#pragma unroll
     for (int wm=0; wm<WPTM; wm++) {
         int globalRow = offsetM + tidm + wm*RTSM;
-        #pragma unroll
+#pragma unroll
         for (int wn=0; wn<WPTN; wn++) {
             int globalCol = offsetN + tidn + wn*RTSN;
             C[globalCol*M + globalRow] = acc[wm][wn];

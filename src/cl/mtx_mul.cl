@@ -8,17 +8,17 @@
 #include "hyperparams.h"
 
 #ifdef NORM_INT
-    // TODO: see if changing between int and short produces any effect
-    // TODO: this should likely be defined on the host
-    #define ACCUMULATOR_T int
+// TODO: see if changing between int and short produces any effect
+// TODO: this should likely be defined on the host
+#define ACCUMULATOR_T int
 #else
-    #define ACCUMULATOR_T CL_PRIM
+#define ACCUMULATOR_T CL_PRIM
 #endif
 
 __kernel void mtx_mul(
-        __global CL_PRIM_N* restrict input,
-        __global CL_PRIM* restrict output,
-        __global CL_PRIM_N* restrict weights) {
+    __global CL_PRIM_N* restrict input,
+    __global CL_PRIM* restrict output,
+    __global CL_PRIM_N* restrict weights) {
 
     // Divide by number of primitives in vector
     const int DATA_SIZE = PATCH3SQ * FM_COUNT / VECN;

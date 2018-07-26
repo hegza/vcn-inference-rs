@@ -5,11 +5,11 @@
 #include "macros.h"
 
 #if WIDTH == 1
-    typedef float floatX;
+typedef float floatX;
 #elif WIDTH == 2
-    typedef float2 floatX;
+typedef float2 floatX;
 #elif WIDTH == 4
-    typedef float4 floatX;
+typedef float4 floatX;
 #endif
 
 // Use wider data types
@@ -29,13 +29,13 @@ __kernel void myGEMM4(const int M, const int N, const int K,
     __local floatX Bsub[TS][TS/WIDTH];
 
     // Initialise the accumulation registers
-    #if WIDTH == 1
-        floatX acc = 0.0f;
-    #elif WIDTH == 2
-        floatX acc = { 0.0f, 0.0f };
-    #elif WIDTH == 4
-        floatX acc = { 0.0f, 0.0f, 0.0f, 0.0f };
-    #endif
+#if WIDTH == 1
+    floatX acc = 0.0f;
+#elif WIDTH == 2
+    floatX acc = { 0.0f, 0.0f };
+#elif WIDTH == 4
+    floatX acc = { 0.0f, 0.0f, 0.0f, 0.0f };
+#endif
 
     // Loop over all tiles
     const int numTiles = K/TS;
@@ -57,28 +57,40 @@ __kernel void myGEMM4(const int M, const int N, const int K,
             vecB = Bsub[col][k];
             for (int w=0; w<WIDTH; w++) {
                 vecA = Asub[WIDTH*k + w][row];
-                #if WIDTH == 1
-                    valB = vecB;
-                    acc += vecA * valB;
-                #elif WIDTH == 2
-                    switch (w) {
-                        case 0: valB = vecB.x; break;
-                        case 1: valB = vecB.y; break;
-                    }
-                    acc.x += vecA.x * valB;
-                    acc.y += vecA.y * valB;
-                #elif WIDTH == 4
-                    switch (w) {
-                        case 0: valB = vecB.x; break;
-                        case 1: valB = vecB.y; break;
-                        case 2: valB = vecB.z; break;
-                        case 3: valB = vecB.w; break;
-                    }
-                    acc.x += vecA.x * valB;
-                    acc.y += vecA.y * valB;
-                    acc.z += vecA.z * valB;
-                    acc.w += vecA.w * valB;
-               #endif
+#if WIDTH == 1
+                valB = vecB;
+                acc += vecA * valB;
+#elif WIDTH == 2
+                switch (w) {
+                case 0:
+                    valB = vecB.x;
+                    break;
+                case 1:
+                    valB = vecB.y;
+                    break;
+                }
+                acc.x += vecA.x * valB;
+                acc.y += vecA.y * valB;
+#elif WIDTH == 4
+                switch (w) {
+                case 0:
+                    valB = vecB.x;
+                    break;
+                case 1:
+                    valB = vecB.y;
+                    break;
+                case 2:
+                    valB = vecB.z;
+                    break;
+                case 3:
+                    valB = vecB.w;
+                    break;
+                }
+                acc.x += vecA.x * valB;
+                acc.y += vecA.y * valB;
+                acc.z += vecA.z * valB;
+                acc.w += vecA.w * valB;
+#endif
             }
         }
 

@@ -15,7 +15,7 @@ use std::collections::HashMap;
 
 const SAMPLE_SIZE: usize = 20;
 const NOISE_THRESHOLD: f64 = 0.06;
-const COARSE_RESULT_MARGIN: f32 = 0.0035f32;
+const RESULT_MARGIN: f32 = 0.00002f32;
 
 const D: usize = 64;
 
@@ -79,7 +79,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
 
     // Verify result
     gemm_naive(D, D, D, &input_a, &input_b, &mut naive_out);
-    verify(&naive_out, &correct_c, COARSE_RESULT_MARGIN);
+    verify(&naive_out, &correct_c, RESULT_MARGIN);
 
     // Create benchmark-closure
     let bench = ParameterizedBenchmark::new(
@@ -162,7 +162,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // Verify result by setting the known matrices
     gemm_1[&D].set_buffers_from_slices(&input_a, &input_b);
     gemm_1[&D].calculate_wait();
-    verify(&gemm_1_gpu_out[&D], &correct_c, COARSE_RESULT_MARGIN);
+    verify(&gemm_1_gpu_out[&D], &correct_c, RESULT_MARGIN);
 
     // Create benchmark-closure
     let bench = bench.with_function("cnugteren_1_naive (GPU)", move |be, &ds| {
@@ -199,7 +199,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // Verify Result
     gemm_4[&D].set_buffers_from_slices(&input_a, &input_b);
     gemm_4[&D].calculate_wait();
-    verify(&gemm_4_gpu_out[&D], &correct_c, COARSE_RESULT_MARGIN);
+    verify(&gemm_4_gpu_out[&D], &correct_c, RESULT_MARGIN);
 
     // Create benchmark-closure
     let bench = bench.with_function("cnugteren_4_vectors (GPU)", move |be, &ds| {
@@ -236,7 +236,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // Verify Result
     gemm_5[&D].set_buffers_from_slices(&input_a, &input_b);
     gemm_5[&D].calculate_wait();
-    verify(&gemm_5_gpu_out[&D], &correct_c, COARSE_RESULT_MARGIN);
+    verify(&gemm_5_gpu_out[&D], &correct_c, RESULT_MARGIN);
 
     // Create benchmark-closure
     let bench = bench.with_function("cnugteren_5_transpose (GPU)", move |be, &ds| {
@@ -273,7 +273,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // Verify Result
     gemm_6_gpu[&D].set_buffers_from_slices(&input_a, &input_b);
     gemm_6_gpu[&D].calculate_wait();
-    verify(&gemm_6_gpu_out[&D], &correct_c, COARSE_RESULT_MARGIN);
+    verify(&gemm_6_gpu_out[&D], &correct_c, RESULT_MARGIN);
 
     // Create benchmark-closure
     let bench = bench.with_function("cnugteren_6_tiling (GPU)", move |be, &ds| {

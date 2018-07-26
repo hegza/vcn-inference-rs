@@ -6,8 +6,10 @@ extern crate num_traits;
 extern crate rand;
 extern crate rusty_cnn;
 
+mod common;
+
+use common::*;
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
-use rand::Rng;
 use rusty_cnn::math::gemm_naive;
 use rusty_cnn::math::mtx_mul::gemm::*;
 use rusty_cnn::verify;
@@ -295,11 +297,6 @@ fn bench_gemm_variants(c: &mut Criterion) {
             })
             .plot_config(plot_config),
     );
-}
-
-fn create_random_vec(len: usize) -> Vec<f32> {
-    let mut rng = rand::thread_rng();
-    (0..len).map(|_| rng.gen_range(-1f32, 1f32)).collect()
 }
 
 criterion_group!{

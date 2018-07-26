@@ -2,6 +2,7 @@
 extern crate criterion;
 extern crate ndarray;
 extern crate ocl;
+extern crate rand;
 extern crate rusty_cnn;
 
 mod common;

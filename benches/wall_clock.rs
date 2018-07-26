@@ -1,13 +1,14 @@
 #[macro_use]
 extern crate criterion;
+extern crate rand;
 extern crate rusty_cnn;
 
 mod common;
 
 use common::*;
 use criterion::Criterion;
-use rusty_cnn::*;
 use rusty_cnn::geometry::{ImageGeometry, PaddedSquare};
+use rusty_cnn::*;
 
 const SAMPLE_SIZE: usize = 10;
 const NOISE_THRESHOLD: f64 = 0.03;

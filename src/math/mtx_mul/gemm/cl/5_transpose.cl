@@ -1,7 +1,7 @@
 // Compile with:
-// -D WPT   i32     The amount of work-per-thread, i.e. the thread-coarsening factor
-// -D TS    i32     The square-root of the 2D tile-size (== work-group dims)
-// -D TSDK  i32     The tile-size in dimension K
+// -D WPT={}    The amount of work-per-thread, i.e. the thread-coarsening factor
+// -D TS={}     The square-root of the 2D tile-size (== work-group dims)
+// -D TSDK={}   The tile-size in dimension K
 
 #include "macros.h"
 

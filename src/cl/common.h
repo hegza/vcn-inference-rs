@@ -1,6 +1,6 @@
 // Compile with:
-//  -D CL_PRIM      type {float, char}
-//  -D VECN         the N after the vector type (eg. 4, 8, ...), default = 1 (or empty)
+// -D CL_PRIM={}    type {float, char}
+// -D VECN={}       the N after the vector type (eg. 4, 8, ...), default = 1 (or empty)
 
 #pragma once
 

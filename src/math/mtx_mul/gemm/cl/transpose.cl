@@ -1,6 +1,6 @@
 // Compile with:
-//  -D TRANSPOSEX   i32     Local memory dimension
-//  -D TRANSPOSEY   i32     Local memory dimension
+// -D TRANSPOSEX={}	Local memory dimension
+// -D TRANSPOSEY={}	Local memory dimension
 
 // Simple transpose kernel for a P * Q matrix
 __kernel void transpose(const int P, const int Q,

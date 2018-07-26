@@ -1,9 +1,9 @@
 // Compile with:
-// -D TSM   i32     The tile-size in dimension M
-// -D TSN   i32     The tile-size in dimension N
-// -D TSK   i32     The tile-size in dimension K
-// -D WPTM  i32     The amount of work-per-thread in dimension M
-// -D WPTN  i32     The amount of work-per-thread in dimension N
+// -D TSM={}    The tile-size in dimension M
+// -D TSN={}    The tile-size in dimension N
+// -D TSK={}    The tile-size in dimension K
+// -D WPTM={}   The amount of work-per-thread in dimension M
+// -D WPTN={}   The amount of work-per-thread in dimension N
 
 // Local memory usage:
 // local_memory_bytes = 4 * TSK * TSM + 4 * (TSK + 2) * TSN

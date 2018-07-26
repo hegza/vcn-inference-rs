@@ -1,6 +1,6 @@
 // Compile with:
-// -D WIDTH     i32     The vector-width (in number of floats)
-// -D TS        i32     The square-root of the 2D tile-size (== work-group dims)
+// -D WIDTH={}  The vector-width (in number of floats)
+// -D TS={}     The square-root of the 2D tile-size (== work-group dims)
 
 #include "macros.h"
 

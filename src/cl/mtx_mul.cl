@@ -1,7 +1,7 @@
 // Compile with:
-//  -D CL_PRIM      type {float, char}
-//  -D VECN         the N after the vector type (eg. 4, 8, ...), default = 1 (or empty)
-//  -D NORM_INT     (optional) if one should use the integer normalization method rather than floating point multiplication
+// -D CL_PRIM={}    type {float, char}
+// -D VECN={}       the N after the vector type (eg. 4, 8, ...), default = 1 (or empty)
+// -D NORM_INT={}   (optional) if one should use the integer normalization method rather than floating point multiplication
 
 // HACK: should be based passed in as a flag (hyperparams.h for classic, sepconv.h for sepconv)
 #include "common.h"

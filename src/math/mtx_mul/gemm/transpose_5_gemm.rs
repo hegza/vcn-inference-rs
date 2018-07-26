@@ -25,7 +25,7 @@ impl OclGemm<Transpose5GemmKernel> for Transpose5GemmKernel {
 
         // The square-root of the 2D tile-size (== work-group dims)
         const TS: usize = 32;
-        // The amount of work-per-thread, i.e. the thread-coarsening factor
+        // The amount of work-per-work-item, i.e. the work-item-coarsening factor
         const WPT: usize = 8;
         // The tile-size in dimension k. Determines number of loads per work-item.
         const TSDK: usize = 16;

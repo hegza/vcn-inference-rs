@@ -18,7 +18,7 @@ __kernel void myGEMM4(const int M, const int N, const int K,
                       const __global floatX* B,
                       __global floatX* C) {
 
-    // Thread identifiers
+    // Work-item identifiers
     const int row = get_local_id(0); // Local row ID (max: TS/WIDTH)
     const int col = get_local_id(1); // Local col ID (max: TS)
     const int globalRow = (TS/WIDTH)*get_group_id(0) + row; // 0..M/WIDTH

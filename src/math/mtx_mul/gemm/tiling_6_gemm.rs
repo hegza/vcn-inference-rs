@@ -28,15 +28,15 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
         let use_host_ptr = device.contains(DeviceType::CPU);
 
         // The tile-size in dimension m
-        const TSM: usize = 32;
+        let tsm: usize = 32;
         // The tile-size in dimension n
-        const TSN: usize = 32;
+        let tsn: usize = 32;
         // The tile-size in dimension k
-        const TSK: usize = 16;
+        let tsk: usize = 16;
         // The amount of work-per-work-item in dimension m
-        const WPTM: usize = 8;
+        let wptm: usize = 8;
         // The amount of work-per-work-item in dimension n
-        const WPTN: usize = 8;
+        let wptn: usize = 8;
         // Dimensions for local memory optimization
         const TRANSPOSEX: usize = 16;
         const TRANSPOSEY: usize = 16;
@@ -48,11 +48,11 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
             &[&src_transpose, &src_mtx_mul],
             &[
                 "-I./src/math/mtx_mul/gemm/cl",
-                &format!("-D TSM={}", TSM),
-                &format!("-D TSN={}", TSN),
-                &format!("-D TSK={}", TSK),
-                &format!("-D WPTM={}", WPTM),
-                &format!("-D WPTN={}", WPTN),
+                &format!("-D TSM={}", tsm),
+                &format!("-D TSN={}", tsn),
+                &format!("-D TSK={}", tsk),
+                &format!("-D WPTM={}", wptm),
+                &format!("-D WPTN={}", wptn),
                 &format!("-D TRANSPOSEX={}", TRANSPOSEX),
                 &format!("-D TRANSPOSEY={}", TRANSPOSEY),
             ],
@@ -90,8 +90,8 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
         };
 
         let (transpose_kernel, main_kernel) = {
-            let lws = SpatialDims::Two(TSM / WPTM, TSN / WPTN);
-            let gws = SpatialDims::Two(m / WPTM, n / WPTN);
+            let lws = SpatialDims::Two(tsn / wptm, tsn / wptn);
+            let gws = SpatialDims::Two(m / wptm, n / wptn);
 
             // Build kernel for transposing B
             (

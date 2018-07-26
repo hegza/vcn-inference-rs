@@ -2,25 +2,25 @@
 // -D TSM={}    The tile-size in dimension M
 // -D TSN={}    The tile-size in dimension N
 // -D TSK={}    The tile-size in dimension K
-// -D WPTM={}   The amount of work-per-thread in dimension M
-// -D WPTN={}   The amount of work-per-thread in dimension N
+// -D WPTM={}   The amount of work-per-work-item in dimension M
+// -D WPTN={}   The amount of work-per-work-item in dimension N
 
 // Local memory usage:
 // local_memory_bytes = 4 * TSK * TSM + 4 * (TSK + 2) * TSN
 
 #include "macros.h"
 
-#define RTSM (TSM / WPTM)                  // The reduced tile-size in dimension M (== number of threads)
-#define RTSN (TSN / WPTN)                  // The reduced tile-size in dimension N (== number of threads)
-#define LPTA ((TSK * WPTM * WPTN) / (TSN)) // The amount of loads-per-thread for A
-#define LPTB ((TSK * WPTM * WPTN) / (TSM)) // The amount of loads-per-thread for B
+#define RTSM (TSM / WPTM)                  // The reduced tile-size in dimension M (== number of work-items)
+#define RTSN (TSN / WPTN)                  // The reduced tile-size in dimension N (== number of work-items)
+#define LPTA ((TSK * WPTM * WPTN) / (TSN)) // The amount of loads-per-work-item for A
+#define LPTB ((TSK * WPTM * WPTN) / (TSM)) // The amount of loads-per-work-item for B
 
-// Use 2D register blocking (further increase in work per thread)
+// Use 2D register blocking (further increase in work per work-item)
 __kernel void myGEMM6(const int M, const int N, const int K,
                       const __global float* A,
                       const __global float* B,
                       __global float* C) {
-    // Thread identifiers
+    // Work-item identifiers
     const int tidm = get_local_id(0); // Local row ID (max: TSM/WPTM == RTSM)
     const int tidn = get_local_id(1); // Local col ID (max: TSN/WPTN == RTSN)
     const int offsetM = TSM*get_group_id(0); // Work-group offset

@@ -36,11 +36,8 @@ where
     T: ClVecTypeName,
 {
     // Select device
+    let device = select_device(device_type);
     let platform = Platform::default();
-    let device = match device_type {
-        Some(dt) => *Device::list(platform, Some(dt)).unwrap().first().unwrap(),
-        None => Device::first(platform).unwrap(),
-    };
     let context = Context::builder()
         .platform(platform)
         .devices(device)
@@ -145,4 +142,13 @@ pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<
 
     mem_map.unmap().enq()?;
     Ok(())
+}
+
+pub fn select_device(device_type: Option<DeviceType>) -> Device {
+    let platform = Platform::default();
+
+    match device_type {
+        Some(dt) => *Device::list(platform, Some(dt)).unwrap().first().unwrap(),
+        None => Device::first(platform).unwrap(),
+    }
 }

@@ -34,9 +34,9 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
         // The tile-size in dimension k
         let tsk: usize = 16;
         // The amount of work-per-work-item in dimension m
-        let wptm: usize = 8;
+        let wpwim: usize = 8;
         // The amount of work-per-work-item in dimension n
-        let wptn: usize = 8;
+        let wpwin: usize = 8;
         // Dimensions for local memory optimization
         const TRANSPOSEX: usize = 16;
         const TRANSPOSEY: usize = 16;
@@ -51,8 +51,8 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
                 &format!("-D TSM={}", tsm),
                 &format!("-D TSN={}", tsn),
                 &format!("-D TSK={}", tsk),
-                &format!("-D WPTM={}", wptm),
-                &format!("-D WPTN={}", wptn),
+                &format!("-D WPWIM={}", wpwim),
+                &format!("-D WPWIN={}", wpwin),
                 &format!("-D TRANSPOSEX={}", TRANSPOSEX),
                 &format!("-D TRANSPOSEY={}", TRANSPOSEY),
             ],
@@ -89,24 +89,23 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
                 .unwrap()
         };
 
-        let (transpose_kernel, main_kernel) = {
-            let lws = SpatialDims::Two(tsn / wptm, tsn / wptn);
-            let gws = SpatialDims::Two(m / wptm, n / wptn);
+        // Build kernel for transposing B
+        let transpose_kernel = Kernel::builder()
+            .program(&program)
+            .name("transpose")
+            .queue(queue.clone())
+            .local_work_size(SpatialDims::Two(TRANSPOSEX, TRANSPOSEY))
+            .global_work_size(SpatialDims::Two(k, n))
+            .arg(k as i32)
+            .arg(n as i32)
+            .arg_named("b_untransposed", &b_untransposed_buf)
+            .arg_named("b", &b_buf)
+            .build()
+            .unwrap();
 
-            // Build kernel for transposing B
-            (
-                Kernel::builder()
-                    .program(&program)
-                    .name("transpose")
-                    .queue(queue.clone())
-                    .local_work_size(SpatialDims::Two(TRANSPOSEX, TRANSPOSEY))
-                    .global_work_size(SpatialDims::Two(k, n))
-                    .arg(k as i32)
-                    .arg(n as i32)
-                    .arg_named("b_untransposed", &b_untransposed_buf)
-                    .arg_named("b", &b_buf)
-                    .build()
-                    .unwrap(),
+        let lws = SpatialDims::Two(tsn / wpwim, tsn / wpwin);
+        let gws = SpatialDims::Two(m / wpwim, n / wpwin);
+        let main_kernel =
                 // Build kernel for mtx_mul
                 Kernel::builder()
                     .program(&program)
@@ -121,9 +120,7 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
                     .arg_named("b", &b_buf)
                     .arg_named("c", &c_buf)
                     .build()
-                    .unwrap(),
-            )
-        };
+                    .unwrap();
         queue.finish().unwrap();
 
         Tiling6GemmKernel {

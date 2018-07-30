@@ -2,8 +2,8 @@
 // -D TSM={}    The tile-size in dimension M
 // -D TSN={}    The tile-size in dimension N
 // -D TSK={}    The tile-size in dimension K
-// -D WPTM={}   The amount of work-per-work-item in dimension M
-// -D WPTN={}   The amount of work-per-work-item in dimension N
+// -D WPWIM={}   The amount of work-per-work-item in dimension M
+// -D WPWIN={}   The amount of work-per-work-item in dimension N
 
 // Local memory usage:
 // local_memory_bytes = 4 * TSK * TSM + 4 * (TSK + 2) * TSN
@@ -18,10 +18,10 @@
 
 #include "macros.h"
 
-#define RTSM (TSM / WPTM)                  // The reduced tile-size in dimension M (== number of work-items)
-#define RTSN (TSN / WPTN)                  // The reduced tile-size in dimension N (== number of work-items)
-#define LPTA ((TSK * WPTM * WPTN) / (TSN)) // The amount of loads-per-work-item for A
-#define LPTB ((TSK * WPTM * WPTN) / (TSM)) // The amount of loads-per-work-item for B
+#define RTSM (TSM / WPWIM)                  // The reduced tile-size in dimension M (== number of work-items)
+#define RTSN (TSN / WPWIN)                  // The reduced tile-size in dimension N (== number of work-items)
+#define LPTA ((TSK * WPWIM * WPWIN) / (TSN)) // The amount of loads-per-work-item for A
+#define LPTB ((TSK * WPWIM * WPWIN) / (TSM)) // The amount of loads-per-work-item for B
 
 // Use 2D register blocking (further increase in work per work-item)
 __kernel void myGEMM6(const int M, const int N, const int K,
@@ -29,8 +29,8 @@ __kernel void myGEMM6(const int M, const int N, const int K,
                       const __global float* B,
                       __global float* C) {
     // Work-item identifiers
-    const int tidm = get_local_id(0); // Local row ID (max: TSM/WPTM == RTSM)
-    const int tidn = get_local_id(1); // Local col ID (max: TSN/WPTN == RTSN)
+    const int tidm = get_local_id(0); // Local row ID (max: TSM/WPWIM == RTSM)
+    const int tidn = get_local_id(1); // Local col ID (max: TSN/WPWIN == RTSN)
     const int offsetM = TSM*get_group_id(0); // Work-group offset
     const int offsetN = TSN*get_group_id(1); // Work-group offset
 
@@ -40,14 +40,14 @@ __kernel void myGEMM6(const int M, const int N, const int K,
 
     // Allocate register space
     float Areg;
-    float Breg[WPTN];
-    float acc[WPTM][WPTN];
+    float Breg[WPWIN];
+    float acc[WPWIM][WPWIN];
 
     // Initialise the accumulation registers
 #pragma unroll
-    for (int wm=0; wm<WPTM; wm++) {
+    for (int wm=0; wm<WPWIM; wm++) {
 #pragma unroll
-        for (int wn=0; wn<WPTN; wn++) {
+        for (int wn=0; wn<WPWIN; wn++) {
             acc[wm][wn] = 0.0f;
         }
     }
@@ -78,18 +78,18 @@ __kernel void myGEMM6(const int M, const int N, const int K,
 
             // Cache the values of Bsub in registers
 #pragma unroll
-            for (int wn=0; wn<WPTN; wn++) {
+            for (int wn=0; wn<WPWIN; wn++) {
                 int col = tidn + wn*RTSN;
                 Breg[wn] = Bsub[col][k];
             }
 
             // Perform the computation
 #pragma unroll
-            for (int wm=0; wm<WPTM; wm++) {
+            for (int wm=0; wm<WPWIM; wm++) {
                 int row = tidm + wm*RTSM;
                 Areg = Asub[k][row];
 #pragma unroll
-                for (int wn=0; wn<WPTN; wn++) {
+                for (int wn=0; wn<WPWIN; wn++) {
                     acc[wm][wn] += Areg * Breg[wn];
                 }
             }
@@ -104,10 +104,10 @@ __kernel void myGEMM6(const int M, const int N, const int K,
 
     // Store the final results in C
 #pragma unroll
-    for (int wm=0; wm<WPTM; wm++) {
+    for (int wm=0; wm<WPWIM; wm++) {
         int globalRow = offsetM + tidm + wm*RTSM;
 #pragma unroll
-        for (int wn=0; wn<WPTN; wn++) {
+        for (int wn=0; wn<WPWIN; wn++) {
             int globalCol = offsetN + tidn + wn*RTSN;
             C[globalCol*M + globalRow] = acc[wm][wn];
         }

@@ -171,6 +171,71 @@ fn bench_transpose(c: &mut Criterion, params: Vec<usize>, device: DeviceType, gr
         )
     });
 
+    let test_data = params
+        .iter()
+        .map(|&ds| {
+            (ds, {
+                let transposex = 1;
+                let transposey = 1;
+                let (queue, program, _context) = rusty_cnn::cl_util::init_from_file::<f32>(
+                    &["src/math/mtx_mul/gemm/cl/transpose.cl"],
+                    &[
+                        &format!("-D TRANSPOSEX={}", transposex),
+                        &format!("-D TRANSPOSEY={}", transposey),
+                    ],
+                    Some(device),
+                );
+
+                let buffer = ocl::Buffer::<f32>::builder()
+                    .queue(queue.clone())
+                    .flags(ocl::flags::MEM_READ_ONLY)
+                    .len(ds * ds)
+                    .build()
+                    .unwrap();
+                let output = ocl::Buffer::<f32>::builder()
+                    .queue(queue.clone())
+                    .flags(ocl::flags::MEM_READ_WRITE)
+                    .len(ds * ds)
+                    .build()
+                    .unwrap();
+
+                let kernel = ocl::Kernel::builder()
+                    .program(&program)
+                    .name("transpose")
+                    .queue(queue.clone())
+                    .local_work_size(ocl::SpatialDims::Two(transposex, transposey))
+                    .global_work_size(ocl::SpatialDims::Two(ds, ds))
+                    .arg(ds as i32)
+                    .arg(ds as i32)
+                    .arg(&buffer)
+                    .arg(&output)
+                    .build()
+                    .unwrap();
+                (kernel, buffer, queue)
+            })
+        })
+        .collect::<HashMap<usize, (ocl::Kernel, ocl::Buffer<f32>, ocl::Queue)>>();
+
+    let bench = bench.with_function("transpose 1", move |be, &ds| {
+        // Measure
+        be.iter_with_setup(
+            || {
+                let input = create_random_vec(ds * ds);
+                test_data[&ds].1.write(&input).enq().unwrap();
+                test_data[&ds].2.finish().unwrap();
+            },
+            |()| unsafe {
+                test_data[&ds]
+                    .0
+                    .cmd()
+                    .queue(&test_data[&ds].2)
+                    .enq()
+                    .unwrap();
+                test_data[&ds].2.finish().unwrap();
+            },
+        )
+    });
+
     c.bench(
         group_name,
         bench

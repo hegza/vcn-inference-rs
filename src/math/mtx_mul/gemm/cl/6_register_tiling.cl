@@ -8,6 +8,14 @@
 // Local memory usage:
 // local_memory_bytes = 4 * TSK * TSM + 4 * (TSK + 2) * TSN
 
+// From software.intel.com:
+// If your kernel code contains the barrier instruction, the issue of work-group size becomes a
+// tradeoff. The more local and private memory each work-item in the work-group requires, the
+// smaller the optimal work-group size is. The reason is that a barrier also issues copy
+// instructions for the total amount of private and local memory used by all work-items in the
+// work-group in the work-group since the state of each work-item that arrived at the barrier is
+// saved before proceeding with another work-item.
+
 #include "macros.h"
 
 #define RTSM (TSM / WPTM)                  // The reduced tile-size in dimension M (== number of work-items)

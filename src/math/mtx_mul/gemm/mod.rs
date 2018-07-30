@@ -27,6 +27,7 @@ use cl_util;
 use layers::Coeff;
 use ocl;
 use ocl::{flags, Buffer, Context, Device, Kernel, OclPrm, Platform, Program, Queue, SpatialDims};
+use std::cmp::min;
 
 /// The idea here is to allow usage of module as drop-in where cross-platform high-perf matrix
 /// multiplication is used. API calls are generally split into three categories: init, load and calculate,

@@ -51,27 +51,32 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
                 .unwrap()
         };
 
-        let kernel = {
-            // This is 32 in the original example; that would produce gws of 1024, but the maximum of
-            // my desktop GPU is 256 (16x16).
-            const TS: usize = 16;
-            let lws = SpatialDims::Two(TS, TS);
-            let gws = SpatialDims::Two(m, n);
-            Kernel::builder()
-                .program(&program)
-                .name("myGEMM1")
-                .queue(queue.clone())
-                .local_work_size(lws)
-                .global_work_size(gws)
-                .arg(m as i32)
-                .arg(n as i32)
-                .arg(k as i32)
-                .arg_named("a", &a_buf)
-                .arg_named("b", &b_buf)
-                .arg_named("c", &c_buf)
-                .build()
-                .unwrap()
+        // Optimal tile-size is as close to the preferred maximum work-group-size while still
+        // fitting into the max work group size on GPU and 1 on CPU because no autovectorization is
+        // possible for this kernel. cnugteren uses hard-coded 32x32.
+        let ts = if device.contains(DeviceType::CPU) {
+            1
+        } else {
+            let dev_max_lws = cl_util::select_device(Some(device)).max_wg_size().unwrap();
+            (dev_max_lws as f64).sqrt() as usize
         };
+        let lws = SpatialDims::Two(ts, ts);
+
+        let gws = SpatialDims::Two(m, n);
+        let kernel = Kernel::builder()
+            .program(&program)
+            .name("myGEMM1")
+            .queue(queue.clone())
+            .local_work_size(lws)
+            .global_work_size(gws)
+            .arg(m as i32)
+            .arg(n as i32)
+            .arg(k as i32)
+            .arg_named("a", &a_buf)
+            .arg_named("b", &b_buf)
+            .arg_named("c", &c_buf)
+            .build()
+            .unwrap();
         queue.finish().unwrap();
 
         Naive1GemmKernel {

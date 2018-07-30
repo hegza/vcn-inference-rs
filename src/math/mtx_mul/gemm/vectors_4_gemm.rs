@@ -20,7 +20,7 @@ impl OclGemm<Vectors4GemmKernel> for Vectors4GemmKernel {
         debug_assert_eq!(out.len(), m * n);
 
         // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
-        let use_host_ptr = device.contains(DeviceType::CPU);
+        let use_host_ptr = device == DeviceType::CPU;
 
         // The width of the OpenCL vector-type (in number of floats)
         const WIDTH: usize = 4;

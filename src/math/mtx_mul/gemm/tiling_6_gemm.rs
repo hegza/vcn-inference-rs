@@ -25,7 +25,7 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
         debug_assert_eq!(out.len(), m * n);
 
         // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
-        let use_host_ptr = device.contains(DeviceType::CPU);
+        let use_host_ptr = device == DeviceType::CPU;
 
         // The tile-size in dimension m
         let tsm: usize = 32;

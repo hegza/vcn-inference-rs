@@ -21,7 +21,7 @@ impl OclGemm<Transpose5GemmKernel> for Transpose5GemmKernel {
         debug_assert_eq!(out.len(), m * n);
 
         // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
-        let use_host_ptr = device.contains(DeviceType::CPU);
+        let use_host_ptr = device == DeviceType::CPU;
 
         // The square-root of the 2D tile-size (== work-group dims)
         const TS: usize = 32;

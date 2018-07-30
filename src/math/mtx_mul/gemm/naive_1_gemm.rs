@@ -20,7 +20,7 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
         debug_assert_eq!(out.len(), m * n);
 
         // If Device uses RAM, use_host_ptr and mapping via address translation may be faster
-        let use_host_ptr = device.contains(DeviceType::CPU);
+        let use_host_ptr = device == DeviceType::CPU;
 
         let src = String::from_utf8_lossy(include_bytes!("cl/1_naive.cl"));
 
@@ -54,7 +54,7 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
         // Optimal tile-size is as close to the preferred maximum work-group-size while still
         // fitting into the max work group size on GPU and 1 on CPU because no autovectorization is
         // possible for this kernel. cnugteren uses hard-coded 32x32.
-        let ts = if device.contains(DeviceType::CPU) {
+        let ts = if device == DeviceType::CPU {
             1
         } else {
             let dev_max_lws = cl_util::select_device(Some(device)).max_wg_size().unwrap();

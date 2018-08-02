@@ -57,10 +57,10 @@ fn gemm_5_is_correct() {
 }
 
 #[test]
-fn mtx_mul_6_register_tiling_cl_is_correct() {
+fn gemm_6_is_correct() {
     let mut out = vec![0f32; D * D];
 
-    let kernel = Gemm6Kernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
+    let kernel = Gemm6WithBTransposeKernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
     kernel.calculate_wait();
     verify(&out, &C, COARSE_RESULT_MARGIN);
 }

@@ -45,7 +45,6 @@ const BASELINE: &str = "baseline 24-07-2018";
 /// Cloned input matrices are dropped.
 ///
 
-// Benchmark each layer separately.
 fn bench_gemm_variants(c: &mut Criterion) {
     // Allocate input matrices and model output
     let input_a = criterion::black_box(
@@ -261,7 +260,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .map(|&ds| {
             (
                 ds,
-                Gemm6Kernel::uninitialized(
+                Gemm6WithBTransposeKernel::uninitialized(
                     ds,
                     ds,
                     ds,
@@ -270,7 +269,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
                 ),
             )
         })
-        .collect::<HashMap<usize, Gemm6Kernel>>();
+        .collect::<HashMap<usize, Gemm6WithBTransposeKernel>>();
 
     // Verify Result
     gemm_6_gpu[&D].set_buffers_from_slices(&input_a, &input_b);

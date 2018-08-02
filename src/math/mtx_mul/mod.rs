@@ -5,7 +5,7 @@ mod naive;
 pub mod gemm;
 
 // TODO: consolidate self::naive::mtx_mul and self::gemm_naive
-pub use self::gemm::Tiling6GemmKernel as GemmKernel;
+pub use self::gemm::Gemm6Kernel as GemmKernel;
 pub use self::naive::{mtx_mul, mtx_mul_normint};
 
 /// Naive matrix multiplication on the host

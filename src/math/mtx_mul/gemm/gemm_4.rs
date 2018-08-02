@@ -1,6 +1,6 @@
 use super::*;
 
-pub struct Vectors4GemmKernel {
+pub struct Gemm4Kernel {
     kernel: Kernel,
     queue: Queue,
     a_buf: Buffer<f32>,
@@ -8,14 +8,14 @@ pub struct Vectors4GemmKernel {
     use_host_ptr: bool,
 }
 
-impl OclGemm<Vectors4GemmKernel> for Vectors4GemmKernel {
+impl OclGemm<Gemm4Kernel> for Gemm4Kernel {
     fn uninitialized(
         m: usize,
         n: usize,
         k: usize,
         out: &mut [f32],
         device: DeviceType,
-    ) -> Vectors4GemmKernel {
+    ) -> Gemm4Kernel {
         // Make sure enough space is reserved for the output buffer
         debug_assert_eq!(out.len(), m * n);
 
@@ -83,7 +83,7 @@ impl OclGemm<Vectors4GemmKernel> for Vectors4GemmKernel {
         };
         queue.finish().unwrap();
 
-        Vectors4GemmKernel {
+        Gemm4Kernel {
             kernel,
             queue,
             a_buf,
@@ -99,11 +99,11 @@ impl OclGemm<Vectors4GemmKernel> for Vectors4GemmKernel {
         b: &[f32],
         c: &mut [f32],
         device: DeviceType,
-    ) -> Vectors4GemmKernel {
+    ) -> Gemm4Kernel {
         debug_assert_eq!(a.len(), k * m);
         debug_assert_eq!(b.len(), n * k);
 
-        let mut kernel = Vectors4GemmKernel::uninitialized(m, n, k, c, device);
+        let mut kernel = Gemm4Kernel::uninitialized(m, n, k, c, device);
         {
             let queue = &kernel.queue;
 

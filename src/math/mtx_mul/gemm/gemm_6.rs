@@ -2,7 +2,7 @@ use super::*;
 
 // TODO: Implement a version for pretransposed b-matrix. Measure performance. This, because in a neural net, the weights matrices (b's) can be consistently pre-transposed.
 /// Minimum matrix size: 32x32
-pub struct Tiling6GemmKernel {
+pub struct Gemm6Kernel {
     transpose_kernel: Kernel,
     main_kernel: Kernel,
     queue: Queue,
@@ -13,14 +13,14 @@ pub struct Tiling6GemmKernel {
     use_host_ptr: bool,
 }
 
-impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
+impl OclGemm<Gemm6Kernel> for Gemm6Kernel {
     fn uninitialized(
         m: usize,
         n: usize,
         k: usize,
         out: &mut [f32],
         device: DeviceType,
-    ) -> Tiling6GemmKernel {
+    ) -> Gemm6Kernel {
         // Make sure enough space is reserved for the output buffer
         debug_assert_eq!(out.len(), m * n);
 
@@ -157,7 +157,7 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
                     .unwrap();
         queue.finish().unwrap();
 
-        Tiling6GemmKernel {
+        Gemm6Kernel {
             transpose_kernel: transpose_kernel,
             main_kernel: main_kernel,
             queue: queue,
@@ -174,11 +174,11 @@ impl OclGemm<Tiling6GemmKernel> for Tiling6GemmKernel {
         b: &[f32],
         c: &mut [f32],
         device: DeviceType,
-    ) -> Tiling6GemmKernel {
+    ) -> Gemm6Kernel {
         debug_assert_eq!(a.len(), k * m);
         debug_assert_eq!(b.len(), n * k);
 
-        let mut kernel = Tiling6GemmKernel::uninitialized(m, n, k, c, device);
+        let mut kernel = Gemm6Kernel::uninitialized(m, n, k, c, device);
         {
             let queue = &kernel.queue;
 

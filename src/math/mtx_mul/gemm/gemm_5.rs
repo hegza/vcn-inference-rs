@@ -1,6 +1,6 @@
 use super::*;
 
-pub struct Transpose5GemmKernel {
+pub struct Gemm5Kernel {
     transpose_kernel: Kernel,
     main_kernel: Kernel,
     queue: Queue,
@@ -9,14 +9,14 @@ pub struct Transpose5GemmKernel {
     use_host_ptr: bool,
 }
 
-impl OclGemm<Transpose5GemmKernel> for Transpose5GemmKernel {
+impl OclGemm<Gemm5Kernel> for Gemm5Kernel {
     fn uninitialized(
         m: usize,
         n: usize,
         k: usize,
         out: &mut [f32],
         device: DeviceType,
-    ) -> Transpose5GemmKernel {
+    ) -> Gemm5Kernel {
         // Make sure enough space is reserved for the output buffer
         debug_assert_eq!(out.len(), m * n);
 
@@ -116,7 +116,7 @@ impl OclGemm<Transpose5GemmKernel> for Transpose5GemmKernel {
         };
         queue.finish().unwrap();
 
-        Transpose5GemmKernel {
+        Gemm5Kernel {
             transpose_kernel,
             main_kernel,
             queue,
@@ -133,11 +133,11 @@ impl OclGemm<Transpose5GemmKernel> for Transpose5GemmKernel {
         b: &[f32],
         c: &mut [f32],
         device: DeviceType,
-    ) -> Transpose5GemmKernel {
+    ) -> Gemm5Kernel {
         debug_assert_eq!(a.len(), k * m);
         debug_assert_eq!(b.len(), n * k);
 
-        let mut kernel = Transpose5GemmKernel::uninitialized(m, n, k, c, device);
+        let mut kernel = Gemm5Kernel::uninitialized(m, n, k, c, device);
         {
             let queue = &kernel.queue;
 

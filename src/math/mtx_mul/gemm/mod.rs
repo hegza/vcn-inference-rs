@@ -10,17 +10,17 @@
 //! * C is m by n
 //!
 
-mod naive_1_gemm;
+mod gemm_1;
+mod gemm_4;
+mod gemm_5;
+mod gemm_6;
 #[cfg(test)]
 mod test;
-mod tiling_6_gemm;
-mod transpose_5_gemm;
-mod vectors_4_gemm;
 
-pub use self::naive_1_gemm::*;
-pub use self::tiling_6_gemm::*;
-pub use self::transpose_5_gemm::*;
-pub use self::vectors_4_gemm::*;
+pub use self::gemm_1::*;
+pub use self::gemm_4::*;
+pub use self::gemm_5::*;
+pub use self::gemm_6::*;
 pub use ocl::flags::DeviceType;
 
 use cl_util;

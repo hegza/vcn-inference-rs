@@ -150,7 +150,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .map(|&ds| {
             (
                 ds,
-                Naive1GemmKernel::uninitialized(
+                Gemm1Kernel::uninitialized(
                     ds,
                     ds,
                     ds,
@@ -159,7 +159,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
                 ),
             )
         })
-        .collect::<HashMap<usize, Naive1GemmKernel>>();
+        .collect::<HashMap<usize, Gemm1Kernel>>();
 
     // Verify result by setting the known matrices
     gemm_1[&D].set_buffers_from_slices(&input_a, &input_b);
@@ -187,7 +187,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .map(|&ds| {
             (
                 ds,
-                Vectors4GemmKernel::uninitialized(
+                Gemm4Kernel::uninitialized(
                     ds,
                     ds,
                     ds,
@@ -196,7 +196,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
                 ),
             )
         })
-        .collect::<HashMap<usize, Vectors4GemmKernel>>();
+        .collect::<HashMap<usize, Gemm4Kernel>>();
 
     // Verify Result
     gemm_4[&D].set_buffers_from_slices(&input_a, &input_b);
@@ -224,7 +224,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .map(|&ds| {
             (
                 ds,
-                Transpose5GemmKernel::uninitialized(
+                Gemm5Kernel::uninitialized(
                     ds,
                     ds,
                     ds,
@@ -233,7 +233,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
                 ),
             )
         })
-        .collect::<HashMap<usize, Transpose5GemmKernel>>();
+        .collect::<HashMap<usize, Gemm5Kernel>>();
 
     // Verify Result
     gemm_5[&D].set_buffers_from_slices(&input_a, &input_b);
@@ -261,7 +261,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .map(|&ds| {
             (
                 ds,
-                Tiling6GemmKernel::uninitialized(
+                Gemm6Kernel::uninitialized(
                     ds,
                     ds,
                     ds,
@@ -270,7 +270,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
                 ),
             )
         })
-        .collect::<HashMap<usize, Tiling6GemmKernel>>();
+        .collect::<HashMap<usize, Gemm6Kernel>>();
 
     // Verify Result
     gemm_6_gpu[&D].set_buffers_from_slices(&input_a, &input_b);

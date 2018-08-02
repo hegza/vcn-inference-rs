@@ -30,28 +30,28 @@ lazy_static! {
 }
 
 #[test]
-fn mtx_mul_1_naive_is_correct() {
+fn gemm_1_is_correct() {
     let mut out = vec![0f32; D * D];
 
-    let kernel = Naive1GemmKernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
+    let kernel = Gemm1Kernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
     kernel.calculate_wait();
     verify(&out, &C, COARSE_RESULT_MARGIN);
 }
 
 #[test]
-fn mtx_mul_4_vector_data_types_cl_is_correct() {
+fn gemm_4_is_correct() {
     let mut out = vec![0f32; D * D];
 
-    let kernel = Vectors4GemmKernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
+    let kernel = Gemm4Kernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
     kernel.calculate_wait();
     verify(&out, &C, COARSE_RESULT_MARGIN);
 }
 
 #[test]
-fn mtx_mul_5_transpose_cl_is_correct() {
+fn gemm_5_is_correct() {
     let mut out = vec![0f32; D * D];
 
-    let kernel = Transpose5GemmKernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
+    let kernel = Gemm5Kernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
     kernel.calculate_wait();
     verify(&out, &C, COARSE_RESULT_MARGIN);
 }
@@ -60,7 +60,7 @@ fn mtx_mul_5_transpose_cl_is_correct() {
 fn mtx_mul_6_register_tiling_cl_is_correct() {
     let mut out = vec![0f32; D * D];
 
-    let kernel = Tiling6GemmKernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
+    let kernel = Gemm6Kernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
     kernel.calculate_wait();
     verify(&out, &C, COARSE_RESULT_MARGIN);
 }

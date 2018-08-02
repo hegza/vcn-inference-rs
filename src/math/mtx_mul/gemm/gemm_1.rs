@@ -1,6 +1,6 @@
 use super::*;
 
-pub struct Naive1GemmKernel {
+pub struct Gemm1Kernel {
     kernel: Kernel,
     queue: Queue,
     use_host_ptr: bool,
@@ -8,14 +8,14 @@ pub struct Naive1GemmKernel {
     b_buf: Buffer<f32>,
 }
 
-impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
+impl OclGemm<Gemm1Kernel> for Gemm1Kernel {
     fn uninitialized(
         m: usize,
         n: usize,
         k: usize,
         out: &mut [f32],
         device: DeviceType,
-    ) -> Naive1GemmKernel {
+    ) -> Gemm1Kernel {
         // Make sure enough space is reserved for the output buffer
         debug_assert_eq!(out.len(), m * n);
 
@@ -53,7 +53,7 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
 
         // Optimal tile-size is as close to the preferred maximum work-group-size while still
         // fitting into the max work group size on GPU and 1 on CPU because no autovectorization is
-        // possible for this kernel. cnugteren uses hard-coded 32x32.
+        // possible for this kernel. cnugteren used hard-coded 32x32.
         let ts = if device == DeviceType::CPU {
             1
         } else {
@@ -79,7 +79,7 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
             .unwrap();
         queue.finish().unwrap();
 
-        Naive1GemmKernel {
+        Gemm1Kernel {
             kernel,
             queue,
             use_host_ptr,
@@ -95,11 +95,11 @@ impl OclGemm<Naive1GemmKernel> for Naive1GemmKernel {
         b: &[f32],
         c: &mut [f32],
         device: DeviceType,
-    ) -> Naive1GemmKernel {
+    ) -> Gemm1Kernel {
         debug_assert_eq!(a.len(), k * m);
         debug_assert_eq!(b.len(), n * k);
 
-        let mut kernel = Naive1GemmKernel::uninitialized(m, n, k, c, device);
+        let mut kernel = Gemm1Kernel::uninitialized(m, n, k, c, device);
         {
             let queue = &kernel.queue;
 

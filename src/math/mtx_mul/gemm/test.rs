@@ -65,6 +65,16 @@ fn gemm_6_is_correct() {
     verify(&out, &C, COARSE_RESULT_MARGIN);
 }
 
+#[test]
+fn gemm_10_is_correct() {
+    let mut out = vec![0f32; D * D];
+
+    let kernel =
+        Gemm10WithBTransposeKernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
+    kernel.calculate_wait();
+    verify(&out, &C, COARSE_RESULT_MARGIN);
+}
+
 fn test_mtx_mul<F>(mtx_mul_impl: F)
 where
     F: Fn(usize, usize, usize, &[f32], &[f32], &mut [f32]),

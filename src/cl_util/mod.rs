@@ -45,6 +45,7 @@ where
         .unwrap();
 
     let mut program_b = Program::builder();
+
     // Add default compiler options
     configure_program::<T>(&mut program_b, &device);
 

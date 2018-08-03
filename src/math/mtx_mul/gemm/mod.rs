@@ -11,6 +11,7 @@
 //!
 
 mod gemm_1;
+mod gemm_10;
 mod gemm_4;
 mod gemm_5;
 mod gemm_6;
@@ -18,6 +19,7 @@ mod gemm_6;
 mod test;
 
 pub use self::gemm_1::*;
+pub use self::gemm_10::*;
 pub use self::gemm_4::*;
 pub use self::gemm_5::*;
 pub use self::gemm_6::*;

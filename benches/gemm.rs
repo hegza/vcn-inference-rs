@@ -306,7 +306,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         })
         .collect::<HashMap<usize, Gemm6Kernel>>();
 
-    // TODO: Verify result with a pretransposed B
+    // TODO: Verify result with cnugteren_6 with pretransposed B
 
     // Create benchmark-closure
     let bench = bench.with_function("cnugteren_6_pretransposed (GPU)", move |be, &ds| {
@@ -316,6 +316,40 @@ fn bench_gemm_variants(c: &mut Criterion) {
                 gemm_6_gpu[&ds].set_buffers_from_slices(&a, &b);
             },
             |_| gemm_6_gpu[&ds].calculate_wait(),
+        )
+    });
+
+    // Setup
+    let mut gemm_10_gpu_out = input_sizes
+        .iter()
+        .map(|&ds| (ds, vec![0f32; ds * ds]))
+        .collect::<HashMap<usize, Vec<f32>>>();
+    let gemm_10_gpu = input_sizes
+        .iter()
+        .map(|&ds| {
+            (
+                ds,
+                Gemm10Kernel::uninitialized(
+                    ds,
+                    ds,
+                    ds,
+                    gemm_10_gpu_out.get_mut(&ds).unwrap(),
+                    DeviceType::ALL,
+                ),
+            )
+        })
+        .collect::<HashMap<usize, Gemm10Kernel>>();
+
+    // TODO: Verify result with cnugteren_10 with pretransposed B
+
+    // Create benchmark-closure
+    let bench = bench.with_function("cnugteren_10_pretransposed (GPU)", move |be, &ds| {
+        be.iter_with_setup(
+            || {
+                let (a, b) = (create_random_vec(ds * ds), create_random_vec(ds * ds));
+                gemm_10_gpu[&ds].set_buffers_from_slices(&a, &b);
+            },
+            |_| gemm_10_gpu[&ds].calculate_wait(),
         )
     });
 

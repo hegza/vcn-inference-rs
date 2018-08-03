@@ -416,7 +416,9 @@ impl Gemm6CompileParameters {
 
         // Optimal tile-size is as close to the preferred maximum work-group-size while still
         // fitting into the max work group size on GPU. cnugteren used hard-coded 128x128.
-        let ts = min(cache_line_size, ((m * n) as f64).sqrt() as usize);
+        let c_len = m * n;
+        let c_side = (c_len as f64).sqrt() as usize;
+        let ts = min(cache_line_size, c_side);
 
         let tsm: usize = ts;
         let tsn: usize = ts;

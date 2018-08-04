@@ -1,17 +1,22 @@
 #[macro_use]
 extern crate criterion;
+#[macro_use]
+extern crate lazy_static;
+extern crate matrixmultiply;
+extern crate ndarray;
+extern crate num_traits;
 extern crate ocl;
 extern crate rand;
 extern crate rusty_cnn;
 
-mod common;
+mod shared;
 
 const SAMPLE_SIZE: usize = 20;
 const NOISE_THRESHOLD: f64 = 0.06;
 
-use common::*;
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
 use rusty_cnn::math::mtx_mul::gemm::*;
+use shared::*;
 use std::collections::HashMap;
 
 fn bench_transpose_gpu(c: &mut Criterion) {

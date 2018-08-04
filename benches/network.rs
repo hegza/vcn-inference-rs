@@ -1,18 +1,23 @@
 #[macro_use]
 extern crate criterion;
+#[macro_use]
+extern crate lazy_static;
+extern crate matrixmultiply;
+extern crate ndarray;
 extern crate num_traits;
+extern crate ocl;
 extern crate rand;
 extern crate rusty_cnn;
 
-mod common;
+mod shared;
 
-use common::*;
 use criterion::Criterion;
-use rusty_cnn::*;
-use rusty_cnn::cl_util as cl;
-use rand::Rng;
 use num_traits::bounds::Bounded;
 use rand::distributions::range::SampleRange;
+use rand::Rng;
+use rusty_cnn::cl_util as cl;
+use rusty_cnn::*;
+use shared::*;
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.05;

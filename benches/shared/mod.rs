@@ -1,4 +1,8 @@
 #![allow(dead_code)]
+
+pub mod conv;
+pub mod dense;
+
 use rand;
 use rand::Rng;
 

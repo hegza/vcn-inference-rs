@@ -1,18 +1,24 @@
+//! The purpose of this benchmark is to give an overview of the performance of different GEMM
+//! algorithms on smallish input sizes.
+
 #[macro_use]
 extern crate criterion;
+#[macro_use]
+extern crate lazy_static;
 extern crate matrixmultiply;
 extern crate ndarray;
 extern crate num_traits;
+extern crate ocl;
 extern crate rand;
 extern crate rusty_cnn;
 
-mod common;
+mod shared;
 
-use common::*;
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
 use rusty_cnn::math::gemm_naive;
 use rusty_cnn::math::mtx_mul::gemm::*;
 use rusty_cnn::verify;
+use shared::*;
 use std::collections::HashMap;
 
 const SAMPLE_SIZE: usize = 20;
@@ -20,8 +26,6 @@ const NOISE_THRESHOLD: f64 = 0.06;
 const RESULT_MARGIN: f32 = 0.00002f32;
 
 const D: usize = 64;
-
-const BASELINE: &str = "baseline 24-07-2018";
 
 /// On notation:
 /// host =  compiled Rust.
@@ -70,9 +74,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         .filter_map(|res| res.ok())
         .collect::<Vec<f32>>();
 
-    const GROUP: &str = "gemm-f32";
-    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
-    let input_sizes: Vec<usize> = vec![1024, 512, 256, 128, 64, 32];
+    let input_sizes: Vec<usize> = vec![256, 128, 64, 32];
 
     let mut naive_out = vec![0f32; D * D];
 
@@ -171,80 +173,6 @@ fn bench_gemm_variants(c: &mut Criterion) {
                 gemm_1[&ds].set_buffers_from_slices(&a, &b);
             },
             |()| gemm_1[&ds].calculate_wait(),
-        )
-    });
-
-    //  Setup
-    let mut gemm_4_gpu_out = input_sizes
-        .iter()
-        .map(|&ds| (ds, vec![0f32; ds * ds]))
-        .collect::<HashMap<usize, Vec<f32>>>();
-    let gemm_4 = input_sizes
-        .iter()
-        .map(|&ds| {
-            (
-                ds,
-                Gemm4Kernel::uninitialized(
-                    ds,
-                    ds,
-                    ds,
-                    gemm_4_gpu_out.get_mut(&ds).unwrap(),
-                    DeviceType::ALL,
-                ),
-            )
-        })
-        .collect::<HashMap<usize, Gemm4Kernel>>();
-
-    // Verify Result
-    gemm_4[&D].set_buffers_from_slices(&input_a, &input_b);
-    gemm_4[&D].calculate_wait();
-    verify(&gemm_4_gpu_out[&D], &correct_c, RESULT_MARGIN);
-
-    // Create benchmark-closure
-    let bench = bench.with_function("cnugteren_4_vectors (GPU)", move |be, &ds| {
-        be.iter_with_setup(
-            || {
-                let (a, b) = (create_random_vec(ds * ds), create_random_vec(ds * ds));
-                gemm_4[&ds].set_buffers_from_slices(&a, &b);
-            },
-            |_| gemm_4[&ds].calculate_wait(),
-        )
-    });
-
-    // Setup
-    let mut gemm_5_gpu_out = input_sizes
-        .iter()
-        .map(|&ds| (ds, vec![0f32; ds * ds]))
-        .collect::<HashMap<usize, Vec<f32>>>();
-    let gemm_5 = input_sizes
-        .iter()
-        .map(|&ds| {
-            (
-                ds,
-                Gemm5Kernel::uninitialized(
-                    ds,
-                    ds,
-                    ds,
-                    gemm_5_gpu_out.get_mut(&ds).unwrap(),
-                    DeviceType::ALL,
-                ),
-            )
-        })
-        .collect::<HashMap<usize, Gemm5Kernel>>();
-
-    // Verify Result
-    gemm_5[&D].set_buffers_from_slices(&input_a, &input_b);
-    gemm_5[&D].calculate_wait();
-    verify(&gemm_5_gpu_out[&D], &correct_c, RESULT_MARGIN);
-
-    // Create benchmark-closure
-    let bench = bench.with_function("cnugteren_5_transpose (GPU)", move |be, &ds| {
-        be.iter_with_setup(
-            || {
-                let (a, b) = (create_random_vec(ds * ds), create_random_vec(ds * ds));
-                gemm_5[&ds].set_buffers_from_slices(&a, &b);
-            },
-            |_| gemm_5[&ds].calculate_wait(),
         )
     });
 
@@ -353,6 +281,8 @@ fn bench_gemm_variants(c: &mut Criterion) {
         )
     });
 
+    const GROUP: &str = "gemm-f32";
+    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
     c.bench(
         GROUP,
         bench
@@ -366,7 +296,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
 
 criterion_group!{
     name = benches;
-    config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD).retain_baseline(BASELINE.to_string());
+    config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
     targets = bench_gemm_variants
 }
 criterion_main!(benches);

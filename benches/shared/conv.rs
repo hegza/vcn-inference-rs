@@ -1,51 +1,22 @@
-#[macro_use]
-extern crate criterion;
-extern crate ndarray;
-extern crate ocl;
-extern crate rand;
-extern crate rusty_cnn;
-
-mod common;
-
-use cl_util as cl;
-use common::*;
-use criterion::Criterion;
+use super::*;
+use criterion::{black_box, Criterion};
 use ocl::{Device, SpatialDims};
+use rusty_cnn::cl_util as cl;
 use rusty_cnn::*;
 
-// Sample size of 100 puts the max-min of the benches at around 10 us at worst.
-const SAMPLE_SIZE: usize = 100;
-const NOISE_THRESHOLD: f64 = 0.06;
-
-/// Benchmark each layer separately.
-fn per_layer_benchmark(c: &mut Criterion) {
-    // Initialize sepconv network
-    let mut p = SEPCONV_HYPER_PARAMS.clone();
-
-    // HACK: Reduce dimensions of overshot layers
-    SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
-
-    let layers = SepconvNetwork::<f32>::create_layers(&p, sepconv::Weights::default());
-
-    bench_sepconv1(&layers, &p, c);
-    bench_sepconv2(&layers, &p, c);
-    bench_sepconv1and2(&layers, &p, c);
-
-    // Initialize classic network
-    let net = ClassicNetwork::create_layers(&CLASSIC_HYPER_PARAMS);
-
-    // Create shorthands (and move)
-    let (conv1, conv2, ..) = net;
-
-    bench_conv1(&conv1, c);
-    bench_conv2(&conv2, c);
-    bench_conv1and2(&conv1, &conv2, c);
-    //bench_dense3_cl_gpu(&dense3, c);
-    // TODO: cl_[c|g]pu_vec16
+lazy_static! {
+    static ref SEPCONV_PARAMS: SepconvHyperParams = {
+        let mut p = SEPCONV_HYPER_PARAMS.clone();
+        SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
+        p
+    };
+    static ref CLASSIC_PARAMS: NetworkParams = NetworkParams::new(CLASSIC_HYPER_PARAMS.clone());
 }
 
-fn bench_sepconv1(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
+pub fn bench_sepconv1(id: &str, c: &mut Criterion) {
+    let layers = SepconvNetwork::<f32>::create_layers(&SEPCONV_PARAMS, sepconv::Weights::default());
+
+    let input_data = black_box(f32::read_bin_from_file(&format!(
         "{}/in.bin",
         SEPCONV_BASELINE
     )));
@@ -53,7 +24,7 @@ fn bench_sepconv1(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
         &["src/cl/sepconv.cl", "src/cl/max_pool.cl"],
-        &SepconvNetwork::<f32>::compile_flags(&p, &layers)
+        &SepconvNetwork::<f32>::compile_flags(&SEPCONV_PARAMS, &layers)
             .iter()
             .map(AsRef::as_ref)
             .collect::<Vec<&str>>(),
@@ -74,12 +45,18 @@ fn bench_sepconv1(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
     let krn_vconv1 = b.build_iow_kernel(
         vconv1,
         "col_conv",
-        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y)),
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            SEPCONV_PARAMS.vconv1_blockdim_x,
+            SEPCONV_PARAMS.vconv1_blockdim_y,
+        )),
     );
     let krn_hconv1 = b.build_iow_kernel(
         hconv1,
         "row_conv",
-        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side, p.hconv1_blockdim_y)),
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            SEPCONV_PARAMS.side,
+            SEPCONV_PARAMS.hconv1_blockdim_y,
+        )),
     );
     let krn_max_pool1 = b.build_io_kernel(
         mxp1,
@@ -95,7 +72,7 @@ fn bench_sepconv1(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
     // Wait for setup to finish
     queue.finish().unwrap();
 
-    c.bench_function("layer 1 - cl gpu sepconv v+h+mxp", move |b| {
+    c.bench_function(id, move |b| {
         b.iter(|| {
             unsafe {
                 krn_vconv1.cmd().queue(&queue).enq().unwrap();
@@ -107,8 +84,9 @@ fn bench_sepconv1(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
     });
 }
 
-fn bench_sepconv2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
+pub fn bench_sepconv2(id: &str, c: &mut Criterion) {
+    let layers = SepconvNetwork::<f32>::create_layers(&SEPCONV_PARAMS, sepconv::Weights::default());
+    let input_data = black_box(f32::read_bin_from_file(&format!(
         "{}/mxp1-out.bin",
         SEPCONV_BASELINE
     )));
@@ -116,7 +94,7 @@ fn bench_sepconv2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
         &["src/cl/sepconv.cl", "src/cl/max_pool.cl"],
-        &SepconvNetwork::<f32>::compile_flags(&p, &layers)
+        &SepconvNetwork::<f32>::compile_flags(&SEPCONV_PARAMS, &layers)
             .iter()
             .map(AsRef::as_ref)
             .collect::<Vec<&str>>(),
@@ -137,12 +115,18 @@ fn bench_sepconv2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
     let krn_vconv2 = b.build_iow_kernel(
         vconv2,
         "col_conv_2",
-        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y)),
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            SEPCONV_PARAMS.vconv2_blockdim_x,
+            SEPCONV_PARAMS.vconv1_blockdim_y,
+        )),
     );
     let krn_hconv2 = b.build_iow_kernel(
         hconv2,
         "row_conv_2",
-        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y)),
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            SEPCONV_PARAMS.side / 2,
+            SEPCONV_PARAMS.hconv2_blockdim_y,
+        )),
     );
     let krn_max_pool2 = b.build_io_kernel(
         mxp2,
@@ -158,7 +142,7 @@ fn bench_sepconv2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
     // Wait for setup to finish
     queue.finish().unwrap();
 
-    c.bench_function("layer 2 - cl gpu sepconv v+h+mxp", move |b| {
+    c.bench_function(id, move |b| {
         b.iter(|| {
             unsafe {
                 krn_vconv2.cmd().queue(&queue).enq().unwrap();
@@ -170,8 +154,10 @@ fn bench_sepconv2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut
     });
 }
 
-fn bench_sepconv1and2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: &mut Criterion) {
-    let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
+pub fn bench_sepconv1and2(id: &str, c: &mut Criterion) {
+    let layers = SepconvNetwork::<f32>::create_layers(&SEPCONV_PARAMS, sepconv::Weights::default());
+
+    let input_data = black_box(f32::read_bin_from_file(&format!(
         "{}/in.bin",
         SEPCONV_BASELINE
     )));
@@ -179,7 +165,7 @@ fn bench_sepconv1and2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: 
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
         &["src/cl/sepconv.cl", "src/cl/max_pool.cl"],
-        &SepconvNetwork::<f32>::compile_flags(&p, &layers)
+        &SepconvNetwork::<f32>::compile_flags(&SEPCONV_PARAMS, &layers)
             .iter()
             .map(AsRef::as_ref)
             .collect::<Vec<&str>>(),
@@ -202,12 +188,18 @@ fn bench_sepconv1and2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: 
     let krn_vconv1 = b.build_iow_kernel(
         vconv1,
         "col_conv",
-        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.vconv1_blockdim_x, p.vconv1_blockdim_y)),
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            SEPCONV_PARAMS.vconv1_blockdim_x,
+            SEPCONV_PARAMS.vconv1_blockdim_y,
+        )),
     );
     let krn_hconv1 = b.build_iow_kernel(
         hconv1,
         "row_conv",
-        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side, p.hconv1_blockdim_y)),
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            SEPCONV_PARAMS.side,
+            SEPCONV_PARAMS.hconv1_blockdim_y,
+        )),
     );
     let krn_max_pool1 = b.build_io_kernel(
         mxp1,
@@ -217,12 +209,18 @@ fn bench_sepconv1and2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: 
     let krn_vconv2 = b.build_iow_kernel(
         vconv2,
         "col_conv_2",
-        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.vconv2_blockdim_x, p.vconv1_blockdim_y)),
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            SEPCONV_PARAMS.vconv2_blockdim_x,
+            SEPCONV_PARAMS.vconv1_blockdim_y,
+        )),
     );
     let krn_hconv2 = b.build_iow_kernel(
         hconv2,
         "row_conv_2",
-        LocalWorkSizePolicy::Specify(SpatialDims::Two(p.side / 2, p.hconv2_blockdim_y)),
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            SEPCONV_PARAMS.side / 2,
+            SEPCONV_PARAMS.hconv2_blockdim_y,
+        )),
     );
     let krn_max_pool2 = b.build_io_kernel(
         mxp2,
@@ -238,7 +236,7 @@ fn bench_sepconv1and2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: 
     // Wait for setup to finish
     queue.finish().unwrap();
 
-    c.bench_function("layers 1 + 2 - cl gpu sepconv v+h+mxp", move |b| {
+    c.bench_function(id, move |b| {
         b.iter(|| {
             unsafe {
                 krn_vconv1.cmd().queue(&queue).enq().unwrap();
@@ -253,7 +251,13 @@ fn bench_sepconv1and2(layers: &sepconv::Layers<f32>, p: &SepconvHyperParams, c: 
     });
 }
 
-fn bench_conv1(conv1: &ConvLayer<f32>, c: &mut Criterion) {
+pub fn bench_conv1(id: &str, c: &mut Criterion) {
+    // Initialize classic network
+    let params = NetworkParams::new(CLASSIC_PARAMS.clone());
+    let wgts = Weights::<f32>::default();
+    // Create a representation of the 1st convolutional layer with weights from a file
+    let conv1 = params.create_conv(1, wgts.0);
+
     let cl_layer = conv1.impl_standalone(
         &["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"],
         "conv_relu_1",
@@ -262,12 +266,16 @@ fn bench_conv1(conv1: &ConvLayer<f32>, c: &mut Criterion) {
         LocalWorkSizePolicy::UseDefault,
     );
 
-    c.bench_function("layer 1 - cl gpu conv", move |b| {
-        b.iter(|| cl_layer.dry_run())
-    });
+    c.bench_function(id, move |b| b.iter(|| cl_layer.dry_run()));
 }
 
-fn bench_conv2(conv2: &ConvLayer<f32>, c: &mut Criterion) {
+pub fn bench_conv2(id: &str, c: &mut Criterion) {
+    // Initialize classic network
+    let params = NetworkParams::new(CLASSIC_PARAMS.clone());
+    let wgts = Weights::<f32>::default();
+    // Create a representation of the 2nd convolutional layer with weights from a file
+    let conv2 = params.create_conv(2, wgts.1);
+
     let cl_layer = conv2.impl_standalone(
         &["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"],
         "conv_relu_2",
@@ -276,13 +284,19 @@ fn bench_conv2(conv2: &ConvLayer<f32>, c: &mut Criterion) {
         LocalWorkSizePolicy::UseDefault,
     );
 
-    c.bench_function("layer 2 - cl gpu conv", move |b| {
-        b.iter(|| cl_layer.dry_run())
-    });
+    c.bench_function(id, move |b| b.iter(|| cl_layer.dry_run()));
 }
 
-fn bench_conv1and2(conv1: &ConvLayer<f32>, conv2: &ConvLayer<f32>, c: &mut Criterion) {
-    let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
+pub fn bench_conv1and2(id: &str, c: &mut Criterion) {
+    // Initialize classic network
+    let params = NetworkParams::new(CLASSIC_PARAMS.clone());
+    let wgts = Weights::<f32>::default();
+    // Create a representation of the 1st convolutional layer with weights from a file
+    let conv1 = params.create_conv(1, wgts.0);
+    // Create a representation of the 2nd convolutional layer with weights from a file
+    let conv2 = params.create_conv(2, wgts.1);
+
+    let input_data = black_box(read_image_with_padding_from_bin_in_channels(
         &format!("{}/in.bin", CLASSIC_BASELINE),
         *conv1.input_shape(),
     ));
@@ -290,14 +304,14 @@ fn bench_conv1and2(conv1: &ConvLayer<f32>, conv2: &ConvLayer<f32>, c: &mut Crite
     let (queue, program, _context) =
         cl::init::<f32>(&["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"], &[], None);
 
-    let wgts_bufs = create_weights_bufs(&[conv1, conv2], &queue);
-    let bufs = create_buffer_chain(&[conv1, conv2], &queue);
+    let wgts_bufs = create_weights_bufs(&[&conv1, &conv2], &queue);
+    let bufs = create_buffer_chain(&[&conv1, &conv2], &queue);
 
     let mut b = ClKernelChainBuilder::new(&bufs, &wgts_bufs, &program, queue.clone());
 
     // Create the kernels for the first two layers (Convolution + ReLU)
-    let conv_relu1 = b.build_iow_kernel(conv1, "conv_relu_1", LocalWorkSizePolicy::UseDefault);
-    let conv_relu2 = b.build_iow_kernel(conv2, "conv_relu_2", LocalWorkSizePolicy::UseDefault);
+    let conv_relu1 = b.build_iow_kernel(&conv1, "conv_relu_1", LocalWorkSizePolicy::UseDefault);
+    let conv_relu2 = b.build_iow_kernel(&conv2, "conv_relu_2", LocalWorkSizePolicy::UseDefault);
 
     unsafe {
         cl::map_to_buf(&bufs[0], &input_data).unwrap();
@@ -306,7 +320,7 @@ fn bench_conv1and2(conv1: &ConvLayer<f32>, conv2: &ConvLayer<f32>, c: &mut Crite
     // Wait for setup to finish
     queue.finish().unwrap();
 
-    c.bench_function("layers 1 + 2 - cl gpu conv", move |b| {
+    c.bench_function(id, move |b| {
         b.iter(|| {
             unsafe {
                 // Enqueue the kernel for the 1st layer (Convolution + ReLU)
@@ -319,30 +333,3 @@ fn bench_conv1and2(conv1: &ConvLayer<f32>, conv2: &ConvLayer<f32>, c: &mut Crite
         })
     });
 }
-
-/*
- * Disabled: Running mtx_mul on GPU seems to be around more than 10x slower than what it is on a CPU.
- * layer 3 - cl gpu mtxmul time:   [2.1539 ms 2.1547 ms 2.1555 ms]
-/*
-fn bench_dense3_cl_gpu(dense3: DenseLayer<f32>, c: &mut Criterion) {
-    let cl_layer = dense3.impl_standalone(
-        &["src/cl/mtx_mul.cl"],
-        "mtx_mul",
-        &[],
-        None,
-        LocalWorkSizePolicy::UseDefault,
-    );
-
-    c.bench_function("layer 3 - cl gpu mtxmul", move |b| {
-        b.iter(|| cl_layer.dry_run())
-    });
-}
-*/
-*/
-
-criterion_group!{
-    name = benches;
-    config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
-    targets = per_layer_benchmark
-}
-criterion_main!(benches);

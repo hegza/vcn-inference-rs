@@ -25,7 +25,7 @@ name = "test_accuracy"
 path = "test_accuracy/mod.rs"
 
 [[bench]]
-name = "wall_clock"
+name = "network_wall"
 harness = false
 
 [[bench]]
@@ -33,15 +33,19 @@ name = "network"
 harness = false
 
 [[bench]]
-name = "cpu_layers"
+name = "layers_cpu"
 harness = false
 
 [[bench]]
-name = "gpu_layers"
+name = "layers_gpu"
 harness = false
 
 [[bench]]
-name = "gemm"
+name = "gemm_xdevice"
+harness = false
+
+[[bench]]
+name = "gemm_gpu"
 harness = false
 
 [[bench]]

@@ -24,11 +24,14 @@ pub trait GenericOps {
 }
 
 /// Convert negative values in source to zero
-pub fn relu<T>(source: &[T]) -> Vec<T>
+pub fn relu<T>(source: Vec<T>) -> Vec<T>
 where
     T: Zero + GenericOps + Copy,
 {
-    source.iter().map(|&x| x.generic_max(&T::zero())).collect()
+    source
+        .into_iter()
+        .map(|x| x.generic_max(&T::zero()))
+        .collect()
 }
 
 pub fn softmax<T>(input: &[T]) -> Vec<f32>

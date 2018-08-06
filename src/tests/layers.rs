@@ -60,7 +60,7 @@ fn l4_returns_baseline() {
     );
     let input_data = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
 
-    let output = relu(&layer.compute(&input_data));
+    let output = relu(layer.compute(&input_data));
     let correct = f32::read_lines_from_file(&format!("{}/fc4.f", CLASSIC_BASELINE));
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);

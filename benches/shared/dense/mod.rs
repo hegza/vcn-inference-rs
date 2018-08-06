@@ -17,7 +17,7 @@ pub fn bench_dense4(id: &str, c: &mut Criterion) {
         "{}/fc3.f",
         CLASSIC_BASELINE
     )));
-    c.bench_function(id, move |b| b.iter(|| relu(&dense4.compute(&input_data))));
+    c.bench_function(id, move |b| b.iter(|| relu(dense4.compute(&input_data))));
 }
 
 pub fn bench_dense5(id: &str, c: &mut Criterion) {

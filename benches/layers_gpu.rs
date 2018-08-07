@@ -14,7 +14,7 @@ extern crate rusty_cnn;
 
 mod shared;
 
-use criterion::Criterion;
+use criterion::{Benchmark, Criterion};
 use shared::conv::*;
 
 // Sample size of 100 puts the max-min of the benches at around 10 us at worst.
@@ -23,14 +23,14 @@ const NOISE_THRESHOLD: f64 = 0.06;
 
 /// Benchmark each layer separately.
 fn per_layer_benchmark(c: &mut Criterion) {
-    bench_sepconv1("layer 1 - cl sepconv v+h+mxp", c);
-    bench_sepconv2("layer 2 - cl sepconv v+h+mxp", c);
-    bench_sepconv1and2("layers 1 + 2 - cl sepconv v+h+mxp", c);
-
-    bench_conv1("layer 1 - cl conv", c);
-    bench_conv2("layer 2 - cl conv", c);
-    bench_conv1and2("layers 1 + 2 - cl conv", c);
+    let bench = Benchmark::new("layer 1 - cl sepconv v+h+mxp", bench_sepconv1())
+        .with_function("layer 2 - cl sepconv v+h+mxp", bench_sepconv2())
+        .with_function("layers 1 + 2 - cl sepconv v+h+mxp", bench_sepconv1and2())
+        .with_function("layer 1 - cl conv", bench_conv1())
+        .with_function("layer 2 - cl conv", bench_conv2())
+        .with_function("layers 1 + 2 - cl conv", bench_conv1and2());
     //bench_dense3_cl_gpu(&dense3, c);
+    c.bench("layers (GPU)", bench);
 }
 
 criterion_group!{

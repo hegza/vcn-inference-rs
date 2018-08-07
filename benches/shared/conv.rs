@@ -1,5 +1,5 @@
 use super::*;
-use criterion::{black_box, Criterion};
+use criterion::{black_box, Bencher};
 use ocl::{Device, SpatialDims};
 use rusty_cnn::cl_util as cl;
 use rusty_cnn::*;
@@ -13,7 +13,7 @@ lazy_static! {
     static ref CLASSIC_PARAMS: NetworkParams = NetworkParams::new(CLASSIC_HYPER_PARAMS.clone());
 }
 
-pub fn bench_sepconv1(id: &str, c: &mut Criterion) {
+pub fn bench_sepconv1() -> impl FnMut(&mut Bencher) {
     let layers = SepconvNetwork::<f32>::create_layers(&SEPCONV_PARAMS, sepconv::Weights::default());
 
     let input_data = black_box(f32::read_bin_from_file(&format!(
@@ -72,7 +72,7 @@ pub fn bench_sepconv1(id: &str, c: &mut Criterion) {
     // Wait for setup to finish
     queue.finish().unwrap();
 
-    c.bench_function(id, move |b| {
+    move |b| {
         b.iter(|| {
             unsafe {
                 krn_vconv1.cmd().queue(&queue).enq().unwrap();
@@ -81,10 +81,10 @@ pub fn bench_sepconv1(id: &str, c: &mut Criterion) {
             }
             queue.finish().unwrap()
         })
-    });
+    }
 }
 
-pub fn bench_sepconv2(id: &str, c: &mut Criterion) {
+pub fn bench_sepconv2() -> impl FnMut(&mut Bencher) {
     let layers = SepconvNetwork::<f32>::create_layers(&SEPCONV_PARAMS, sepconv::Weights::default());
     let input_data = black_box(f32::read_bin_from_file(&format!(
         "{}/mxp1-out.bin",
@@ -142,7 +142,7 @@ pub fn bench_sepconv2(id: &str, c: &mut Criterion) {
     // Wait for setup to finish
     queue.finish().unwrap();
 
-    c.bench_function(id, move |b| {
+    move |b| {
         b.iter(|| {
             unsafe {
                 krn_vconv2.cmd().queue(&queue).enq().unwrap();
@@ -151,10 +151,10 @@ pub fn bench_sepconv2(id: &str, c: &mut Criterion) {
             }
             queue.finish().unwrap()
         })
-    });
+    }
 }
 
-pub fn bench_sepconv1and2(id: &str, c: &mut Criterion) {
+pub fn bench_sepconv1and2() -> impl FnMut(&mut Bencher) {
     let layers = SepconvNetwork::<f32>::create_layers(&SEPCONV_PARAMS, sepconv::Weights::default());
 
     let input_data = black_box(f32::read_bin_from_file(&format!(
@@ -236,7 +236,7 @@ pub fn bench_sepconv1and2(id: &str, c: &mut Criterion) {
     // Wait for setup to finish
     queue.finish().unwrap();
 
-    c.bench_function(id, move |b| {
+    move |b| {
         b.iter(|| {
             unsafe {
                 krn_vconv1.cmd().queue(&queue).enq().unwrap();
@@ -248,10 +248,10 @@ pub fn bench_sepconv1and2(id: &str, c: &mut Criterion) {
             }
             queue.finish().unwrap()
         })
-    });
+    }
 }
 
-pub fn bench_conv1(id: &str, c: &mut Criterion) {
+pub fn bench_conv1() -> impl FnMut(&mut Bencher) {
     // Initialize classic network
     let params = NetworkParams::new(CLASSIC_PARAMS.clone());
     let wgts = Weights::<f32>::default();
@@ -266,10 +266,10 @@ pub fn bench_conv1(id: &str, c: &mut Criterion) {
         LocalWorkSizePolicy::UseDefault,
     );
 
-    c.bench_function(id, move |b| b.iter(|| cl_layer.dry_run()));
+    move |b| b.iter(|| cl_layer.dry_run())
 }
 
-pub fn bench_conv2(id: &str, c: &mut Criterion) {
+pub fn bench_conv2() -> impl FnMut(&mut Bencher) {
     // Initialize classic network
     let params = NetworkParams::new(CLASSIC_PARAMS.clone());
     let wgts = Weights::<f32>::default();
@@ -284,10 +284,10 @@ pub fn bench_conv2(id: &str, c: &mut Criterion) {
         LocalWorkSizePolicy::UseDefault,
     );
 
-    c.bench_function(id, move |b| b.iter(|| cl_layer.dry_run()));
+    move |b| b.iter(|| cl_layer.dry_run())
 }
 
-pub fn bench_conv1and2(id: &str, c: &mut Criterion) {
+pub fn bench_conv1and2() -> impl FnMut(&mut Bencher) {
     // Initialize classic network
     let params = NetworkParams::new(CLASSIC_PARAMS.clone());
     let wgts = Weights::<f32>::default();
@@ -320,7 +320,7 @@ pub fn bench_conv1and2(id: &str, c: &mut Criterion) {
     // Wait for setup to finish
     queue.finish().unwrap();
 
-    c.bench_function(id, move |b| {
+    move |b| {
         b.iter(|| {
             unsafe {
                 // Enqueue the kernel for the 1st layer (Convolution + ReLU)
@@ -331,5 +331,5 @@ pub fn bench_conv1and2(id: &str, c: &mut Criterion) {
             // Wait for all on-device calculations to finish
             queue.finish().unwrap();
         })
-    });
+    }
 }

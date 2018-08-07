@@ -18,6 +18,7 @@ use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration,
 use rusty_cnn::math::gemm_naive;
 use rusty_cnn::math::mtx_mul::gemm::*;
 use rusty_cnn::verify;
+use shared::gemm::*;
 use shared::*;
 use std::collections::HashMap;
 
@@ -101,43 +102,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
         input_sizes.clone(),
     );
 
-    // matrixmultiply::gemm uses row major instead of column-major and verification would be
-    // troublesome. Calculation takes the same amount of time with the incorrect matrices, however.
-
-    // Create benchmark-closure
-    let bench = bench.with_function(
-        // This is the implementation used by ndarray
-        "bluss_matrixmultiply (host)",
-        move |be, &ds| {
-            be.iter_with_setup(
-                || {
-                    (
-                        create_random_vec(ds * ds),
-                        create_random_vec(ds * ds),
-                        vec![0f32; ds * ds],
-                    )
-                },
-                |(a, b, mut c)| unsafe {
-                    matrixmultiply::sgemm(
-                        ds,
-                        ds,
-                        ds,
-                        1f32,
-                        a.as_ptr(),
-                        1,
-                        1,
-                        b.as_ptr(),
-                        1,
-                        1,
-                        1f32,
-                        c.as_mut_ptr(),
-                        1,
-                        1,
-                    )
-                },
-            )
-        },
-    );
+    let bench = bench.with_function("bluss_matrixmultiply (host)", bench_bluss_matrixmultiply());
 
     // Setup
     let mut gemm_1_gpu_out = input_sizes
@@ -248,38 +213,35 @@ fn bench_gemm_variants(c: &mut Criterion) {
     });
 
     // Setup
-    let mut gemm_10_gpu_out = input_sizes
+    let mut out = input_sizes
         .iter()
         .map(|&ds| (ds, vec![0f32; ds * ds]))
         .collect::<HashMap<usize, Vec<f32>>>();
-    let gemm_10_gpu = input_sizes
+    let gemm_10 = input_sizes
         .iter()
         .map(|&ds| {
             (
                 ds,
-                Gemm10Kernel::uninitialized(
-                    ds,
-                    ds,
-                    ds,
-                    gemm_10_gpu_out.get_mut(&ds).unwrap(),
-                    DeviceType::ALL,
-                ),
+                Gemm10Kernel::uninitialized(ds, ds, ds, out.get_mut(&ds).unwrap(), DeviceType::ALL),
             )
         })
         .collect::<HashMap<usize, Gemm10Kernel>>();
 
     // TODO: Verify result with cnugteren_10 with pretransposed B
 
-    // Create benchmark-closure
-    let bench = bench.with_function("cnugteren_10_pretransposed (GPU)", move |be, &ds| {
-        be.iter_with_setup(
-            || {
-                let (a, b) = (create_random_vec(ds * ds), create_random_vec(ds * ds));
-                gemm_10_gpu[&ds].set_buffers_from_slices(&a, &b);
-            },
-            |_| gemm_10_gpu[&ds].calculate_wait(),
-        )
-    });
+    let bench = bench.with_function(
+        "cnugteren_10_pretransposed (GPU)",
+        // Create benchmark-closure
+        move |be, &ds| {
+            be.iter_with_setup(
+                || {
+                    let (a, b) = (create_random_vec(ds * ds), create_random_vec(ds * ds));
+                    gemm_10[&ds].set_buffers_from_slices(&a, &b);
+                },
+                |_| gemm_10[&ds].calculate_wait(),
+            )
+        },
+    );
 
     const GROUP: &str = "gemm-f32";
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);

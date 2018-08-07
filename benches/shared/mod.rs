@@ -2,7 +2,9 @@
 
 pub mod conv;
 pub mod dense;
+pub mod gemm;
 
+use criterion::{black_box, Bencher};
 use rand;
 use rand::Rng;
 

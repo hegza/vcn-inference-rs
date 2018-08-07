@@ -14,20 +14,23 @@ extern crate rusty_cnn;
 
 mod shared;
 
-use criterion::Criterion;
+use criterion::{Benchmark, Criterion};
 use shared::dense::*;
 
-// Sample size of 150 puts the max-min of the benches at around 30 us at worst, and exec time at
-// 1 min max per bench.
 const SAMPLE_SIZE: usize = 150;
 const NOISE_THRESHOLD: f64 = 0.1;
 
 /// Benchmark each layer separately.
 fn per_layer_benchmark(c: &mut Criterion) {
-    bench_dense3_cl_cpu("layer 3 - cl mtxmul", c);
-    bench_dense3_host_ndarray("layer 3 - host ndarray mtxmul", c);
-    bench_dense4("layer 4 - host mtxmul", c);
-    bench_dense5("layer 5 - host mtxmul", c);
+    let (dense3_cl_id, dense3_cl) = bench_dense3_cl_cpu();
+    let (dense3_matrixmultiply_id, dense3_matrixmultiply) = bench_dense_3_bluss_matrixmultiply();
+    let (dense4_cl_id, dense4_cl) = bench_dense4();
+    let (dense5_cl_id, dense5_cl) = bench_dense5();
+    let bench = Benchmark::new(dense3_cl_id, dense3_cl)
+        .with_function(dense3_matrixmultiply_id, dense3_matrixmultiply)
+        .with_function(dense4_cl_id, dense4_cl)
+        .with_function(dense5_cl_id, dense5_cl);
+    c.bench("layers (CPU)", bench);
 }
 
 criterion_group!{

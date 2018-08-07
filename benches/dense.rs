@@ -1,0 +1,42 @@
+//! The purpose of this benchmark is to test and compare the different ways of implementing a dense
+//! layer in a CNN. Test case is based on the vehicle classifier layer 3.
+
+#[macro_use]
+extern crate criterion;
+#[macro_use]
+extern crate lazy_static;
+extern crate matrixmultiply;
+extern crate ndarray;
+extern crate num_traits;
+extern crate ocl;
+extern crate rand;
+extern crate rusty_cnn;
+
+mod shared;
+
+use criterion::{AxisScale, Benchmark, Criterion, PlotConfiguration};
+use shared::dense::*;
+
+const SAMPLE_SIZE: usize = 100;
+const NOISE_THRESHOLD: f64 = 0.06;
+
+fn bench_dense_layer_variants(c: &mut Criterion) {
+    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+
+    let (cl_id, cl) = bench_dense3_cl_cpu();
+    let (matrixmultiply_id, matrixmultiply) = bench_dense_3_bluss_matrixmultiply();
+    let (cnugteren_10_id, cnugteren_10) = bench_dense_3_cnugteren_10();
+
+    let bench = Benchmark::new(cl_id, cl)
+        .with_function(matrixmultiply_id, matrixmultiply)
+        .with_function(cnugteren_10_id, cnugteren_10);
+
+    c.bench("dense-3-f32", bench.plot_config(plot_config));
+}
+
+criterion_group!{
+    name = benches;
+    config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
+    targets = bench_dense_layer_variants
+}
+criterion_main!(benches);

@@ -270,11 +270,7 @@ where
 {
 }
 
-impl<T> ClassicWeights<T> for Weights<T>
-where
-    T: Coeff,
-{
-}
+impl<T> ClassicWeights<T> for Weights<T> where T: Coeff {}
 
 impl<T> Default for Weights<T>
 where

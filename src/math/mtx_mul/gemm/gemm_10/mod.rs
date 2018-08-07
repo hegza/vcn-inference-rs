@@ -162,6 +162,8 @@ impl OclGemm<Gemm10Kernel> for Gemm10Kernel {
             use_host_ptr,
         }
     }
+
+    /// a is column-major and b_transposed is row-major (or transposed column-major)
     fn from_slices(
         m: usize,
         n: usize,
@@ -209,7 +211,7 @@ impl OclGemm<Gemm10Kernel> for Gemm10Kernel {
         kernel
     }
 
-    /// a is column-major and b_transposed is row-major.
+    /// a is column-major and b_transposed is row-major (or transposed column-major)
     fn set_buffers_from_slices(&self, a: &[f32], b_transposed: &[f32]) {
         match self.use_host_ptr {
             true => unsafe {

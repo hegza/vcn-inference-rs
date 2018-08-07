@@ -7,6 +7,9 @@
 #include "common.h"
 #include "hyperparams.h"
 
+// TODO: see if changing between int and short produces any effect
+// TODO: this should likely be defined on the host
+#define ACCUMULATOR_T int
 
 __kernel void mtx_mul(
     __global CL_PRIM_N* restrict input,
@@ -18,13 +21,13 @@ __kernel void mtx_mul(
 
     size_t gid = get_global_id(0);
 
-    CL_PRIM acc = 0.0;
+    ACCUMULATOR_T acc = 0.0;
     for (int data_idx = 0; data_idx != DATA_SIZE; ++data_idx) {
         const size_t wgt_idx = DATA_SIZE * gid + data_idx;
         // Do type-independent dot-product
         acc += gen_dot(weights[wgt_idx], input[data_idx]);
     }
 
-    const CL_PRIM with_relu = acc > 0 ? acc : 0;
-    output[gid] = with_relu;
+    const ACCUMULATOR_T with_relu = acc > 0 ? acc : 0;
+    output[gid] = with_relu >> 24);
 }

@@ -30,7 +30,7 @@ lazy_static! {
 }
 
 #[test]
-fn gemm_1_is_correct() {
+fn gemm_1_sq_mtx_is_correct() {
     let mut out = vec![0f32; D * D];
 
     let kernel = Gemm1Kernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
@@ -39,7 +39,7 @@ fn gemm_1_is_correct() {
 }
 
 #[test]
-fn gemm_4_is_correct() {
+fn gemm_4_sq_mtx_is_correct() {
     let mut out = vec![0f32; D * D];
 
     let kernel = Gemm4Kernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
@@ -48,7 +48,7 @@ fn gemm_4_is_correct() {
 }
 
 #[test]
-fn gemm_5_is_correct() {
+fn gemm_5_sq_mtx_is_correct() {
     let mut out = vec![0f32; D * D];
 
     let kernel = Gemm5Kernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
@@ -57,7 +57,7 @@ fn gemm_5_is_correct() {
 }
 
 #[test]
-fn gemm_6_is_correct() {
+fn gemm_6_sq_mtx_is_correct() {
     let mut out = vec![0f32; D * D];
 
     let kernel = Gemm6WithBTransposeKernel::from_slices(D, D, D, &A, &B, &mut out, DeviceType::ALL);
@@ -66,7 +66,7 @@ fn gemm_6_is_correct() {
 }
 
 #[test]
-fn gemm_10_is_correct() {
+fn gemm_10_sq_mtx_is_correct() {
     let mut out = vec![0f32; D * D];
 
     let kernel =
@@ -89,3 +89,5 @@ where
 fn gemm_naive_is_correct() {
     test_mtx_mul(super::super::gemm_naive);
 }
+
+// TODO: write test cases for non-square matrices in general (with size multiples of 32 where necessary)

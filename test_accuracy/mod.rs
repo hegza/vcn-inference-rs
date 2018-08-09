@@ -10,10 +10,10 @@ extern crate rusty_cnn;
 mod class;
 mod util;
 
-use rusty_cnn::*;
-use util::*;
 use class::Class;
 use geometry::*;
+use rusty_cnn::*;
+use util::*;
 
 const INPUT_IMG_DIR: &str = "input/images";
 

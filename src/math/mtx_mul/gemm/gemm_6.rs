@@ -27,7 +27,7 @@ impl OclGemm<Gemm6WithBTransposeKernel> for Gemm6WithBTransposeKernel {
         out: &mut [f32],
         device: DeviceType,
     ) -> Gemm6WithBTransposeKernel {
-        // Make sure enough space is reserved for the output buffer
+        // Make sure the correct amount of space is reserved for the output buffer
         debug_assert_eq!(out.len(), m * n);
 
         // Make sure the matrix dimensions are powers of two

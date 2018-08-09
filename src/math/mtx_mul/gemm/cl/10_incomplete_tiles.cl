@@ -22,6 +22,8 @@ typedef float2 floatX;
 typedef float4 floatX;
 #elif WIDTH == 8
 typedef float8 floatX;
+#elif WIDTH == 16
+typedef float16 floatX;
 #endif
 
 // With support for incomplete tiles and arbitrary input/output matrix sizes

@@ -6,6 +6,9 @@
 // -D WPTM={}   The amount of work-per-thread in dimension M
 // -D WPTN={}   The amount of work-per-thread in dimension N
 
+// Local memory usage:
+// local_memory_bytes = 4 * 2 * TSK * TSM + 4 * TSK * TSN * 2
+
 #include "macros.h"
 
 #define RTSM (TSM/WPTM)                 // The reduced tile-size in dimension M (== number of threads)

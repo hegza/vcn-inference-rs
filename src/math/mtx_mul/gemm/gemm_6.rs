@@ -399,6 +399,7 @@ impl Gemm6CompileParameters {
     fn choose(m: usize, n: usize, device: DeviceType) -> Gemm6CompileParameters {
         // TODO: the main performance reciprocate here seems to be the amount of local memory used by the kernel
         // TODO: get local memory size (32768) on this device and fit the amount of memory used by the kernel into that
+        // local_memory_bytes = 4 * TSK * TSM + 4 * (TSK + 2) * TSN
 
         let cache_line_size = if device == DeviceType::CPU {
             1
@@ -416,6 +417,7 @@ impl Gemm6CompileParameters {
 
         // Optimal tile-size is as close to the preferred maximum work-group-size while still
         // fitting into the max work group size on GPU. cnugteren used hard-coded 128x128.
+        // TODO: separate m and n here like in gemm 10, sa. test.rs for a related test case TODO
         let c_len = m * n;
         let c_side = (c_len as f64).sqrt() as usize;
         let ts = min(cache_line_size, c_side);
@@ -423,9 +425,8 @@ impl Gemm6CompileParameters {
         let tsm: usize = ts;
         let tsn: usize = ts;
         let tsk: usize = 16;
-        // NOTE: increasing these to 8 decreases the performance by 50 % and to 16 by around 1000 %
-        let wpwim: usize = 4;
-        let wpwin: usize = 4;
+        let wpwim: usize = min(4, tsm);
+        let wpwin: usize = min(4, tsn);
 
         Gemm6CompileParameters {
             tsm,

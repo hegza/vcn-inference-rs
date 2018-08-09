@@ -131,7 +131,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     verify(&gemm_1_gpu_out[&D], &correct_c, RESULT_MARGIN);
 
     // Create benchmark-closure
-    let bench = bench.with_function("cnugteren_1_naive (GPU)", move |be, &ds| {
+    let bench = bench.with_function("cnugteren 1 naive (GPU)", move |be, &ds| {
         be.iter_with_setup(
             || {
                 let (a, b) = (create_random_vec(ds * ds), create_random_vec(ds * ds));
@@ -168,7 +168,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     verify(&gemm_6_gpu_out[&D], &correct_c, RESULT_MARGIN);
 
     // Create benchmark-closure
-    let bench = bench.with_function("cnugteren_6_tiling (GPU)", move |be, &ds| {
+    let bench = bench.with_function("cnugteren 6 tiling (GPU)", move |be, &ds| {
         be.iter_with_setup(
             || {
                 let (a, b) = (create_random_vec(ds * ds), create_random_vec(ds * ds));
@@ -202,7 +202,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // TODO: Verify result with cnugteren_6 with pretransposed B
 
     // Create benchmark-closure
-    let bench = bench.with_function("cnugteren_6_pretransposed (GPU)", move |be, &ds| {
+    let bench = bench.with_function("cnugteren 6 pretransposed (GPU)", move |be, &ds| {
         be.iter_with_setup(
             || {
                 let (a, b) = (create_random_vec(ds * ds), create_random_vec(ds * ds));
@@ -230,7 +230,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // TODO: Verify result with cnugteren_10 with pretransposed B
 
     let bench = bench.with_function(
-        "cnugteren_10_pretransposed (GPU)",
+        "cnugteren 10 pretransposed (GPU)",
         // Create benchmark-closure
         move |be, &ds| {
             be.iter_with_setup(

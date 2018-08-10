@@ -22,7 +22,7 @@ use std::collections::HashMap;
 fn bench_transpose_gpu(c: &mut Criterion) {
     bench_transpose(
         c,
-        vec![4096, 2048, 1024, 512, 256, 128, 64, 32, 16],
+        vec![2048, 1024, 512, 256, 128, 64, 32, 16],
         DeviceType::ALL,
         "transpose (GPU)",
     );

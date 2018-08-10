@@ -257,7 +257,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     // TODO: Verify result with cnugteren_10 with pretransposed B
 
     let bench = bench.with_function(
-        "cnugteren 10 pretransposed (GPU)",
+        "cnugteren 10 pretransposed",
         // Create benchmark-closure
         move |be, &ds| {
             be.iter_with_setup(

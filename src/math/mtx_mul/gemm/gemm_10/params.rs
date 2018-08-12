@@ -51,7 +51,7 @@ impl Gemm10CompileParameters {
         // Note: (TSK*WPTM*WPTN)/(TSN*WIDTH) has to be integer
         // Note: (TSK*WPTM*WPTN)/(TSM*WIDTH) has to be integer
 
-        let padding = (8, 8);
+        let padding = (16, 16);
 
         let cache_line_size = if device == DeviceType::CPU {
             1
@@ -76,7 +76,7 @@ impl Gemm10CompileParameters {
 
         let wpwim: usize = min(4, tsm);
         let wpwin: usize = min(4, tsn);
-        let width: usize = 16;
+        let width: usize = 4;
 
         let padded_k = ceil_div(k, tsk) * tsk;
         let padded_m = ceil_div(m, tsm) * tsm;

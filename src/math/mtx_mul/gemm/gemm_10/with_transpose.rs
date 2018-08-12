@@ -138,9 +138,9 @@ impl OclGemm<Gemm10WithBTransposeKernel> for Gemm10WithBTransposeKernel {
                     .queue(queue.clone())
                     .local_work_size(params.lws())
                     .global_work_size(params.gws())
-                    .arg(m as i32)
-                    .arg(n as i32)
-                    .arg(k as i32)
+                    .arg(params.padded_m() as i32)
+                    .arg(params.padded_n() as i32)
+                    .arg(params.padded_k() as i32)
                     .arg_named("a_padded", &a_buf)
                     .arg_named("b_transposed_padded", &b_transposed_buf)
                     .arg_named("c_padded", &c_padded_buf)
@@ -285,15 +285,13 @@ impl Gemm10WithBTransposeCompileParameters {
             dev_max_lws
         };
 
-        let transpose = {
-            // Optimal tile-size is as close to the preferred maximum work-group-size while still
-            // fitting into the max work group size on GPU and 1 on CPU because no autovectorization is
-            // possible for this kernel. cnugteren used hard-coded 32x32.
-            let local_work_side = (max_lws as f64).sqrt() as usize;
+        // Optimal tile-size is as close to the preferred maximum work-group-size while still
+        // fitting into the max work group size on GPU and 1 on CPU because no autovectorization is
+        // possible for this kernel. cnugteren used hard-coded 32x32.
+        let local_work_side = (max_lws as f64).sqrt() as usize;
 
-            // Dimensions for local memory optimization
-            (local_work_side, local_work_side)
-        };
+        // Dimensions for local memory optimization
+        let transpose = (min(local_work_side, k), min(local_work_side, n));
 
         Gemm10WithBTransposeCompileParameters {
             gemm10_params,

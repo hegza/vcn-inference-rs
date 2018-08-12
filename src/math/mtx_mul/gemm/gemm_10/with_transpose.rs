@@ -7,6 +7,7 @@ pub struct Gemm10WithBTransposeKernel {
     b_untransposed_buf: Buffer<f32>,
     transpose_kernel: Kernel,
 }
+
 impl OclGemm<Gemm10WithBTransposeKernel> for Gemm10WithBTransposeKernel {
     fn uninitialized(
         m: usize,
@@ -65,7 +66,7 @@ impl OclGemm<Gemm10WithBTransposeKernel> for Gemm10WithBTransposeKernel {
             Buffer::<f32>::builder()
                 .queue(queue.clone())
                 .flags(flags::MEM_READ_WRITE)
-                .len(params.padded_n() * params.padded_k())
+                .len(params.padded_k() * params.padded_n())
                 .build()
                 .unwrap(),
         );
@@ -181,12 +182,12 @@ impl OclGemm<Gemm10WithBTransposeKernel> for Gemm10WithBTransposeKernel {
         n: usize,
         k: usize,
         a: &[f32],
-        b: &[f32],
+        b_untransposed: &[f32],
         c: &mut [f32],
         device: DeviceType,
     ) -> Gemm10WithBTransposeKernel {
         debug_assert_eq!(a.len(), k * m);
-        debug_assert_eq!(b.len(), n * k);
+        debug_assert_eq!(b_untransposed.len(), n * k);
 
         let mut kernel = Gemm10WithBTransposeKernel::uninitialized(m, n, k, c, device);
         {
@@ -206,7 +207,7 @@ impl OclGemm<Gemm10WithBTransposeKernel> for Gemm10WithBTransposeKernel {
                         .queue(queue.clone())
                         .flags(flags::MEM_READ_ONLY)
                         .len(n * k)
-                        .use_host_slice(&b)
+                        .use_host_slice(&b_untransposed)
                         .build()
                         .unwrap();
                 }
@@ -220,7 +221,7 @@ impl OclGemm<Gemm10WithBTransposeKernel> for Gemm10WithBTransposeKernel {
                     .set_arg("b_untransposed", &kernel.b_untransposed_buf)
                     .unwrap();
             } else {
-                kernel.set_buffers_from_slices(&a, &b);
+                kernel.set_buffers_from_slices(&a, &b_untransposed);
             }
         }
 

@@ -43,6 +43,14 @@ impl Gemm10CompileParameters {
         // TODO: the main performance reciprocate here seems to be the amount of local memory used by the kernel
         // TODO: get local memory size (32768) on this device and fit the amount of memory used by the kernel into that
 
+        // TODO: enforce:
+        // Note: TSM/WPTM has to be integer
+        // Note: TSN/WPTN has to be integer
+        // Note: TSM/WIDTH has to be integer
+        // Note: TSN/WIDTH has to be integer
+        // Note: (TSK*WPTM*WPTN)/(TSN*WIDTH) has to be integer
+        // Note: (TSK*WPTM*WPTN)/(TSM*WIDTH) has to be integer
+
         let padding = (8, 8);
 
         let cache_line_size = if device == DeviceType::CPU {

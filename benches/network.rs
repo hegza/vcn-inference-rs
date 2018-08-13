@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[macro_use]
 extern crate criterion;
 #[macro_use]
@@ -98,6 +100,6 @@ where
 criterion_group!{
     name = benches;
     config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
-    targets = classic_full, sepconv_f32_full, sepconv_i8_full, net_map_input
+    targets = classic_full, sepconv_f32_full, /*sepconv_i8_full, */net_map_input
 }
 criterion_main!(benches);

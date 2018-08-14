@@ -7,7 +7,7 @@ authors = ["Henri Lunnikivi <henri.lunnikivi@gmail.com>"]
 byteorder = "^1"
 env_logger = "^0.5"
 log = { version = "^0.4", features = ["release_max_level_info"] }
-ocl = "^0.18"
+ocl = "^0.19"
 lazy_static = "^1.0"
 num-traits = "^0.2"
 noisy_float = "^0.1"

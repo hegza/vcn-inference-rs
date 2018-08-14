@@ -55,3 +55,7 @@ harness = false
 [[bench]]
 name = "dense"
 harness = false
+
+[[bench]]
+name = "network_auxiliaries"
+harness = false

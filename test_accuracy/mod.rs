@@ -13,6 +13,7 @@ mod util;
 use class::Class;
 use geometry::*;
 use rusty_cnn::*;
+use std::time::Instant;
 use util::*;
 
 const INPUT_IMG_DIR: &str = "input/images";
@@ -45,11 +46,14 @@ pub fn main() {
         // Initialize OpenCL and the network
         let net = ClassicNetwork::<f32>::new();
 
+        let timer = Instant::now();
         // Make classifications and measure accuracy using the original network
-        let (correct, total) = measure_accuracy(&net, &test_data);
-        let accuracy = correct as f32 / total as f32;
-        println!("original network accuracy:");
-        println!("{} ({}/{})", accuracy, correct, total);
+        let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
+        let duration = timer.elapsed();
+        let accuracy = correct_inputs as f32 / total_inputs as f32;
+        println!("classic network ({} images)", total_inputs);
+        println!("\ttime: {:?}", duration);
+        println!("\taccu: {} ({}/{})", accuracy, correct_inputs, total_inputs);
     }
 
     debug!("Loading input images for sepconv networks...");
@@ -70,11 +74,14 @@ pub fn main() {
         // Initialize OpenCL and the sep-conv network
         let net = SepconvNetwork::<f32>::new(sepconv::Weights::default());
 
+        let timer = Instant::now();
         // Make classifications and measure accuracy using the sep-conv network
-        let (correct, total) = measure_accuracy(&net, &test_data);
-        let accuracy = correct as f32 / total as f32;
-        println!("sepconv-f32 network accuracy:");
-        println!("{} ({}/{})", accuracy, correct, total);
+        let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
+        let duration = timer.elapsed();
+        let accuracy = correct_inputs as f32 / total_inputs as f32;
+        println!("sepconv-f32 network ({} images)", total_inputs);
+        println!("\ttime: {:?}", duration);
+        println!("\taccu: {} ({}/{})", accuracy, correct_inputs, total_inputs);
     }
 
     /*
@@ -102,27 +109,27 @@ pub fn main() {
         let net = SepconvNetwork::<i8>::new(weights);
 
         // Make classifications and measure accuracy using the sep-conv network
-        let (correct, total) = measure_accuracy(&net, &test_data);
-        let accuracy = correct as f32 / total as f32;
+        let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
+        let accuracy = correct_inputs as f32 / total_inputs as f32;
         println!("sepconv-i8 network accuracy:");
-        println!("{} ({}/{})", accuracy, correct, total);
+        println!("{} ({}/{})", accuracy, correct_inputs, total_inputs);
     }
     */
 }
 
-/// Returns (num_correct, num_total)
+/// Returns (num_correct_inputs, num_total_inputs)
 fn measure_accuracy<F, P, C>(predictor: &P, test_data: &[(Vec<F>, C)]) -> (usize, usize)
 where
     F: Coeff,
     P: Predict<F>,
     C: AsRef<Class>,
 {
-    let mut num_correct = 0;
-    let mut num_total = 0;
-    for &(ref input_image, ref correct) in test_data.iter() {
+    let mut num_correct_inputs = 0;
+    let mut num_total_inputs = 0;
+    for &(ref input_image, ref correct_inputs) in test_data.iter() {
         let result = predictor.predict(input_image);
         //println!("{:?}", &result);
-        let idx_of_correct = result
+        let idx_of_correct_inputs = result
             .iter()
             .enumerate()
             // Find the largest number
@@ -135,16 +142,16 @@ where
             .unwrap()
             // Take the index of the largest number
             .0;
-        let prediction = idx_to_class(idx_of_correct);
+        let prediction = idx_to_class(idx_of_correct_inputs);
 
-        num_total += 1;
-        if prediction == *correct.as_ref() {
-            num_correct += 1;
+        num_total_inputs += 1;
+        if prediction == *correct_inputs.as_ref() {
+            num_correct_inputs += 1;
         }
     }
 
     // Measure accuracy
-    (num_correct, num_total)
+    (num_correct_inputs, num_total_inputs)
 }
 
 fn idx_to_class(idx: usize) -> Class {

@@ -87,7 +87,7 @@ where
     T: Coeff,
 {
     let cl_layer = layer.impl_standalone(
-        &["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"],
+        &["src/cl/conv_mxp_relu.cl", "src/cl/mtx_mul.cl"],
         kernel_func,
         &[],
         None,

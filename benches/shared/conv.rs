@@ -259,7 +259,7 @@ pub fn bench_conv1() -> impl FnMut(&mut Bencher) {
     let conv1 = params.create_conv(1, wgts.0);
 
     let cl_layer = conv1.impl_standalone(
-        &["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"],
+        &["src/cl/conv_mxp_relu.cl", "src/cl/mtx_mul.cl"],
         "conv_relu_1",
         &[],
         None,
@@ -277,7 +277,7 @@ pub fn bench_conv2() -> impl FnMut(&mut Bencher) {
     let conv2 = params.create_conv(2, wgts.1);
 
     let cl_layer = conv2.impl_standalone(
-        &["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"],
+        &["src/cl/conv_mxp_relu.cl", "src/cl/mtx_mul.cl"],
         "conv_relu_2",
         &[],
         None,
@@ -302,7 +302,7 @@ pub fn bench_conv1and2() -> impl FnMut(&mut Bencher) {
     ));
 
     let (queue, program, _context) =
-        cl::init::<f32>(&["src/cl/conv_relu.cl", "src/cl/mtx_mul.cl"], &[], None);
+        cl::init::<f32>(&["src/cl/conv_mxp_relu.cl", "src/cl/mtx_mul.cl"], &[], None);
 
     let wgts_bufs = create_weights_bufs(&[&conv1, &conv2], &queue);
     let bufs = create_buffer_chain(&[&conv1, &conv2], &queue);

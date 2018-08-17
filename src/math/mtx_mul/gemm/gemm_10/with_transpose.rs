@@ -280,7 +280,7 @@ impl Gemm10WithBTransposeCompileParameters {
         let max_lws = if device == DeviceType::CPU {
             1
         } else {
-            let device = cl_util::select_device(Some(device));
+            let device = cl_util::resolve_device(Some(device));
             let dev_max_lws = device.max_wg_size().unwrap();
             dev_max_lws
         };

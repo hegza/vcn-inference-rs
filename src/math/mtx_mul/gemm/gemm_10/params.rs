@@ -56,7 +56,7 @@ impl Gemm10CompileParameters {
         let cache_line_size = if device == DeviceType::CPU {
             1
         } else {
-            let device = cl_util::select_device(Some(device));
+            let device = cl_util::resolve_device(Some(device));
             let cache_line_size = match device
                 .info(ocl::enums::DeviceInfo::GlobalMemCachelineSize)
                 .unwrap()
@@ -93,7 +93,7 @@ impl Gemm10CompileParameters {
         trace!("GEMM 10 GWS: {:?}", gws);
 
         let local_mem_size = {
-            let device = cl_util::select_device(Some(device));
+            let device = cl_util::resolve_device(Some(device));
             let local_size = match device.info(ocl::enums::DeviceInfo::LocalMemSize).unwrap() {
                 ocl::enums::DeviceInfoResult::LocalMemSize(x) => x,
                 _ => panic!("ocl API returned incorrect result"),

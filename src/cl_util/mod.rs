@@ -36,7 +36,7 @@ where
     T: ClVecTypeName,
 {
     // Select device
-    let device = select_device(device_type);
+    let device = resolve_device(device_type);
     let platform = Platform::default();
     let context = Context::builder()
         .platform(platform)
@@ -145,7 +145,7 @@ pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<
     Ok(())
 }
 
-pub fn select_device(device_type: Option<DeviceType>) -> Device {
+pub fn resolve_device(device_type: Option<DeviceType>) -> Device {
     let platform = Platform::default();
 
     match device_type {

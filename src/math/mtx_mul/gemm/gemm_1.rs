@@ -57,7 +57,7 @@ impl OclGemm<Gemm1Kernel> for Gemm1Kernel {
         let ts = if device == DeviceType::CPU {
             1
         } else {
-            let dev_max_lws = cl_util::select_device(Some(device)).max_wg_size().unwrap();
+            let dev_max_lws = cl_util::resolve_device(Some(device)).max_wg_size().unwrap();
             (dev_max_lws as f64).sqrt() as usize
         };
         let lws = SpatialDims::Two(ts, ts);

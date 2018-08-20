@@ -47,7 +47,7 @@ where
     let mut program_b = Program::builder();
 
     // Add default compiler options
-    configure_program::<T>(&mut program_b, &device);
+    configure_program::<T, Device>(&mut program_b, device);
 
     // Additional compiler options
     for &opt in addt_cmplr_opts {
@@ -94,12 +94,13 @@ where
     )
 }
 
-pub fn configure_program<T>(program_b: &mut ProgramBuilder, device: &Device)
+pub fn configure_program<T, D>(program_b: &mut ProgramBuilder, devices: D)
 where
     T: ClVecTypeName,
+    D: Into<DeviceSpecifier>,
 {
     program_b
-        .devices(device.clone())
+        .devices(devices)
         .cmplr_opt("-I./src/cl")
         .cmplr_opt("-cl-std=CL1.2")
         .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()))
@@ -151,5 +152,29 @@ pub fn resolve_device(device_type: Option<DeviceType>) -> Device {
     match device_type {
         Some(dt) => *Device::list(platform, Some(dt)).unwrap().first().unwrap(),
         None => Device::first(platform).unwrap(),
+    }
+}
+
+pub enum DevicePreference {
+    PreferGpu,
+    RequireGpu,
+    RequireCpu,
+}
+
+pub fn select_device(preference: DevicePreference) -> Device {
+    let platform = Platform::default();
+
+    use self::DevicePreference::*;
+    match preference {
+        // The first device listed by OpenCL usually seems  to be the GPU
+        PreferGpu => Device::first(platform).unwrap(),
+        RequireGpu => *Device::list(platform, Some(DeviceType::GPU))
+            .unwrap()
+            .first()
+            .unwrap(),
+        RequireCpu => *Device::list(platform, Some(DeviceType::CPU))
+            .unwrap()
+            .first()
+            .unwrap(),
     }
 }

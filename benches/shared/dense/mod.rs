@@ -6,11 +6,12 @@ use super::*;
 use rusty_cnn::*;
 
 lazy_static! {
-    static ref PARAMS: NetworkParams = NetworkParams::new(CLASSIC_HYPER_PARAMS.clone());
+    static ref CLASSIC_LAYERS: classic::Layers<f32> =
+        { classic::Layers::<f32>::new(classic::Weights::default()) };
 }
 
 pub fn bench_dense4() -> (&'static str, impl FnMut(&mut Bencher)) {
-    let dense4 = PARAMS.create_dense::<f32>(4, Weights::default().3);
+    let dense4 = &CLASSIC_LAYERS.dense4;
     let input_data = black_box(f32::read_lines_from_file(&format!(
         "{}/fc3.f",
         CLASSIC_BASELINE
@@ -22,7 +23,7 @@ pub fn bench_dense4() -> (&'static str, impl FnMut(&mut Bencher)) {
 }
 
 pub fn bench_dense5() -> (&'static str, impl FnMut(&mut Bencher)) {
-    let dense5 = PARAMS.create_dense::<f32>(5, Weights::default().4);
+    let dense5 = &CLASSIC_LAYERS.dense5;
     let input_data = black_box(f32::read_lines_from_file(&format!(
         "{}/fc4.f",
         CLASSIC_BASELINE

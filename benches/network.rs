@@ -17,32 +17,18 @@ use criterion::Criterion;
 use num_traits::bounds::Bounded;
 use rand::distributions::range::SampleRange;
 use rand::Rng;
-use rusty_cnn::cl_util as cl;
 use rusty_cnn::*;
 use shared::*;
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.05;
 
-/// Benchmark writing of input to device memory.
-fn net_map_input(c: &mut Criterion) {
-    let net = ClassicNetwork::<f32>::new();
-
-    let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", CLASSIC_BASELINE),
-        *net.input_shape(),
-    ));
-    c.bench_function("network map input", move |b| {
-        b.iter(|| unsafe { cl::map_to_buf(&net.in_buf, &input_data).unwrap() })
-    });
-}
-
 /// Benchmark full computations of original implementation.
 fn classic_full(c: &mut Criterion) {
-    let net = ClassicNetwork::<f32>::new();
+    let net = classic::ClNetwork::<f32>::new(classic::Weights::default());
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
         &format!("{}/in.bin", CLASSIC_BASELINE),
-        *net.input_shape(),
+        net.input_shape(),
     ));
 
     c.bench_function("classic-f32 full", move |b| {
@@ -52,7 +38,7 @@ fn classic_full(c: &mut Criterion) {
 
 /// Benchmark full computations of sepconv implementation.
 fn sepconv_f32_full(c: &mut Criterion) {
-    let net = SepconvNetwork::<f32>::new(sepconv::Weights::default());
+    let net = sepconv::ClNetwork::<f32>::new(sepconv::Weights::default());
     let input_data = criterion::black_box(f32::read_bin_from_file(
         "input/baseline/sepconv-f32-xcorr/in.bin",
     ));
@@ -77,7 +63,7 @@ fn sepconv_i8_full(c: &mut Criterion) {
         rng_vec(100 * 4),
     );
 
-    let net = SepconvNetwork::<i8>::new(wgts);
+    let net = sepconv::ClNetwork::<i8>::new(wgts);
     // TODO: load real input data
     //let input_data = i8::read_bin_from_file("input/baseline/sepconv-f32-xcorr/in.bin");
     let input_data: Vec<i8> = criterion::black_box(rng_vec(96 * 96 * 3));
@@ -100,6 +86,6 @@ where
 criterion_group!{
     name = benches;
     config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
-    targets = classic_full, sepconv_f32_full, /*sepconv_i8_full, */net_map_input
+    targets = classic_full, sepconv_f32_full, /*sepconv_i8_full, */
 }
 criterion_main!(benches);

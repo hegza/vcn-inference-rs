@@ -1,7 +1,7 @@
-use geometry::*;
 use super::*;
-use std::ops::Deref;
+use geometry::*;
 use ocl::SpatialDims;
+use std::ops::Deref;
 
 /// A complete descriptor for the vertical (column) component of a separable convolutional layer
 #[derive(Clone)]
@@ -21,7 +21,7 @@ where
 {
     pub fn new(
         filter_len: usize,
-        in_shape: ImageGeometry,
+        in_shape: &ImageGeometry,
         num_out_channels: usize,
         weights: Vec<T>,
     ) -> VConvLayer<T> {
@@ -47,7 +47,7 @@ where
 {
     pub fn new(
         filter_len: usize,
-        in_shape: ImageGeometry,
+        in_shape: &ImageGeometry,
         num_out_channels: usize,
         weights: Vec<T>,
     ) -> HConvLayer<T> {
@@ -107,7 +107,7 @@ where
     /// side of which will be set to filter_side.
     fn new(
         filter_len: usize,
-        in_shape: ImageGeometry,
+        in_shape: &ImageGeometry,
         num_out_channels: usize,
         weights: Vec<T>,
     ) -> SepconvLayer<T> {
@@ -122,7 +122,7 @@ where
         let out_shape = ImageGeometry::new(in_shape.side(), num_out_channels);
         SepconvLayer {
             weights,
-            in_shape,
+            in_shape: in_shape.clone(),
             out_shape,
         }
     }

@@ -293,7 +293,7 @@ where
 /// Reads a file into a Vec of f32s and adds the given amount of padding.
 pub fn read_image_with_padding_from_bin_in_channels<T>(
     filename: &str,
-    padded_image_shape: ImageGeometry,
+    padded_image_shape: &ImageGeometry,
 ) -> Vec<T>
 where
     T: Zero + ReadBinFromFile + Copy,

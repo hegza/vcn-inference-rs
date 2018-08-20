@@ -5,16 +5,17 @@ use rusty_cnn::cl_util as cl;
 use rusty_cnn::*;
 
 lazy_static! {
-    static ref SEPCONV_PARAMS: SepconvHyperParams = {
-        let mut p = SEPCONV_HYPER_PARAMS.clone();
-        SepconvNetwork::<f32>::fix_params_for_default_gpu(&mut p);
+    static ref SEPCONV_PARAMS: sepconv::SepconvHyperParams = {
+        let mut p = sepconv::SEPCONV_HYPER_PARAMS.clone();
+        sepconv::ClNetwork::<f32>::fix_params_for_default_gpu(&mut p);
         p
     };
-    static ref CLASSIC_PARAMS: NetworkParams = NetworkParams::new(CLASSIC_HYPER_PARAMS.clone());
+    static ref CLASSIC_LAYERS: classic::Layers<f32> =
+        { classic::Layers::<f32>::new(classic::Weights::default()) };
 }
 
 pub fn bench_sepconv1() -> impl FnMut(&mut Bencher) {
-    let layers = SepconvNetwork::<f32>::create_layers(&SEPCONV_PARAMS, sepconv::Weights::default());
+    let layers = sepconv::Layers::<f32>::new(sepconv::Weights::default());
 
     let input_data = black_box(f32::read_bin_from_file(&format!(
         "{}/in.bin",
@@ -24,14 +25,14 @@ pub fn bench_sepconv1() -> impl FnMut(&mut Bencher) {
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
         &["src/cl/sepconv.cl", "src/cl/max_pool.cl"],
-        &SepconvNetwork::<f32>::compile_flags(&SEPCONV_PARAMS, &layers)
+        &sepconv::ClNetwork::<f32>::compile_flags(&SEPCONV_PARAMS, &layers)
             .iter()
             .map(AsRef::as_ref)
             .collect::<Vec<&str>>(),
         None,
     );
 
-    let (vconv1, hconv1, mxp1) = (&layers.0, &layers.1, &layers.2);
+    let (vconv1, hconv1, mxp1) = (&layers.vconv1, &layers.hconv1, &layers.mxp1);
 
     let wgts_bufs = create_weights_bufs(&[vconv1, hconv1], &queue);
 
@@ -85,7 +86,7 @@ pub fn bench_sepconv1() -> impl FnMut(&mut Bencher) {
 }
 
 pub fn bench_sepconv2() -> impl FnMut(&mut Bencher) {
-    let layers = SepconvNetwork::<f32>::create_layers(&SEPCONV_PARAMS, sepconv::Weights::default());
+    let layers = sepconv::Layers::<f32>::new(sepconv::Weights::default());
     let input_data = black_box(f32::read_bin_from_file(&format!(
         "{}/mxp1-out.bin",
         SEPCONV_BASELINE
@@ -94,14 +95,14 @@ pub fn bench_sepconv2() -> impl FnMut(&mut Bencher) {
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
         &["src/cl/sepconv.cl", "src/cl/max_pool.cl"],
-        &SepconvNetwork::<f32>::compile_flags(&SEPCONV_PARAMS, &layers)
+        &sepconv::ClNetwork::<f32>::compile_flags(&SEPCONV_PARAMS, &layers)
             .iter()
             .map(AsRef::as_ref)
             .collect::<Vec<&str>>(),
         None,
     );
 
-    let (vconv2, hconv2, mxp2) = (&layers.3, &layers.4, &layers.5);
+    let (vconv2, hconv2, mxp2) = (&layers.vconv2, &layers.hconv2, &layers.mxp2);
 
     let wgts_bufs = create_weights_bufs(&[vconv2, hconv2], &queue);
 
@@ -155,7 +156,7 @@ pub fn bench_sepconv2() -> impl FnMut(&mut Bencher) {
 }
 
 pub fn bench_sepconv1and2() -> impl FnMut(&mut Bencher) {
-    let layers = SepconvNetwork::<f32>::create_layers(&SEPCONV_PARAMS, sepconv::Weights::default());
+    let layers = sepconv::Layers::<f32>::new(sepconv::Weights::default());
 
     let input_data = black_box(f32::read_bin_from_file(&format!(
         "{}/in.bin",
@@ -165,7 +166,7 @@ pub fn bench_sepconv1and2() -> impl FnMut(&mut Bencher) {
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
         &["src/cl/sepconv.cl", "src/cl/max_pool.cl"],
-        &SepconvNetwork::<f32>::compile_flags(&SEPCONV_PARAMS, &layers)
+        &sepconv::ClNetwork::<f32>::compile_flags(&SEPCONV_PARAMS, &layers)
             .iter()
             .map(AsRef::as_ref)
             .collect::<Vec<&str>>(),
@@ -173,7 +174,12 @@ pub fn bench_sepconv1and2() -> impl FnMut(&mut Bencher) {
     );
 
     let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2) = (
-        &layers.0, &layers.1, &layers.2, &layers.3, &layers.4, &layers.5,
+        &layers.vconv1,
+        &layers.hconv1,
+        &layers.mxp1,
+        &layers.vconv2,
+        &layers.hconv2,
+        &layers.mxp2,
     );
 
     let wgts_bufs = create_weights_bufs(&[vconv1, hconv1, vconv2, hconv2], &queue);
@@ -252,11 +258,8 @@ pub fn bench_sepconv1and2() -> impl FnMut(&mut Bencher) {
 }
 
 pub fn bench_conv1() -> impl FnMut(&mut Bencher) {
-    // Initialize classic network
-    let params = NetworkParams::new(CLASSIC_PARAMS.clone());
-    let wgts = Weights::<f32>::default();
     // Create a representation of the 1st convolutional layer with weights from a file
-    let conv1 = params.create_conv(1, wgts.0);
+    let conv1 = &CLASSIC_LAYERS.conv1;
 
     let cl_layer = conv1.impl_standalone(
         &["src/cl/conv_mxp_relu.cl", "src/cl/mtx_mul.cl"],
@@ -270,11 +273,8 @@ pub fn bench_conv1() -> impl FnMut(&mut Bencher) {
 }
 
 pub fn bench_conv2() -> impl FnMut(&mut Bencher) {
-    // Initialize classic network
-    let params = NetworkParams::new(CLASSIC_PARAMS.clone());
-    let wgts = Weights::<f32>::default();
     // Create a representation of the 2nd convolutional layer with weights from a file
-    let conv2 = params.create_conv(2, wgts.1);
+    let conv2 = &CLASSIC_LAYERS.conv2;
 
     let cl_layer = conv2.impl_standalone(
         &["src/cl/conv_mxp_relu.cl", "src/cl/mtx_mul.cl"],
@@ -288,30 +288,27 @@ pub fn bench_conv2() -> impl FnMut(&mut Bencher) {
 }
 
 pub fn bench_conv1and2() -> impl FnMut(&mut Bencher) {
-    // Initialize classic network
-    let params = NetworkParams::new(CLASSIC_PARAMS.clone());
-    let wgts = Weights::<f32>::default();
     // Create a representation of the 1st convolutional layer with weights from a file
-    let conv1 = params.create_conv(1, wgts.0);
+    let conv1 = &CLASSIC_LAYERS.conv1;
     // Create a representation of the 2nd convolutional layer with weights from a file
-    let conv2 = params.create_conv(2, wgts.1);
+    let conv2 = &CLASSIC_LAYERS.conv2;
 
     let input_data = black_box(read_image_with_padding_from_bin_in_channels(
         &format!("{}/in.bin", CLASSIC_BASELINE),
-        *conv1.input_shape(),
+        conv1.input_shape(),
     ));
 
     let (queue, program, _context) =
         cl::init::<f32>(&["src/cl/conv_mxp_relu.cl", "src/cl/mtx_mul.cl"], &[], None);
 
-    let wgts_bufs = create_weights_bufs(&[&conv1, &conv2], &queue);
-    let bufs = create_buffer_chain(&[&conv1, &conv2], &queue);
+    let wgts_bufs = create_weights_bufs(&[conv1, conv2], &queue);
+    let bufs = create_buffer_chain(&[conv1, conv2], &queue);
 
     let mut b = ClKernelChainBuilder::new(&bufs, &wgts_bufs, &program, queue.clone());
 
     // Create the kernels for the first two layers (Convolution + ReLU)
-    let conv_relu1 = b.build_iow_kernel(&conv1, "conv_relu_1", LocalWorkSizePolicy::UseDefault);
-    let conv_relu2 = b.build_iow_kernel(&conv2, "conv_relu_2", LocalWorkSizePolicy::UseDefault);
+    let conv_relu1 = b.build_iow_kernel(conv1, "conv_relu_1", LocalWorkSizePolicy::UseDefault);
+    let conv_relu2 = b.build_iow_kernel(conv2, "conv_relu_2", LocalWorkSizePolicy::UseDefault);
 
     unsafe {
         cl::map_to_buf(&bufs[0], &input_data).unwrap();

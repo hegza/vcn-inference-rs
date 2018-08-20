@@ -1,9 +1,9 @@
-use util::*;
-use geometry::*;
 use super::*;
-use std::ops::Deref;
-use ocl::SpatialDims;
 use cl_util as cl;
+use geometry::*;
+use ocl::SpatialDims;
+use std::ops::Deref;
+use util::*;
 
 #[derive(Clone)]
 pub struct MaxpoolLayer {
@@ -12,10 +12,10 @@ pub struct MaxpoolLayer {
 }
 
 impl MaxpoolLayer {
-    pub fn new(in_shape: ImageGeometry, stride: usize) -> MaxpoolLayer {
+    pub fn new(in_shape: &ImageGeometry, stride: usize) -> MaxpoolLayer {
         let out_shape = ImageGeometry::new(in_shape.side() / stride, in_shape.channels());
         let layer = MaxpoolLayer {
-            in_shape,
+            in_shape: in_shape.clone(),
             out_shape,
         };
         debug!(
@@ -78,14 +78,14 @@ impl Layer for MaxpoolLayer {
 
 #[test]
 fn test_lws_hint() {
-    let mxp1 = MaxpoolLayer::new(ImageGeometry::new(96, 32), 2);
+    let mxp1 = MaxpoolLayer::new(&ImageGeometry::new(96, 32), 2);
 
     let lws_hint_1024 = mxp1.lws_hint(1024);
     assert_eq!(lws_hint_1024, SpatialDims::Two(32, 32));
     let lws_hint_256 = mxp1.lws_hint(256);
     assert_eq!(lws_hint_256, SpatialDims::Two(16, 16));
 
-    let mxp2 = MaxpoolLayer::new(ImageGeometry::new(48, 32), 2);
+    let mxp2 = MaxpoolLayer::new(&ImageGeometry::new(48, 32), 2);
 
     let lws_hint_1024 = mxp2.lws_hint(1024);
     assert_eq!(lws_hint_1024, SpatialDims::Two(16, 16));

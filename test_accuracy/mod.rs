@@ -1,5 +1,6 @@
 extern crate env_logger;
 extern crate image;
+extern crate ndarray;
 #[macro_use]
 extern crate log;
 extern crate noisy_float;
@@ -44,7 +45,7 @@ pub fn main() {
         }
 
         // Initialize OpenCL and the network
-        let net = ClassicNetwork::<f32>::new();
+        let net = classic::ClNetwork::<f32>::new(classic::Weights::default());
 
         let timer = Instant::now();
         // Make classifications and measure accuracy using the original network
@@ -52,6 +53,31 @@ pub fn main() {
         let duration = timer.elapsed();
         let accuracy = correct_inputs as f32 / total_inputs as f32;
         println!("classic network ({} images)", total_inputs);
+        println!("\ttime: {:?}", duration);
+        println!("\taccu: {} ({}/{})", accuracy, correct_inputs, total_inputs);
+    }
+
+    if TEST_CLASSIC {
+        debug!("Loading input images for original network...");
+
+        let load_fun = |file: &String| -> Vec<f32> { load_jpeg_as_f32_with_padding(file) };
+        let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
+        if CLASSIC_SINGLE_SHOT {
+            test_data = test_data
+                .into_iter()
+                .take(1)
+                .collect::<Vec<(Vec<f32>, Class)>>();
+        }
+
+        // Initialize OpenCL and the network
+        let net = classic::ClNetwork::<f32>::new(classic::Weights::sparse_3());
+
+        let timer = Instant::now();
+        // Make classifications and measure accuracy using the original network
+        let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
+        let duration = timer.elapsed();
+        let accuracy = correct_inputs as f32 / total_inputs as f32;
+        println!("classic-sparse network ({} images)", total_inputs);
         println!("\ttime: {:?}", duration);
         println!("\taccu: {} ({}/{})", accuracy, correct_inputs, total_inputs);
     }
@@ -72,7 +98,7 @@ pub fn main() {
         };
 
         // Initialize OpenCL and the sep-conv network
-        let net = SepconvNetwork::<f32>::new(sepconv::Weights::default());
+        let net = sepconv::ClNetwork::<f32>::new(sepconv::Weights::default());
 
         let timer = Instant::now();
         // Make classifications and measure accuracy using the sep-conv network
@@ -106,7 +132,7 @@ pub fn main() {
         let weights = Weights::<i8>::default();
 
         // Initialize OpenCL and the sep-conv network
-        let net = SepconvNetwork::<i8>::new(weights);
+        let net = sepconv::ClNetwork::<i8>::new(weights);
 
         // Make classifications and measure accuracy using the sep-conv network
         let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
@@ -166,12 +192,12 @@ fn idx_to_class(idx: usize) -> Class {
 }
 
 fn load_jpeg_as_f32_with_padding(file: &str) -> Vec<f32> {
-    let input_shape = ImageGeometry::new(
-        CLASSIC_HYPER_PARAMS.source_side,
-        CLASSIC_HYPER_PARAMS.num_source_channels,
-    );
+    const IMAGE_SIDE: usize = 96;
+    const IMAGE_CHANNELS: usize = 3;
+    const FILTER_SIDE: usize = 5;
 
-    let conv1_filter_shape = PaddedSquare::from_side(CLASSIC_HYPER_PARAMS.conv_1_filter_side);
+    let input_shape = ImageGeometry::new(IMAGE_SIDE, IMAGE_CHANNELS);
+    let conv1_filter_shape = PaddedSquare::from_side(FILTER_SIDE);
     let padded_image_shape = input_shape.with_filter_padding(&conv1_filter_shape);
     let padding = padded_image_shape.padding();
 

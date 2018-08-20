@@ -6,8 +6,7 @@ use rusty_cnn::*;
 const RESULT_MARGIN: f32 = 0.00002f32;
 
 pub fn bench_dense3_cl_cpu() -> (&'static str, impl FnMut(&mut Bencher)) {
-    let dense3 = PARAMS.create_dense::<f32>(3, Weights::default().2);
-    let cl_layer = dense3.impl_standalone(
+    let dense3 = CLASSIC_LAYERS.dense3.impl_standalone(
         &["src/cl/mtx_mul.cl"],
         "mtx_mul",
         &[],
@@ -18,12 +17,12 @@ pub fn bench_dense3_cl_cpu() -> (&'static str, impl FnMut(&mut Bencher)) {
     // TODO: verify correctness
 
     ("dense 3 - cl (CPU)", move |b: &mut Bencher| {
-        b.iter(|| cl_layer.dry_run())
+        b.iter(|| dense3.dry_run())
     })
 }
 
 pub fn bench_dense_3_bluss_matrixmultiply() -> (&'static str, impl FnMut(&mut Bencher)) {
-    let dense3 = PARAMS.create_dense::<f32>(3, Weights::default().2);
+    let dense3 = &CLASSIC_LAYERS.dense3;
     let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
 
     let m = 1;
@@ -83,8 +82,7 @@ pub fn bench_dense_3_bluss_matrixmultiply() -> (&'static str, impl FnMut(&mut Be
 }
 
 pub fn bench_dense_3_cnugteren_10() -> (&'static str, impl FnMut(&mut Bencher)) {
-    let params = NetworkParams::new(CLASSIC_HYPER_PARAMS.clone());
-    let dense3 = params.create_dense::<f32>(3, Weights::default().2);
+    let dense3 = &CLASSIC_LAYERS.dense3;
     let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
 
     let m = 1;

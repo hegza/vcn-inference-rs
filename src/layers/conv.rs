@@ -1,8 +1,11 @@
-use util::*;
-use geometry::*;
 use super::*;
-use std::ops::Deref;
+use geometry::*;
 use ocl::SpatialDims;
+use std::ops::Deref;
+use util::*;
+
+// TODO: refactor to use tensors (weights) and tensor-shapes (input dims)
+// TODO: sa: https://www.tensorflow.org/api_docs/python/tf/nn/conv2d
 
 /// A complete descriptor for a convolutional layer
 #[derive(Clone)]
@@ -48,7 +51,6 @@ where
         );
         layer
     }
-
     pub fn input_shape(&self) -> &ImageGeometry {
         &self.input_shape
     }

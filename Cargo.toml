@@ -59,3 +59,7 @@ harness = false
 [[bench]]
 name = "network_auxiliaries"
 harness = false
+
+[[bench]]
+name = "classic_variants"
+harness = false

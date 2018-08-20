@@ -15,20 +15,20 @@ extern crate rusty_cnn;
 mod shared;
 
 use criterion::{Bencher, Benchmark, Criterion};
-use rusty_cnn::{sepconv, ClassicNetwork, SepconvNetwork};
+use rusty_cnn::{classic, sepconv};
 
 const SAMPLE_SIZE: usize = 3;
 const NOISE_THRESHOLD: f64 = 0.1;
 
 pub fn bench_classic_f32_init() -> (&'static str, impl FnMut(&mut Bencher)) {
     ("classic-f32 init", move |b: &mut Bencher| {
-        b.iter(|| ClassicNetwork::<f32>::new())
+        b.iter(|| classic::ClNetwork::<f32>::new(classic::Weights::default()))
     })
 }
 
 pub fn bench_sepconv_f32_init() -> (&'static str, impl FnMut(&mut Bencher)) {
     ("sepconv-f32 init", move |b: &mut Bencher| {
-        b.iter(|| SepconvNetwork::<f32>::new(sepconv::Weights::default()))
+        b.iter(|| sepconv::ClNetwork::<f32>::new(sepconv::Weights::default()))
     })
 }
 

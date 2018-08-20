@@ -1,5 +1,5 @@
 mod layers;
-mod network;
+mod quantized;
 
 use super::*;
 use env_logger;
@@ -14,6 +14,3 @@ pub const RESULT_MARGIN: f32 = 0.000002f32;
 pub const COARSE_RESULT_MARGIN: f32 = 0.0035f32;
 pub const CLASSIC_BASELINE: &'static str = "input/baseline/orig-f32-all-layers";
 pub const SEPCONV_BASELINE: &'static str = "input/baseline/sepconv-f32-xcorr";
-lazy_static! {
-    static ref CLASSIC_PARAMS: NetworkParams = NetworkParams::new(CLASSIC_HYPER_PARAMS);
-}

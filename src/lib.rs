@@ -12,6 +12,7 @@ extern crate ndarray;
 extern crate num_traits;
 extern crate ocl;
 extern crate rand;
+extern crate sprs;
 
 /// Usage: println!("{}", format_result!(expression));
 #[macro_use]

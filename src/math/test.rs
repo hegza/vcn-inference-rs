@@ -4,15 +4,24 @@ const ONE: f32 = 1f32;
 const ZERO: f32 = 0f32;
 const MINUS_ONE: f32 = -1f32;
 
+// Matrices are column-major in memory
 const M: usize = 2;
 const N: usize = 1;
 const K: usize = 3;
+// [11 12 13]
+// [21 22 23]
 static A_SMALL: [f32; M * K] = [11f32, 21f32, 12f32, 22f32, 13f32, 23f32];
+// [11
+//  21
+//  31]
 static B_SMALL: [f32; K * N] = [11f32, 21f32, 31f32];
+// [776 ]
+// [1406]
 static C_SMALL: [f32; M * N] = [
     11f32 * 11f32 + 12f32 * 21f32 + 13f32 * 31f32,
     21f32 * 11f32 + 22f32 * 21f32 + 23f32 * 31f32,
 ];
+// C = A * B
 
 // `cargo test --feature test_quantize` to run this test
 #[cfg_attr(not(feature = "test_quantize"), ignore)]
@@ -86,4 +95,42 @@ fn gemm_naive_small_is_correct() {
     let mut out = vec![0f32; M * N];
     gemm_naive(M, N, K, &A_SMALL, &B_SMALL, &mut out);
     assert_eq!(&C_SMALL, &out[..]);
+}
+
+use sprs::{CsMat, CsVec, TriMatBase};
+#[test]
+fn sparse_matmul_works_for_dense() {
+    let mut sparse_a = TriMatBase::<Vec<usize>, Vec<f32>>::with_capacity((M, K), M * K);
+
+    for col in 0..K {
+        for row in 0..M {
+            let val = A_SMALL[col * M + row];
+            sparse_a.add_triplet(row, col, val);
+        }
+    }
+    let sparse_a = sparse_a.to_csc();
+
+    let mut sparse_b = TriMatBase::with_capacity((K, N), K * N);
+
+    for col in 0..N {
+        for row in 0..K {
+            let val = B_SMALL[col * K + row];
+            sparse_b.add_triplet(row, col, val);
+        }
+    }
+    let sparse_b = sparse_b.to_csc();
+
+    let mut sparse_c = TriMatBase::with_capacity((M, N), M * N);
+
+    for col in 0..N {
+        for row in 0..M {
+            let val = C_SMALL[col * M + row];
+            sparse_c.add_triplet(row, col, val);
+        }
+    }
+    let sparse_c = sparse_c.to_csc();
+
+    let result_c = &sparse_a * &sparse_b;
+
+    assert_eq!(&result_c, &sparse_c);
 }

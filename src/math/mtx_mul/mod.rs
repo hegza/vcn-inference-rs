@@ -10,8 +10,8 @@ pub use self::naive::{mtx_mul, mtx_mul_normint};
 
 /// Naive matrix multiplication on the host
 pub fn gemm_naive(m: usize, n: usize, k: usize, a: &[f32], b: &[f32], c: &mut [f32]) {
-    debug_assert_eq!(a.len(), k * m);
-    debug_assert_eq!(b.len(), n * k);
+    debug_assert_eq!(a.len(), m * k);
+    debug_assert_eq!(b.len(), k * n);
     debug_assert_eq!(c.len(), m * n);
 
     for m_idx in 0..m {

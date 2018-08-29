@@ -203,8 +203,8 @@ where
 }
 
 pub trait IndexMatrix<T> {
-    fn elem(&self, length: usize, row: usize, column: usize) -> &T;
-    fn elem_mut(&mut self, length: usize, row: usize, column: usize) -> &mut T;
+    fn elem(&self, num_cols: usize, row: usize, column: usize) -> &T;
+    fn elem_mut(&mut self, num_cols: usize, row: usize, column: usize) -> &mut T;
 }
 
 /// Verifies that each network layer inputs data of valid dimensions to the next layer.
@@ -215,11 +215,11 @@ pub fn verify_network_dimensions(layers: &[&Layer]) {
 }
 
 impl<T> IndexMatrix<T> for [T] {
-    fn elem(&self, length: usize, row: usize, column: usize) -> &T {
-        &self[row * length + column]
+    fn elem(&self, num_cols: usize, row: usize, column: usize) -> &T {
+        &self[row * num_cols + column]
     }
-    fn elem_mut(&mut self, length: usize, row: usize, column: usize) -> &mut T {
-        &mut self[row * length + column]
+    fn elem_mut(&mut self, num_cols: usize, row: usize, column: usize) -> &mut T {
+        &mut self[row * num_cols + column]
     }
 }
 

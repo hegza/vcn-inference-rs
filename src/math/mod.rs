@@ -1,10 +1,12 @@
+#![allow(exceeding_bitshifts)]
+
 mod quantize;
 #[cfg(test)]
 mod test;
 // HACK: being pub might be hacky
-pub mod mtx_mul;
+pub mod gemm;
 
-pub use self::mtx_mul::*;
+pub use self::gemm::*;
 pub use self::quantize::*;
 use num_traits::{Float, Num, NumAssign, PrimInt, Zero};
 use std;
@@ -12,6 +14,42 @@ use std::cmp::Ordering;
 use std::mem::size_of;
 use std::ops::{AddAssign, Mul};
 use util::*;
+
+/// Naive matrix multiplication on the host
+pub fn gemm_naive<T>(m: usize, n: usize, k: usize, a: &[T], b: &[T], c: &mut [T])
+where
+    T: NumAssign + Zero + Copy,
+{
+    debug_assert_eq!(a.len(), m * k);
+    debug_assert_eq!(b.len(), k * n);
+    debug_assert_eq!(c.len(), m * n);
+
+    for m_idx in 0..m {
+        for n_idx in 0..n {
+            let mut acc = T::zero();
+            for k_idx in 0..k {
+                acc += a[k_idx * m + m_idx] * b[n_idx * k + k_idx]
+            }
+            c[n_idx * m + m_idx] = acc;
+        }
+    }
+}
+
+pub fn gemm_naive_quantized_i8(m: usize, n: usize, k: usize, a: &[i8], b: &[i8], c: &mut [i8]) {
+    debug_assert_eq!(a.len(), m * k);
+    debug_assert_eq!(b.len(), k * n);
+    debug_assert_eq!(c.len(), m * n);
+
+    for m_idx in 0..m {
+        for n_idx in 0..n {
+            let mut acc = 0;
+            for k_idx in 0..k {
+                acc += a[k_idx * m + m_idx] * b[n_idx * k + k_idx]
+            }
+            c[n_idx * m + m_idx] = (acc >> 24) as i8;
+        }
+    }
+}
 
 /// Combines the max operations of integral and float types.
 pub trait GenericOps {

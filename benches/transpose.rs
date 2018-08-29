@@ -15,7 +15,7 @@ const SAMPLE_SIZE: usize = 20;
 const NOISE_THRESHOLD: f64 = 0.06;
 
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
-use rusty_cnn::math::mtx_mul::gemm::*;
+use rusty_cnn::math::gemm::*;
 use shared::*;
 use std::collections::HashMap;
 
@@ -48,7 +48,7 @@ fn bench_transpose(c: &mut Criterion, params: Vec<usize>, device: DeviceType, gr
                 let transposex = 16;
                 let transposey = 16;
                 let (queue, program, _context) = rusty_cnn::cl_util::init_from_file::<f32>(
-                    &["src/math/mtx_mul/gemm/cl/transpose.cl"],
+                    &["src/math/gemm/cl/transpose.cl"],
                     &[
                         &format!("-D TRANSPOSEX={}", transposex),
                         &format!("-D TRANSPOSEY={}", transposey),
@@ -118,7 +118,7 @@ fn bench_transpose(c: &mut Criterion, params: Vec<usize>, device: DeviceType, gr
                 let transposex = 8;
                 let transposey = 8;
                 let (queue, program, _context) = rusty_cnn::cl_util::init_from_file::<f32>(
-                    &["src/math/mtx_mul/gemm/cl/transpose.cl"],
+                    &["src/math/gemm/cl/transpose.cl"],
                     &[
                         &format!("-D TRANSPOSEX={}", transposex),
                         &format!("-D TRANSPOSEY={}", transposey),
@@ -183,7 +183,7 @@ fn bench_transpose(c: &mut Criterion, params: Vec<usize>, device: DeviceType, gr
                 let transposex = 1;
                 let transposey = 1;
                 let (queue, program, _context) = rusty_cnn::cl_util::init_from_file::<f32>(
-                    &["src/math/mtx_mul/gemm/cl/transpose.cl"],
+                    &["src/math/gemm/cl/transpose.cl"],
                     &[
                         &format!("-D TRANSPOSEX={}", transposex),
                         &format!("-D TRANSPOSEY={}", transposey),

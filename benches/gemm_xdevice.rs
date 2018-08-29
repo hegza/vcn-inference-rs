@@ -15,8 +15,8 @@ extern crate rusty_cnn;
 mod shared;
 
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
+use rusty_cnn::math::gemm::*;
 use rusty_cnn::math::gemm_naive;
-use rusty_cnn::math::mtx_mul::gemm::*;
 use rusty_cnn::verify;
 use shared::gemm::*;
 use shared::*;

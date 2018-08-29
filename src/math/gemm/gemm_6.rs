@@ -43,7 +43,7 @@ impl OclGemm<Gemm6WithBTransposeKernel> for Gemm6WithBTransposeKernel {
 
         let c_params = Gemm6WithBTransposeCompileParameters::choose(m, n, device);
         let mut c_params_list: Vec<String> = c_params.clone().into();
-        c_params_list.push("-I./src/math/mtx_mul/gemm/cl".to_owned());
+        c_params_list.push("-I./src/math/gemm/cl".to_owned());
 
         let (queue, program, _context) = cl_util::init_from_sources::<f32>(
             &[&src_transpose, &src_mtx_mul],
@@ -238,7 +238,7 @@ impl OclGemm<Gemm6Kernel> for Gemm6Kernel {
 
         let c_params = Gemm6CompileParameters::choose(m, n, device);
         let mut c_params_list: Vec<String> = c_params.clone().into();
-        c_params_list.push("-I./src/math/mtx_mul/gemm/cl".to_owned());
+        c_params_list.push("-I./src/math/gemm/cl".to_owned());
 
         let (queue, program, _context) = cl_util::init_from_sources::<f32>(
             &[&src_mtx_mul],

@@ -37,7 +37,7 @@ impl OclGemm<Gemm10Kernel> for Gemm10Kernel {
 
         let params = Gemm10CompileParameters::choose(m, n, k, device);
         let mut params_list: Vec<String> = params.clone().into();
-        params_list.push("-I./src/math/mtx_mul/gemm/cl".to_owned());
+        params_list.push("-I./src/math/gemm/cl".to_owned());
 
         let (queue, program, _context) = cl_util::init_from_sources::<f32>(
             &[&src_mtx_mul, &src_padding],

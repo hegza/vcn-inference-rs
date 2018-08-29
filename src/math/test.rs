@@ -97,40 +97,26 @@ fn gemm_naive_small_is_correct() {
     assert_eq!(&C_SMALL, &out[..]);
 }
 
-use sprs::{CsMat, CsVec, TriMatBase};
+use sprs::{CsMat, CsMatBase, CsMatI, CsVec, TriMatBase};
 #[test]
 fn sparse_matmul_works_for_dense() {
-    let mut sparse_a = TriMatBase::<Vec<usize>, Vec<f32>>::with_capacity((M, K), M * K);
-
-    for col in 0..K {
-        for row in 0..M {
-            let val = A_SMALL[col * M + row];
-            sparse_a.add_triplet(row, col, val);
-        }
-    }
-    let sparse_a = sparse_a.to_csc();
-
-    let mut sparse_b = TriMatBase::with_capacity((K, N), K * N);
-
-    for col in 0..N {
-        for row in 0..K {
-            let val = B_SMALL[col * K + row];
-            sparse_b.add_triplet(row, col, val);
-        }
-    }
-    let sparse_b = sparse_b.to_csc();
-
-    let mut sparse_c = TriMatBase::with_capacity((M, N), M * N);
-
-    for col in 0..N {
-        for row in 0..M {
-            let val = C_SMALL[col * M + row];
-            sparse_c.add_triplet(row, col, val);
-        }
-    }
-    let sparse_c = sparse_c.to_csc();
+    let sparse_a = dense_into_sparse_csr_mtx((M, K), &A_SMALL);
+    let sparse_b = dense_into_sparse_csr_mtx((K, N), &B_SMALL);
+    let sparse_c = dense_into_sparse_csr_mtx((M, N), &C_SMALL);
 
     let result_c = &sparse_a * &sparse_b;
 
     assert_eq!(&result_c, &sparse_c);
+}
+
+fn dense_into_sparse_csr_mtx(dim: (usize, usize), dense: &[f32]) -> CsMatI<f32, usize> {
+    let mut sparse = TriMatBase::<Vec<usize>, Vec<f32>>::with_capacity(dim, dim.0 * dim.1);
+
+    for col in 0..dim.1 {
+        for row in 0..dim.0 {
+            let val = dense[col * dim.0 + row];
+            sparse.add_triplet(row, col, val);
+        }
+    }
+    sparse.to_csr()
 }

@@ -22,6 +22,7 @@ pub use self::gemm_1::*;
 pub use self::gemm_10::*;
 pub use self::gemm_4::*;
 pub use self::gemm_5::*;
+pub use self::gemm_6::Gemm6WithBTransposeKernel as GemmKernel;
 pub use self::gemm_6::*;
 pub use ocl::flags::DeviceType;
 

@@ -1,6 +1,6 @@
 use super::*;
 use matrixmultiply;
-use rusty_cnn::math::mtx_mul::gemm::*;
+use rusty_cnn::math::gemm::*;
 use rusty_cnn::*;
 
 const RESULT_MARGIN: f32 = 0.00002f32;

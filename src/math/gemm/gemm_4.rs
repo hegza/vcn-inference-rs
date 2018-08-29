@@ -32,7 +32,7 @@ impl OclGemm<Gemm4Kernel> for Gemm4Kernel {
         let (queue, program, _context) = cl_util::init_from_sources::<f32>(
             &[&src],
             &[
-                "-I./src/math/mtx_mul/gemm/cl",
+                "-I./src/math/gemm/cl",
                 &format!("-D WIDTH={}", WIDTH as i32),
                 &format!("-D TS={}", TS as i32),
             ],

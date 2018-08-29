@@ -39,7 +39,7 @@ impl OclGemm<Gemm5Kernel> for Gemm5Kernel {
         let (queue, program, _context) = cl_util::init_from_sources::<f32>(
             &[&src_transpose, &src_mtx_mul],
             &[
-                "-I./src/math/mtx_mul/gemm/cl",
+                "-I./src/math/gemm/cl",
                 &format!("-D TS={}", TS),
                 &format!("-D WPT={}", WPT),
                 &format!("-D TSDK={}", TSDK),

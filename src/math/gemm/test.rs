@@ -7,21 +7,21 @@ const D: usize = 64;
 
 lazy_static! {
     static ref A: Vec<f32> = String::from_utf8(
-        include_bytes!("../../../tests/in/A_64x64.csv").to_vec()
+        include_bytes!("../../tests/in/A_64x64.csv").to_vec()
     ).unwrap()
         .split(',')
         .map(|word| word.trim().parse::<f32>())
         .filter_map(|res| res.ok())
         .collect::<Vec<f32>>();
     static ref B: Vec<f32> = String::from_utf8(
-        include_bytes!("../../../tests/in/B_64x64.csv").to_vec(),
+        include_bytes!("../../tests/in/B_64x64.csv").to_vec(),
     ).unwrap()
         .split(',')
         .map(|word| word.trim().parse::<f32>())
         .filter_map(|res| res.ok())
         .collect::<Vec<f32>>();
     static ref C: Vec<f32> = String::from_utf8(
-        include_bytes!("../../../tests/out/C_64x64.csv").to_vec(),
+        include_bytes!("../../tests/out/C_64x64.csv").to_vec(),
     ).unwrap()
         .split(',')
         .map(|word| word.trim().parse::<f32>())
@@ -87,7 +87,7 @@ where
 
 #[test]
 fn gemm_naive_is_correct() {
-    test_mtx_mul(super::super::gemm_naive);
+    test_mtx_mul(super::super::super::gemm_naive);
 }
 
 // TODO: write test cases for non-square matrices in general (with size multiples of 32 where necessary)

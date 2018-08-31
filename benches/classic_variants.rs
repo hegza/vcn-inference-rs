@@ -12,9 +12,8 @@ extern crate rusty_cnn;
 mod shared;
 
 use criterion::{black_box, Bencher, Benchmark, Criterion};
-use rusty_cnn::classic::*;
 use rusty_cnn::geometry::*;
-use rusty_cnn::{read_image_with_padding_from_bin_in_channels, Predict};
+use rusty_cnn::{classic, read_image_with_padding_from_bin_in_channels, sparse, Predict};
 use shared::CLASSIC_BASELINE;
 
 // Sample size of 100 puts the max-min of the benches at around 10 us at worst.
@@ -22,7 +21,7 @@ const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.06;
 
 pub fn bench_classic() -> (&'static str, impl FnMut(&mut Bencher)) {
-    let net = ClNetwork::<f32>::new(Weights::default());
+    let net = classic::ClNetwork::<f32>::new(classic::Weights::default());
     let input_data = black_box(read_image_with_padding_from_bin_in_channels(
         &format!("{}/in.bin", CLASSIC_BASELINE),
         net.input_shape(),
@@ -34,7 +33,7 @@ pub fn bench_classic() -> (&'static str, impl FnMut(&mut Bencher)) {
 }
 
 pub fn bench_sparse() -> (&'static str, impl FnMut(&mut Bencher)) {
-    let net = ClNetwork::<f32>::new(Weights::sparse_3());
+    let net = sparse::ClNetwork::<f32>::new(sparse::Weights::default());
 
     let input_shape = ImageGeometry::new(96, 3);
     let filter_shape = PaddedSquare::from_side(5);

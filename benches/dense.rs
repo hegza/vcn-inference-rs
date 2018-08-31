@@ -26,12 +26,14 @@ fn bench_dense_layer_variants(c: &mut Criterion) {
     let (cl_id, cl) = bench_dense3_cl_cpu();
     let (matrixmultiply_id, matrixmultiply) = bench_dense_3_bluss_matrixmultiply();
     let (cnugteren_10_id, cnugteren_10) = bench_dense_3_cnugteren_10();
+    let (sparse_id, sparse) = bench_sparse3();
 
     let bench = Benchmark::new(cl_id, cl)
         .with_function(matrixmultiply_id, matrixmultiply)
-        .with_function(cnugteren_10_id, cnugteren_10);
+        .with_function(cnugteren_10_id, cnugteren_10)
+        .with_function(sparse_id, sparse);
 
-    c.bench("dense-3-f32", bench.plot_config(plot_config));
+    c.bench("layer-3-f32", bench.plot_config(plot_config));
 }
 
 criterion_group!{

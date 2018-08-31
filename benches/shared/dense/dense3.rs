@@ -21,6 +21,21 @@ pub fn bench_dense3_cl_cpu() -> (&'static str, impl FnMut(&mut Bencher)) {
     })
 }
 
+pub fn bench_sparse3() -> (&'static str, impl FnMut(&mut Bencher)) {
+    let sparse3 = sparse::Layers::<f32>::new(sparse::Weights::default()).sparse3;
+
+    let input = black_box(f32::read_lines_from_file(&format!(
+        "{}/fm2.f",
+        CLASSIC_BASELINE
+    )));
+
+    // TODO: verify correctness
+
+    ("sparse 3 - sprs (CPU)", move |b: &mut Bencher| {
+        b.iter(|| sparse3.compute(&input))
+    })
+}
+
 pub fn bench_dense_3_bluss_matrixmultiply() -> (&'static str, impl FnMut(&mut Bencher)) {
     let dense3 = &CLASSIC_LAYERS.dense3;
     let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));

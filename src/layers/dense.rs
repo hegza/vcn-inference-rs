@@ -69,7 +69,7 @@ impl<T> WeightedLayer<T> for DenseLayer<T>
 where
     T: Coeff,
 {
-    fn weights(&self) -> &Vec<T> {
+    fn weights(&self) -> &[T] {
         &self.weights
     }
 }

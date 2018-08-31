@@ -38,7 +38,7 @@ pub trait Layer {
 }
 
 pub trait WeightedLayer<T>: Layer {
-    fn weights(&self) -> &Vec<T>;
+    fn weights(&self) -> &[T];
     fn num_weights(&self) -> usize {
         self.weights().len()
     }

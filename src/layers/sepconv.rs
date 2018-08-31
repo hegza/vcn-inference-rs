@@ -206,7 +206,7 @@ impl<T> WeightedLayer<T> for SepconvLayer<T>
 where
     T: Coeff,
 {
-    fn weights(&self) -> &Vec<T> {
+    fn weights(&self) -> &[T] {
         &self.weights
     }
 }
@@ -215,7 +215,7 @@ impl<T> WeightedLayer<T> for HConvLayer<T>
 where
     T: Coeff,
 {
-    fn weights(&self) -> &Vec<T> {
+    fn weights(&self) -> &[T] {
         self.0.weights()
     }
 }
@@ -224,7 +224,7 @@ impl<T> WeightedLayer<T> for VConvLayer<T>
 where
     T: Coeff,
 {
-    fn weights(&self) -> &Vec<T> {
+    fn weights(&self) -> &[T] {
         self.0.weights()
     }
 }

@@ -2,6 +2,7 @@ use super::*;
 
 pub mod classic;
 pub mod sepconv;
+pub mod sparse;
 
 /// A trait for networks that are able to create a prediction distribution
 pub trait Predict<T> {

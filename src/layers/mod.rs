@@ -1,27 +1,30 @@
+mod cl;
 mod conv;
 mod dense;
-mod sepconv;
-mod maxpool;
-mod cl;
 mod host;
+mod maxpool;
+mod sepconv;
+mod sparse;
 
+pub use self::cl::*;
 pub use self::conv::*;
 pub use self::dense::*;
-pub use self::sepconv::*;
-pub use self::maxpool::*;
-pub use self::cl::*;
 pub use self::host::*;
-use geometry::*;
-use std::ops::Deref;
-use ocl::*;
-use util::*;
-use num_traits::{Float, NumAssign, PrimInt};
-use math::GenericOps;
+pub use self::maxpool::*;
+pub use self::sepconv::*;
+pub use self::sparse::*;
 use cl_util;
 use cl_util::ClVecTypeName;
 use flags::DeviceType;
+use geometry::*;
+use math::GenericOps;
+use num_traits::{Float, NumAssign, PrimInt};
+use ocl::*;
+use std::fmt::Display;
+use std::ops::Deref;
+use util::*;
 
-pub trait Coeff: NumAssign + GenericOps + OclPrm + ClVecTypeName {}
+pub trait Coeff: NumAssign + GenericOps + OclPrm + ClVecTypeName + Display {}
 pub trait CoeffFloat: Coeff + Float {}
 
 /// Describes a layer of a convolutive neural network.

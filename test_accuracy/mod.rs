@@ -20,6 +20,7 @@ use util::*;
 const INPUT_IMG_DIR: &str = "input/images";
 
 const TEST_CLASSIC: bool = true;
+const TEST_SPARSE: bool = true;
 const TEST_SEPCONV_F32: bool = true;
 //const TEST_SEPCONV_I8: bool = true;
 const CLASSIC_SINGLE_SHOT: bool = false;
@@ -33,54 +34,61 @@ pub fn main() {
     // Figure out the existing classes for the network based on directory names
     let class_dir_names = list_dirs(INPUT_IMG_DIR).unwrap();
 
-    if TEST_CLASSIC {
-        debug!("Loading input images for original network...");
+    debug!("Loading input images for classic networks...");
 
-        let load_fun = |file: &String| -> Vec<f32> { load_jpeg_as_f32_with_padding(file) };
-        let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
-        if CLASSIC_SINGLE_SHOT {
-            test_data = test_data
-                .into_iter()
-                .take(1)
-                .collect::<Vec<(Vec<f32>, Class)>>();
-        }
-
-        // Initialize OpenCL and the network
-        let net = classic::ClNetwork::<f32>::new(classic::Weights::default());
-
-        let timer = Instant::now();
-        // Make classifications and measure accuracy using the original network
-        let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
-        let duration = timer.elapsed();
-        let accuracy = correct_inputs as f32 / total_inputs as f32;
-        println!("classic network ({} images)", total_inputs);
-        println!("\ttime: {:?}", duration);
-        println!("\taccu: {} ({}/{})", accuracy, correct_inputs, total_inputs);
+    let load_fun = |file: &String| -> Vec<f32> { load_jpeg_as_f32_with_padding(file) };
+    let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
+    if CLASSIC_SINGLE_SHOT {
+        test_data = test_data
+            .into_iter()
+            .take(1)
+            .collect::<Vec<(Vec<f32>, Class)>>();
     }
 
     if TEST_CLASSIC {
-        debug!("Loading input images for original network...");
-
-        let load_fun = |file: &String| -> Vec<f32> { load_jpeg_as_f32_with_padding(file) };
-        let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
-        if CLASSIC_SINGLE_SHOT {
-            test_data = test_data
-                .into_iter()
-                .take(1)
-                .collect::<Vec<(Vec<f32>, Class)>>();
-        }
+        let timer = Instant::now();
 
         // Initialize OpenCL and the network
-        let net = classic::ClNetwork::<f32>::new(classic::Weights::sparse_3());
+        let net = classic::ClNetwork::<f32>::new(classic::Weights::default());
+        let init_duration = timer.elapsed();
 
-        let timer = Instant::now();
         // Make classifications and measure accuracy using the original network
         let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
-        let duration = timer.elapsed();
+        let total_duration = timer.elapsed();
         let accuracy = correct_inputs as f32 / total_inputs as f32;
-        println!("classic-sparse network ({} images)", total_inputs);
-        println!("\ttime: {:?}", duration);
-        println!("\taccu: {} ({}/{})", accuracy, correct_inputs, total_inputs);
+        println!("classic network\t\t\t({} images)", total_inputs);
+        println!(
+            "\ttime: {:?}\t(+ {:?} init)",
+            total_duration - init_duration,
+            init_duration,
+        );
+        println!(
+            "\taccu: {:.5}\t\t({}/{})",
+            accuracy, correct_inputs, total_inputs
+        );
+    }
+
+    if TEST_SPARSE {
+        let timer = Instant::now();
+
+        // Initialize OpenCL and the network
+        let net = sparse::ClNetwork::<f32>::new(sparse::Weights::default());
+        let init_duration = timer.elapsed();
+
+        // Make classifications and measure accuracy using the original network
+        let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
+        let total_duration = timer.elapsed();
+        let accuracy = correct_inputs as f32 / total_inputs as f32;
+        println!("sparse network\t\t\t({} images)", total_inputs);
+        println!(
+            "\ttime: {:?}\t(+ {:?} init)",
+            total_duration - init_duration,
+            init_duration,
+        );
+        println!(
+            "\taccu: {:.5}\t\t({}/{})",
+            accuracy, correct_inputs, total_inputs
+        );
     }
 
     debug!("Loading input images for sepconv networks...");
@@ -98,17 +106,26 @@ pub fn main() {
             false => test_data.iter().cloned().collect(),
         };
 
+        let timer = Instant::now();
+
         // Initialize OpenCL and the sep-conv network
         let net = sepconv::ClNetwork::<f32>::new(sepconv::Weights::default());
+        let init_duration = timer.elapsed();
 
-        let timer = Instant::now();
         // Make classifications and measure accuracy using the sep-conv network
         let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
-        let duration = timer.elapsed();
+        let total_duration = timer.elapsed();
         let accuracy = correct_inputs as f32 / total_inputs as f32;
-        println!("sepconv-f32 network ({} images)", total_inputs);
-        println!("\ttime: {:?}", duration);
-        println!("\taccu: {} ({}/{})", accuracy, correct_inputs, total_inputs);
+        println!("sepconv-f32 network\t\t({} images)", total_inputs);
+        println!(
+            "\ttime: {:?}\t(+ {:?} init)",
+            total_duration - init_duration,
+            init_duration,
+        );
+        println!(
+            "\taccu: {:.5}\t\t({}/{})",
+            accuracy, correct_inputs, total_inputs
+        );
     }
 
     /*

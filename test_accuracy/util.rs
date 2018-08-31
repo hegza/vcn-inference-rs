@@ -1,11 +1,11 @@
 #![allow(dead_code)]
+use super::class::Class;
 use image;
 use image::{GenericImage, Pixel};
-use std::io;
-use std::fs::*;
-use std::path::*;
 use rusty_cnn::*;
-use super::class::Class;
+use std::fs::*;
+use std::io;
+use std::path::*;
 
 pub fn load_jpeg_as_f32<P>(file: P) -> Vec<f32>
 where
@@ -109,12 +109,14 @@ where
                 .iter()
                 .map(|file_name| {
                     (
-                        load_fun(&dir.as_ref()
-                            .join(class_dir)
-                            .join(file_name)
-                            .to_str()
-                            .unwrap()
-                            .to_owned()),
+                        load_fun(
+                            &dir.as_ref()
+                                .join(class_dir)
+                                .join(file_name)
+                                .to_str()
+                                .unwrap()
+                                .to_owned(),
+                        ),
                         class_dir.parse::<Class>().unwrap(),
                     )
                 })
@@ -155,3 +157,20 @@ where
     let converted = cb(&src);
     D::write_csv(destination, &converted);
 }
+
+/*
+use ndarray;
+pub fn permute_axes<T, A>(vec: Vec<T>, from_shape: ndarray::Shape, to_shape: A) -> Vec<T>
+where
+    T: ndarray::IntoDimension<Dim = D>,
+{
+    // Load sparse 3 weights in NCHW
+    let sparse3_nchw = f32::read_csv("input/weights/sparse-classic-95-96/fc3-f32-nchw.csv");
+
+    // Create and manipulate representation from_shape to_shape using ndarray
+    let mut w = ndarray::Array::from_shape_vec(from_shape, vec).unwrap();
+    w = w.permuted_axes(to_shape);
+
+    w.iter().cloned().collect::<Vec<T>>()
+}
+*/

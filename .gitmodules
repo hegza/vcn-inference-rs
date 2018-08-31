@@ -1,0 +1,4 @@
+[submodule "sprs"]
+	path = sprs
+	url = https://github.com/hegza/sprs
+	branch = master

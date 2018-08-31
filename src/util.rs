@@ -310,7 +310,7 @@ pub fn duration_between(start: Instant, end: Instant) -> f64 {
     duration.as_secs() as f64 + f64::from(duration.subsec_nanos()) * 0.000_000_001f64
 }
 
-const VEC_DISPLAY_ELEMENTS_MAX: usize = 6;
+const VEC_DISPLAY_ELEMENTS_MAX: usize = 8;
 
 // Wrap is_within_margin within an assert!()
 pub fn verify(output: &[f32], correct: &[f32], margin: f32) {

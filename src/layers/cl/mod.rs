@@ -1,17 +1,17 @@
 pub mod builders;
-pub mod weighted_layer;
 pub mod unweighted_layer;
+pub mod weighted_layer;
 
-pub use self::dense::*;
-pub use self::conv::*;
 pub use self::builders::*;
-pub use self::weighted_layer::*;
+pub use self::conv::*;
+pub use self::dense::*;
 pub use self::unweighted_layer::*;
+pub use self::weighted_layer::*;
 use super::*;
-use ocl::Result as OclResult;
-use ocl::*;
 use cl_util as cl;
 use ocl::builders::KernelBuilder;
+use ocl::Result as OclResult;
+use ocl::*;
 
 pub enum LocalWorkSizePolicy {
     Infer { dev_max_wgs: usize },
@@ -90,65 +90,25 @@ where
         .collect()
 }
 
-impl<T> ClWeightedLayer<T> for DenseLayer<T>
-where
-    T: Coeff,
-{
-}
+impl<T> ClWeightedLayer<T> for DenseLayer<T> where T: Coeff {}
 
-impl<T> ClLayer<T> for DenseLayer<T>
-where
-    T: Coeff,
-{
-}
+impl<T> ClLayer<T> for DenseLayer<T> where T: Coeff {}
 
-impl<T> ClWeightedLayer<T> for ConvLayer<T>
-where
-    T: Coeff,
-{
-}
+impl<T> ClWeightedLayer<T> for ConvLayer<T> where T: Coeff {}
 
-impl<T> ClLayer<T> for ConvLayer<T>
-where
-    T: Coeff,
-{
-}
+impl<T> ClLayer<T> for ConvLayer<T> where T: Coeff {}
 
-impl<T> ClWeightedLayer<T> for HConvLayer<T>
-where
-    T: Coeff,
-{
-}
+impl<T> ClWeightedLayer<T> for HConvLayer<T> where T: Coeff {}
 
-impl<T> ClLayer<T> for HConvLayer<T>
-where
-    T: Coeff,
-{
-}
+impl<T> ClLayer<T> for HConvLayer<T> where T: Coeff {}
 
-impl<T> ClWeightedLayer<T> for VConvLayer<T>
-where
-    T: Coeff,
-{
-}
+impl<T> ClWeightedLayer<T> for VConvLayer<T> where T: Coeff {}
 
-impl<T> ClLayer<T> for VConvLayer<T>
-where
-    T: Coeff,
-{
-}
+impl<T> ClLayer<T> for VConvLayer<T> where T: Coeff {}
 
-impl<T> ClLayer<T> for MaxpoolLayer
-where
-    T: Coeff,
-{
-}
+impl<T> ClLayer<T> for MaxpoolLayer where T: Coeff {}
 
-impl<T> ClUnweightedLayer<T> for MaxpoolLayer
-where
-    T: Coeff,
-{
-}
+impl<T> ClUnweightedLayer<T> for MaxpoolLayer where T: Coeff {}
 
 // A standalone layer
 pub struct LayerImpl<T>

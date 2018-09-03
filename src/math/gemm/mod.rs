@@ -107,7 +107,7 @@ pub trait OclGemm<SuperKernel> {
         device: DeviceType,
     ) -> SuperKernel;
     fn set_buffers_from_slices(&self, a: &[f32], b: &[f32]);
-    // TODO: this should probably return some kind of a future or such to allow checking ready state; see ocl
+    // FIXME: this should probably return some kind of a future or such to allow checking ready state; see ocl
     fn calculate(&self);
     fn queue(&self) -> &Queue;
     fn calculate_wait(&self) {

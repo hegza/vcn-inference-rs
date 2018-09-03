@@ -138,7 +138,6 @@ pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<
 
     // Read the input into the input_buf as T
     for (idx, f) in data.into_iter().enumerate() {
-        // TODO: the mapping could be done in float4's
         mem_map[idx] = *f;
     }
 

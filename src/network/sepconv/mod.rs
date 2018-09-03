@@ -18,8 +18,9 @@ use std::io::prelude::*;
 use util::*;
 
 pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
-    // TODO: revisit the names here
     side: 96,
+    // TODO: these 5 are an implementation detail and should not be exposed here
+    // These should probably be inferred from the OpenCL API info
     vconv1_blockdim_x: 32,
     vconv1_blockdim_y: 8,
     hconv1_blockdim_y: 4,
@@ -27,6 +28,7 @@ pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     hconv2_blockdim_y: 4,
     kernel_len: 5,
     num_channels: 3,
+    // TODO: also implementation detail; should not be exposed
     conv_kernel_split: 7,
     num_conv_fms: 32,
     fully_connected_const: 100,

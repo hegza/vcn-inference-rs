@@ -32,7 +32,6 @@ where
 
         // TODO: refactor by making the layers use a tensor-based API
 
-        // TODO: weights are read as T, independent of what's actually stored
         let in_shape = ImageGeometry::new(INPUT_SIDE, INPUT_CHANNELS);
         let vconv1 = VConvLayer::new(KERNEL_LEN, &in_shape, CONV_KERNEL_SPLIT, weights.0);
         let hconv1 = HConvLayer::new(

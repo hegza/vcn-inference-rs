@@ -44,7 +44,6 @@ where
         }
         builder.build().unwrap()
     }
-    // TODO: generalized version over N-layers
     /// Passing None as device_type uses default device (usually GPU if available).
     fn impl_standalone(
         &self,

@@ -243,8 +243,8 @@ fn split_in_three_mut<T>(
     }
 }
 
-/// `data` is a vector of Ts that's organized into channels.
-pub fn with_edge_padding_by_channel<T>(data: &[T], shape: &ImageGeometry, padding: usize) -> Vec<T>
+/// `data` is a vector organized into chunks of channels
+pub fn add_channelwise_padding2d<T>(data: &[T], shape: &ImageGeometry, padding: usize) -> Vec<T>
 where
     T: Zero + ReadBinFromFile + Copy,
 {
@@ -302,7 +302,7 @@ where
     let image_shape = padded_image_shape.unpadded();
     let padding = padded_image_shape.padding();
 
-    with_edge_padding_by_channel(&image, &image_shape, padding)
+    add_channelwise_padding2d(&image, &image_shape, padding)
 }
 
 pub fn duration_between(start: Instant, end: Instant) -> f64 {
@@ -365,4 +365,79 @@ where
         }
     }
     true
+}
+
+use image;
+use image::{GenericImage, Pixel};
+
+pub fn load_jpeg_as_f32<P>(file: P) -> Vec<f32>
+where
+    P: AsRef<Path>,
+{
+    let img = image::open(file).unwrap();
+    let num_pixels = (img.width() * img.height()) as usize;
+    const UMAX: f32 = 255f32;
+    const UMIN: f32 = 0f32;
+    let mut red_channel = Vec::with_capacity(num_pixels);
+    let mut blue_channel = Vec::with_capacity(num_pixels);
+    let mut green_channel = Vec::with_capacity(num_pixels);
+    for pixel in img.pixels() {
+        let rgb = pixel.2.to_rgb();
+        let r = f32::from(rgb[0]) / UMAX + UMIN;
+        let g = f32::from(rgb[1]) / UMAX + UMIN;
+        let b = f32::from(rgb[2]) / UMAX + UMIN;
+        red_channel.push(r);
+        blue_channel.push(g);
+        green_channel.push(b);
+    }
+    red_channel
+        .into_iter()
+        .chain(blue_channel)
+        .chain(green_channel)
+        .collect::<Vec<f32>>()
+}
+
+pub fn load_jpeg_as_u8_lossless<P>(file: P) -> Vec<u8>
+where
+    P: AsRef<Path>,
+{
+    let img = image::open(file).unwrap();
+    let num_pixels = (img.width() * img.height()) as usize;
+    let mut red_channel = Vec::with_capacity(num_pixels);
+    let mut blue_channel = Vec::with_capacity(num_pixels);
+    let mut green_channel = Vec::with_capacity(num_pixels);
+    for pixel in img.pixels() {
+        let rgb = pixel.2.to_rgb();
+        let (r, g, b) = (rgb[0], rgb[1], rgb[2]);
+        red_channel.push(r);
+        blue_channel.push(g);
+        green_channel.push(b);
+    }
+    red_channel
+        .into_iter()
+        .chain(blue_channel)
+        .chain(green_channel)
+        .collect::<Vec<u8>>()
+}
+
+use geometry::PaddedSquare;
+use ndarray::IntoDimension;
+pub fn load_jpeg_as_f32_with_filter_padding<S>(
+    file: &str,
+    image_shape: S,
+    filter_side: usize,
+) -> Vec<f32>
+where
+    S: IntoDimension,
+{
+    let image_shape = image_shape.into_dimension();
+
+    // HACK: ImageGeometry supports square images only
+    let input_shape = ImageGeometry::new(image_shape[0], image_shape[2]);
+    let conv1_filter_shape = PaddedSquare::from_side(filter_side);
+    let padded_image_shape = input_shape.with_filter_padding(&conv1_filter_shape);
+    let padding = padded_image_shape.padding();
+
+    // Load input as a vector of floats in the network format
+    add_channelwise_padding2d(&load_jpeg_as_f32(file), &input_shape, padding)
 }

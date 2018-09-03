@@ -1,61 +1,9 @@
 #![allow(dead_code)]
 use super::class::Class;
-use image;
-use image::{GenericImage, Pixel};
 use rusty_cnn::*;
 use std::fs::*;
 use std::io;
 use std::path::*;
-
-pub fn load_jpeg_as_f32<P>(file: P) -> Vec<f32>
-where
-    P: AsRef<Path>,
-{
-    let img = image::open(file).unwrap();
-    let num_pixels = (img.width() * img.height()) as usize;
-    const UMAX: f32 = 255f32;
-    const UMIN: f32 = 0f32;
-    let mut red_channel = Vec::with_capacity(num_pixels);
-    let mut blue_channel = Vec::with_capacity(num_pixels);
-    let mut green_channel = Vec::with_capacity(num_pixels);
-    for pixel in img.pixels() {
-        let rgb = pixel.2.to_rgb();
-        let r = f32::from(rgb[0]) / UMAX + UMIN;
-        let g = f32::from(rgb[1]) / UMAX + UMIN;
-        let b = f32::from(rgb[2]) / UMAX + UMIN;
-        red_channel.push(r);
-        blue_channel.push(g);
-        green_channel.push(b);
-    }
-    red_channel
-        .into_iter()
-        .chain(blue_channel)
-        .chain(green_channel)
-        .collect::<Vec<f32>>()
-}
-
-pub fn load_jpeg_as_u8_lossless<P>(file: P) -> Vec<u8>
-where
-    P: AsRef<Path>,
-{
-    let img = image::open(file).unwrap();
-    let num_pixels = (img.width() * img.height()) as usize;
-    let mut red_channel = Vec::with_capacity(num_pixels);
-    let mut blue_channel = Vec::with_capacity(num_pixels);
-    let mut green_channel = Vec::with_capacity(num_pixels);
-    for pixel in img.pixels() {
-        let rgb = pixel.2.to_rgb();
-        let (r, g, b) = (rgb[0], rgb[1], rgb[2]);
-        red_channel.push(r);
-        blue_channel.push(g);
-        green_channel.push(b);
-    }
-    red_channel
-        .into_iter()
-        .chain(blue_channel)
-        .chain(green_channel)
-        .collect::<Vec<u8>>()
-}
 
 pub fn list_dirs<P>(dir: P) -> io::Result<Vec<String>>
 where

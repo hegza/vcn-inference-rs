@@ -12,7 +12,6 @@ mod class;
 mod util;
 
 use class::Class;
-use geometry::*;
 use rusty_cnn::*;
 use std::time::Instant;
 use util::*;
@@ -36,7 +35,8 @@ pub fn main() {
 
     debug!("Loading input images for classic networks...");
 
-    let load_fun = |file: &String| -> Vec<f32> { load_jpeg_as_f32_with_padding(file) };
+    let load_fun =
+        |file: &String| -> Vec<f32> { load_jpeg_as_f32_with_filter_padding(file, (96, 96, 3), 5) };
     let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
     if CLASSIC_SINGLE_SHOT {
         test_data = test_data
@@ -215,18 +215,4 @@ fn idx_to_class(idx: usize) -> Class {
         3 => Van,
         _ => panic!(),
     }
-}
-
-fn load_jpeg_as_f32_with_padding(file: &str) -> Vec<f32> {
-    const IMAGE_SIDE: usize = 96;
-    const IMAGE_CHANNELS: usize = 3;
-    const FILTER_SIDE: usize = 5;
-
-    let input_shape = ImageGeometry::new(IMAGE_SIDE, IMAGE_CHANNELS);
-    let conv1_filter_shape = PaddedSquare::from_side(FILTER_SIDE);
-    let padded_image_shape = input_shape.with_filter_padding(&conv1_filter_shape);
-    let padding = padded_image_shape.padding();
-
-    // Load input as a vector of floats in the network format
-    with_edge_padding_by_channel(&load_jpeg_as_f32(file), &input_shape, padding)
 }

@@ -1,3 +1,5 @@
+// TODO: most of the stuff in this file should be deprecated in favor of a tensor API
+
 /// A descriptor for the filter-geometry
 #[derive(Copy, Clone, Debug)]
 pub struct PaddedSquare {

@@ -9,6 +9,7 @@ extern crate lazy_static;
 extern crate log;
 #[macro_use(array, s)]
 extern crate ndarray;
+extern crate image;
 extern crate num_traits;
 extern crate ocl;
 extern crate rand;

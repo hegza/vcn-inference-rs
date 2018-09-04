@@ -36,7 +36,7 @@ pub fn main() {
     debug!("Loading input images for classic networks...");
 
     let load_fun =
-        |file: &String| -> Vec<f32> { load_jpeg_as_f32_with_filter_padding(file, (96, 96, 3), 5) };
+        |file: &String| -> Vec<f32> { load_jpeg_with_filter_padding(file, (96, 96, 3), 5) };
     let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
     if CLASSIC_SINGLE_SHOT {
         test_data = test_data
@@ -93,7 +93,7 @@ pub fn main() {
 
     debug!("Loading input images for sepconv networks...");
 
-    let load_fun = |file: &String| -> Vec<f32> { load_jpeg_as_f32(file) };
+    let load_fun = |file: &String| -> Vec<f32> { load_jpeg(file) };
     let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
 
     if TEST_SEPCONV_F32 {

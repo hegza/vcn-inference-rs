@@ -56,20 +56,6 @@ impl SparseLayer<f32> {
             sparse.to_csc()
         };
 
-        // Verify that weights are exactly the same
-        for row in 0..input_dim {
-            for col in 0..output_dim {
-                match weights.get(row, col) {
-                    Some(v) => {
-                        debug_assert_eq!(v, &dense_weights[row * output_dim + col]);
-                    }
-                    None => {
-                        debug_assert!(dense_weights[row * output_dim + col] < FLOAT_ZERO_THRESHOLD);
-                    }
-                }
-            }
-        }
-
         let layer = SparseLayer {
             weights,
             num_in: input_dim,

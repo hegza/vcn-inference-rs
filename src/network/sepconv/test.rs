@@ -1,18 +1,236 @@
-#[cfg(test)]
-mod test;
+use super::*;
+use cl_util as cl;
+use network::Predict;
+use rand;
+use rand::{Rng, ThreadRng};
+use tests::*;
 
-fn run_sepconv_f32() -> Vec<f32> {
-    let net = sepconv::ClNetwork::<f32>::new(sepconv::Weights::default());
-    let input_data = f32::read_bin_from_file(&format!("{}/in.bin", SEPCONV_BASELINE));
-    net.predict(&input_data)
+lazy_static! {
+    static ref LAYERS: Layers<f32> = { Layers::<f32>::new(Weights::default()) };
+    // HACK: Reduce dimensions of overshot layers
+    static ref FIXED_SEPCONV_HYPER_PARAMS: SepconvHyperParams = {
+        let mut p = SEPCONV_HYPER_PARAMS.clone();
+        ClNetwork::<f32>::fix_params_for_default_gpu(&mut p);
+        p
+    };
+    static ref ADDT_CMPLR_OPTS: Vec<String> =
+        ClNetwork::<f32>::compile_flags(&FIXED_SEPCONV_HYPER_PARAMS, &LAYERS);
+}
+pub const SEPCONV_BASELINE_F32: &'static str = "input/baseline/sepconv-f32-xcorr/f32";
+
+#[test]
+fn v1_returns_baseline() {
+    // Create the representation of the 1st convolutional layer with weights from a file
+    let layer = &LAYERS.vconv1;
+    let input_data = f32::read_lines_from_file(&format!("{}/in.f", SEPCONV_BASELINE_F32));
+
+    let output = run_single_layer(
+        "col_conv",
+        layer,
+        &input_data,
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            FIXED_SEPCONV_HYPER_PARAMS.vconv1_blockdim_x,
+            FIXED_SEPCONV_HYPER_PARAMS.vconv1_blockdim_y,
+        )),
+    );
+    let correct = f32::read_lines_from_file(&format!("{}/vcr1-out.f", SEPCONV_BASELINE_F32));
+
+    verify(&output, &correct, RESULT_MARGIN);
 }
 
+#[test]
+fn h1_returns_baseline() {
+    // Create the representation of the 1st convolutional layer with weights from a file
+    let layer = &LAYERS.hconv1;
+    let input_data = f32::read_lines_from_file(&format!("{}/vcr1-out.f", SEPCONV_BASELINE_F32));
+
+    let (queue, program, _context) = cl_util::init::<f32>(
+        &["src/cl/sepconv.cl"],
+        &ADDT_CMPLR_OPTS
+            .iter()
+            .map(AsRef::as_ref)
+            .collect::<Vec<&str>>(),
+        None,
+    );
+
+    // Create buffers
+    let wgts_buf = layer.create_wgts_buf(&queue);
+    let (in_buf, out_buf) = layer.create_io_bufs(
+        flags::MEM_READ_ONLY | flags::MEM_ALLOC_HOST_PTR,
+        flags::MEM_WRITE_ONLY | flags::MEM_ALLOC_HOST_PTR,
+        &queue,
+    );
+
+    let kernel = layer.create_kernel(
+        "row_conv",
+        &in_buf,
+        &out_buf,
+        &wgts_buf,
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            FIXED_SEPCONV_HYPER_PARAMS.side,
+            FIXED_SEPCONV_HYPER_PARAMS.hconv1_blockdim_y,
+        )),
+        &program,
+        &queue,
+    );
+
+    // Enqueue kernel and wait for it to end, return the result
+    let output = unsafe {
+        cl_util::map_to_buf(&in_buf, &input_data).unwrap();
+        kernel.cmd().queue(&queue).enq().unwrap();
+        cl_util::read_buf(&out_buf).unwrap()
+    };
+    queue.finish().unwrap();
+    let correct = f32::read_lines_from_file(&format!("{}/hcr1-out.f", SEPCONV_BASELINE_F32));
+
+    verify(&output, &correct, COARSE_RESULT_MARGIN);
+}
+
+#[test]
+fn mxp1_returns_baseline() {
+    // Create the representation of the 1st convolutional layer with weights from a file
+    let layer = &LAYERS.mxp1;
+    let input_data = f32::read_lines_from_file(&format!("{}/hcr1-out.f", SEPCONV_BASELINE_F32));
+
+    let output = run_single_layer_unweighted(
+        "max_pool_1",
+        layer,
+        &input_data,
+        // HACK: dev_max_wgs
+        LocalWorkSizePolicy::Infer { dev_max_wgs: 256 },
+    );
+    let correct = f32::read_lines_from_file(&format!("{}/mxp1-out.f", SEPCONV_BASELINE_F32));
+
+    verify(&output, &correct, RESULT_MARGIN);
+}
+
+#[test]
+fn v2_returns_baseline() {
+    // Create the representation of the 1st convolutional layer with weights from a file
+    let layer = &LAYERS.vconv2;
+    let input_data = f32::read_lines_from_file(&format!("{}/mxp1-out.f", SEPCONV_BASELINE_F32));
+
+    let output = run_single_layer(
+        "col_conv_2",
+        layer,
+        &input_data,
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            FIXED_SEPCONV_HYPER_PARAMS.vconv2_blockdim_x,
+            FIXED_SEPCONV_HYPER_PARAMS.vconv1_blockdim_y,
+        )),
+    );
+    let correct = f32::read_lines_from_file(&format!("{}/vcr2-out.f", SEPCONV_BASELINE_F32));
+
+    verify(&output, &correct, RESULT_MARGIN);
+}
+
+#[test]
+fn h2_returns_baseline() {
+    // Create the representation of the 1st convolutional layer with weights from a file
+    let layer = &LAYERS.hconv2;
+    let input_data = f32::read_lines_from_file(&format!("{}/vcr2-out.f", SEPCONV_BASELINE_F32));
+
+    let output = run_single_layer(
+        "row_conv_2",
+        layer,
+        &input_data,
+        LocalWorkSizePolicy::Specify(SpatialDims::Two(
+            FIXED_SEPCONV_HYPER_PARAMS.side / 2,
+            FIXED_SEPCONV_HYPER_PARAMS.hconv2_blockdim_y,
+        )),
+    );
+    let correct = f32::read_lines_from_file(&format!("{}/hcr2-out.f", SEPCONV_BASELINE_F32));
+
+    verify(&output, &correct, RESULT_MARGIN);
+}
+
+#[test]
+fn mxp2_returns_baseline() {
+    // Create the representation of the 1st convolutional layer with weights from a file
+    let layer = &LAYERS.mxp2;
+    let input_data = f32::read_lines_from_file(&format!("{}/hcr2-out.f", SEPCONV_BASELINE_F32));
+
+    let output = run_single_layer_unweighted(
+        "max_pool_2",
+        layer,
+        &input_data,
+        LocalWorkSizePolicy::Infer { dev_max_wgs: 256 },
+    );
+    let correct = f32::read_lines_from_file(&format!("{}/mxp2-out.f", SEPCONV_BASELINE_F32));
+
+    verify(&output, &correct, RESULT_MARGIN);
+}
+
+// HACK: this does not measure the correct thing
+#[test]
+fn l3_returns_baseline() {
+    // Create the representation of the fully-connected layer
+    let layer = &LAYERS.dense3;
+    let input_data = f32::read_lines_from_file(&format!("{}/fc3-flat-in.f", SEPCONV_BASELINE_F32));
+
+    let flags = ClNetwork::<f32>::compile_flags(&FIXED_SEPCONV_HYPER_PARAMS, &LAYERS);
+    let (_queue_a, queue_b, device_a, device_b, program, _context) =
+        init_cl::<f32>(&flags.iter().map(AsRef::as_ref).collect::<Vec<&str>>());
+
+    let (dense3_in_buf, dense3_out_buf) =
+        layer.create_io_bufs(flags::MEM_READ_ONLY, flags::MEM_WRITE_ONLY, &queue_b);
+    let dense3_wgts_buf = layer.create_wgts_buf(&queue_b);
+
+    // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
+    let kernel = layer.create_kernel(
+        "mtx_mul",
+        &dense3_in_buf,
+        &dense3_out_buf,
+        &dense3_wgts_buf,
+        LocalWorkSizePolicy::UseDefault,
+        &program,
+        &queue_b,
+    );
+
+    let output = unsafe {
+        cl_util::map_to_buf(&dense3_in_buf, &input_data).unwrap();
+        kernel.cmd().queue(&queue_b).enq().unwrap();
+        let output = cl_util::read_buf(&dense3_out_buf).unwrap();
+        queue_b.finish().unwrap();
+        output
+    };
+
+    let correct = f32::read_lines_from_file(&format!("{}/fc3-out.f", SEPCONV_BASELINE_F32));
+
+    verify(&output, &correct, RESULT_MARGIN);
+}
+
+#[test]
+fn l4_returns_baseline() {
+    // Create the representation of the fully-connected layer
+    let layer = &LAYERS.dense4;
+    let input_data = f32::read_lines_from_file(&format!("{}/fc3-out.f", SEPCONV_BASELINE_F32));
+
+    let output = relu(layer.compute(&input_data));
+    let correct = f32::read_lines_from_file(&format!("{}/fc4-out.f", SEPCONV_BASELINE_F32));
+
+    verify(&output, &correct, RESULT_MARGIN);
+}
+
+#[test]
+fn l5_returns_baseline() {
+    // Create the representation of the fully-connected layer
+    let layer = &LAYERS.dense5;
+    let input_data = f32::read_lines_from_file(&format!("{}/fc4-out.f", SEPCONV_BASELINE_F32));
+
+    let output = softmax(&layer.compute(&input_data));
+    let correct = f32::read_lines_from_file(&format!("{}/out.f", SEPCONV_BASELINE_F32));
+
+    verify(&output, &correct, RESULT_MARGIN);
+}
+
+/*
 fn run_sepconv_i8() -> Vec<f32> {
     use std::i8;
     let mut rng = rand::thread_rng();
 
     // HACK: Random-generate weights for now
-    let wgts = sepconv::Weights(
+    let wgts = Weights(
         // H/V convs
         (0..5 * 1 * 3 * 7)
             .map(|_| rng.gen_range(i8::MIN, i8::MAX))
@@ -26,7 +244,7 @@ fn run_sepconv_i8() -> Vec<f32> {
         (0..1 * 5 * 7 * 32)
             .map(|_| rng.gen_range(i8::MIN, i8::MAX))
             .collect(),
-        // Dense layers
+        // Dense LAYERS
         (0..100 * 24 * 24 * 32)
             .map(|_| rng.gen_range(i8::MIN, i8::MAX))
             .collect(),
@@ -37,29 +255,85 @@ fn run_sepconv_i8() -> Vec<f32> {
             .map(|_| rng.gen_range(i8::MIN, i8::MAX))
             .collect(),
     );
-    let net = sepconv::ClNetwork::<i8>::new(wgts);
+    let net = ClNetwork::<i8>::new(wgts);
     // TODO: load real input data
-    //let input_data = i8::read_bin_from_file("input/baseline/sepconv-f32-xcorr/in.bin");
+    //let input_data = i8::read_lines_from_file("input/baseline/sepconv-f32-xcorr/in.f");
     let input_data: Vec<i8> = (0..96 * 96 * 3)
         .map(|_| rng.gen_range(i8::MIN, i8::MAX))
         .collect();
     net.predict(&input_data)
 }
+*/
 
 #[test]
 fn sepconv_f32_predicts() {
     let output = run_sepconv_f32();
-    let correct = f32::read_lines_from_file(&format!("{}/f32/out.f", SEPCONV_BASELINE));
+    let correct = f32::read_lines_from_file(&format!("{}/out.f", SEPCONV_BASELINE_F32));
 
     verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
 
-#[test]
-fn sepconv_i8_runs() {
-    let output = run_sepconv_i8();
-    assert_eq!(output.len(), 4);
+fn run_sepconv_f32() -> Vec<f32> {
+    let net = ClNetwork::<f32>::new(Weights::default());
+    let input_data = f32::read_lines_from_file(&format!("{}/in.f", SEPCONV_BASELINE_F32));
+    net.predict(&input_data)
+}
 
-    // TODO: verify correctness
-    //let correct = i8::read_lines_from_file("X");
-    //verify(&output, &correct, COARSE_RESULT_MARGIN);
+// HACK: these run_single_LAYERS are not the best thing to use for prototyping the sepconv
+fn run_single_layer<L, T>(
+    kernel_func: &str,
+    layer: &L,
+    input: &[T],
+    lws_policy: LocalWorkSizePolicy,
+) -> Vec<T>
+where
+    L: ClWeightedLayer<T>,
+    T: Coeff,
+{
+    let cl_layer = layer.impl_standalone(
+        &[
+            "src/cl/sepconv.cl",
+            "src/cl/max_pool.cl",
+            "src/cl/mtx_mul.cl",
+        ],
+        kernel_func,
+        &ADDT_CMPLR_OPTS
+            .iter()
+            .map(AsRef::as_ref)
+            .collect::<Vec<&str>>(),
+        None,
+        lws_policy,
+    );
+
+    // Enqueue kernel and wait for it to end, return the result
+    cl_layer.run_with_input(&input)
+}
+
+fn run_single_layer_unweighted<L, T>(
+    kernel_func: &str,
+    layer: &L,
+    input: &[T],
+    lws_policy: LocalWorkSizePolicy,
+) -> Vec<T>
+where
+    L: ClUnweightedLayer<T>,
+    T: Coeff,
+{
+    let cl_layer = layer.impl_standalone(
+        &[
+            "src/cl/sepconv.cl",
+            "src/cl/max_pool.cl",
+            "src/cl/mtx_mul.cl",
+        ],
+        kernel_func,
+        &ADDT_CMPLR_OPTS
+            .iter()
+            .map(AsRef::as_ref)
+            .collect::<Vec<&str>>(),
+        None,
+        lws_policy,
+    );
+
+    // Enqueue kernel and wait for it to end, return the result
+    cl_layer.run_with_input(&input)
 }

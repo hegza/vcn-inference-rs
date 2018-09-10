@@ -1,4 +1,6 @@
 mod layers;
+#[cfg(test)]
+mod test;
 mod weights;
 
 pub use self::layers::*;
@@ -55,7 +57,8 @@ pub struct ClNetwork<T>
 where
     T: Coeff,
 {
-    queue: Queue,
+    queue_a: Queue,
+    queue_b: Queue,
     pub in_buf: Buffer<T>,
     krn_vconv1: Kernel,
     krn_hconv1: Kernel,
@@ -63,7 +66,9 @@ where
     krn_vconv2: Kernel,
     krn_hconv2: Kernel,
     krn_max_pool2: Kernel,
+    dense3_in_buf: Buffer<T>,
     krn_dense3: Kernel,
+    device_a_out_buf: Buffer<T>,
     dense3_out_buf: Buffer<T>,
     dense4: DenseLayer<T>,
     dense5: DenseLayer<T>,
@@ -71,7 +76,7 @@ where
 
 impl<T> ClNetwork<T>
 where
-    T: Coeff + ReadCsv,
+    T: Coeff,
 {
     pub fn new(wgts: Weights<T>) -> ClNetwork<T> {
         let mut p = SEPCONV_HYPER_PARAMS.clone();
@@ -83,15 +88,8 @@ where
 
         // Init OpenCL
         let flags = ClNetwork::<T>::compile_flags(&p, &layers);
-        let (queue, program, _context) = cl_util::init::<T>(
-            &[
-                "src/cl/sepconv.cl",
-                "src/cl/max_pool.cl",
-                "src/cl/mtx_mul.cl",
-            ],
-            &flags.iter().map(AsRef::as_ref).collect::<Vec<&str>>(),
-            None,
-        );
+        let (queue_a, queue_b, device_a, _device_b, program, _context) =
+            init_cl::<T>(&flags.iter().map(AsRef::as_ref).collect::<Vec<&str>>());
 
         // Create shorthands
         let (vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3) = (
@@ -105,20 +103,25 @@ where
         );
 
         // Allocate read-only memory on-device for the weights buffers
-        let wgts_bufs = create_weights_bufs(&[vconv1, hconv1, vconv2, hconv2, dense3], &queue);
+        let conv_wgts_bufs = create_weights_bufs(&[vconv1, hconv1, vconv2, hconv2], &queue_a);
+        let dense3_wgts_buf = dense3.create_wgts_buf(&queue_b);
 
         // Allocate memory on-device for the I/O buffers
-        let mut bufs = create_buffer_chain(
-            &[vconv1, hconv1, mxp1, vconv2, hconv2, mxp2, dense3],
-            &queue,
-        );
+        let mut conv_bufs =
+            create_buffer_chain(&[vconv1, hconv1, mxp1, vconv2, hconv2, mxp2], &queue_a);
+        let (dense3_in_buf, dense3_out_buf) =
+            dense3.create_io_bufs(flags::MEM_READ_WRITE, flags::MEM_WRITE_ONLY, &queue_b);
+
+        let dev_max_wgs = cl_util::max_wgs(Some(&device_a));
 
         // Create kernels
-        let primary_device = Device::from(*program.devices().unwrap().first().unwrap());
-        let dev_max_wgs = cl_util::max_wgs(Some(&primary_device));
-
         let kernels = {
-            let mut b = ClKernelChainBuilder::<T>::new(&bufs, &wgts_bufs, &program, queue.clone());
+            let mut b = ClKernelChainBuilder::<T>::new(
+                &conv_bufs,
+                &conv_wgts_bufs,
+                &program,
+                queue_a.clone(),
+            );
             (
                 b.build_iow_kernel(
                     vconv1,
@@ -156,20 +159,30 @@ where
                     "max_pool_2",
                     LocalWorkSizePolicy::Infer { dev_max_wgs },
                 ),
-                b.build_iow_kernel(dense3, "mtx_mul", LocalWorkSizePolicy::UseDefault),
             )
         };
 
-        // Wait until all commands have finished running before returning.
-        queue.finish().unwrap();
+        // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
+        let dense3_kernel = dense3.create_kernel(
+            "mtx_mul",
+            &dense3_in_buf,
+            &dense3_out_buf,
+            &dense3_wgts_buf,
+            LocalWorkSizePolicy::UseDefault,
+            &program,
+            &queue_b,
+        );
+
+        // TODO: see if queue finish here has an impact on anything
 
         // Move and store the first and last buffer
-        let mut buf_drain = bufs.drain(..);
-        let in_buf = buf_drain.next().unwrap();
-        let dense3_out_buf = buf_drain.next_back().unwrap();
+        let mut device_a_buf_drain = conv_bufs.drain(..);
+        let in_buf = device_a_buf_drain.next().unwrap();
+        let device_a_out_buf = device_a_buf_drain.next_back().unwrap();
 
         ClNetwork {
-            queue,
+            queue_a,
+            queue_b,
             in_buf,
             krn_vconv1: kernels.0,
             krn_hconv1: kernels.1,
@@ -177,7 +190,9 @@ where
             krn_vconv2: kernels.3,
             krn_hconv2: kernels.4,
             krn_max_pool2: kernels.5,
-            krn_dense3: kernels.6,
+            device_a_out_buf,
+            dense3_in_buf,
+            krn_dense3: dense3_kernel,
             dense3_out_buf,
             dense4: layers.dense4,
             dense5: layers.dense5,
@@ -214,9 +229,9 @@ where
 {
     // Maps the input buffer, and runs the network, returning the result.
     fn predict(&self, input_data: &[T]) -> Vec<f32> {
-        let q = &self.queue;
+        let q = &self.queue_a;
+        let mut event_list = EventList::new();
 
-        /*let buf = */
         unsafe {
             cl_util::map_to_buf(&self.in_buf, input_data).unwrap();
 
@@ -226,11 +241,25 @@ where
             self.krn_vconv2.cmd().queue(q).enq().unwrap();
             self.krn_hconv2.cmd().queue(q).enq().unwrap();
             self.krn_max_pool2.cmd().queue(q).enq().unwrap();
-            self.krn_dense3.cmd().queue(q).enq().unwrap();
+
+            self.device_a_out_buf
+                .copy(&self.dense3_in_buf, None, None)
+                .queue(q)
+                .enew(&mut event_list)
+                .enq()
+                .unwrap();
+
+            // Enqueue the 3rd layer (fully-connected)
+            self.krn_dense3
+                .cmd()
+                .queue(&self.queue_b)
+                .ewait(&event_list)
+                .enq()
+                .unwrap();
         }
 
         // Wait for all on-device calculations to finish
-        q.finish().unwrap();
+        self.queue_b.finish().unwrap();
 
         // Load the 3rd layer from the GPU and Run ReLU on it
         let dense3_out = unsafe { cl_util::read_buf(&self.dense3_out_buf).unwrap() };
@@ -245,36 +274,59 @@ where
     }
 }
 
-impl Predict<i8> for ClNetwork<i8> {
-    // Maps the input buffer, and runs the network, returning the result.
-    fn predict(&self, input_data: &[i8]) -> Vec<f32> {
-        let q = &self.queue;
+fn init_cl<T>(flags: &[&str]) -> (Queue, Queue, Device, Device, Program, Context)
+where
+    T: Coeff,
+{
+    // Init OpenCL
+    let kernel_files = [
+        "src/cl/sepconv.cl",
+        "src/cl/max_pool.cl",
+        "src/cl/mtx_mul.cl",
+    ];
 
-        /*let buf = */
-        unsafe {
-            cl_util::map_to_buf(&self.in_buf, input_data).unwrap();
+    let sources = kernel_files
+        .iter()
+        .map(|&fname| {
+            let mut f = fs::File::open(&fname).unwrap();
+            let mut contents = String::new();
+            f.read_to_string(&mut contents).unwrap();
+            contents
+        })
+        .collect::<Vec<String>>();
 
-            self.krn_vconv1.cmd().queue(q).enq().unwrap();
-            self.krn_hconv1.cmd().queue(q).enq().unwrap();
-            self.krn_max_pool1.cmd().queue(q).enq().unwrap();
-            self.krn_vconv2.cmd().queue(q).enq().unwrap();
-            self.krn_hconv2.cmd().queue(q).enq().unwrap();
-            self.krn_max_pool2.cmd().queue(q).enq().unwrap();
-            self.krn_dense3.cmd().queue(q).enq().unwrap();
-        }
+    let platform = Platform::default();
 
-        // Wait for all on-device calculations to finish
-        q.finish().unwrap();
+    // Prefer GPU a device for the convolution device
+    let device_a = cl_util::select_device(cl_util::DevicePreference::PreferGpu);
+    // Prefer CPU for the dense-3 matrix multiplication
+    let device_b = cl_util::select_device(cl_util::DevicePreference::RequireCpu);
 
-        // Load the 3rd layer from the GPU and Run ReLU on it
-        let dense3_out = unsafe { cl_util::read_buf(&self.dense3_out_buf).unwrap() };
+    let context = Context::builder()
+        .platform(platform)
+        .devices::<&[Device]>(&[device_a, device_b])
+        .build()
+        .unwrap();
 
-        // Run the 4th layer (fully-connected)
-        let dense4_out = relu(self.dense4.compute(&dense3_out));
+    let mut program_b = Program::builder();
 
-        // Run the 5th layer (fully-connected)
-        let dense5_out = self.dense5.compute(&dense4_out);
-
-        softmax(&dense5_out)
+    // Add default compiler options
+    cl_util::configure_program::<T, &[Device]>(&mut program_b, &[device_a, device_b]);
+    for &opt in flags {
+        program_b.cmplr_opt(opt);
     }
+
+    // Input the kernel source files
+    for src in sources {
+        program_b.src(src);
+    }
+
+    let program = program_b.build(&context).unwrap();
+
+    // Create the queue for the default device
+    let profile_flag = None;
+    let queue_a = Queue::new(&context, device_a, profile_flag).unwrap();
+    let queue_b = Queue::new(&context, device_b, profile_flag).unwrap();
+
+    (queue_a, queue_b, device_a, device_b, program, context)
 }

@@ -48,27 +48,12 @@ fn sepconv_f32_full(c: &mut Criterion) {
     });
 }
 
-/// Benchmark full computations of sepconv implementation.
-fn sepconv_i8_full(c: &mut Criterion) {
-    // HACK: Random-generate weights for now
-    let wgts = sepconv::Weights(
-        // H/V convs
-        rng_vec(5 * 1 * 3 * 7),
-        rng_vec(5 * 1 * 3 * 32),
-        rng_vec(5 * 1 * 32 * 7),
-        rng_vec(1 * 5 * 7 * 32),
-        // Dense layers
-        rng_vec(100 * 24 * 24 * 32),
-        rng_vec(100 * 100),
-        rng_vec(100 * 4),
-    );
+/// Benchmark full computations of sparse implementation.
+fn sparse_f32_full(c: &mut Criterion) {
+    let net = sparse::ClNetwork::<f32>::new(sparse::Weights::default());
+    let input_data = criterion::black_box(load_jpeg("input/baseline/sparse-f32/in.jpg"));
 
-    let net = sepconv::ClNetwork::<i8>::new(wgts);
-    // TODO: load real input data
-    //let input_data = i8::read_bin_from_file("input/baseline/sepconv-f32-xcorr/in.bin");
-    let input_data: Vec<i8> = criterion::black_box(rng_vec(96 * 96 * 3));
-
-    c.bench_function("sepconv-i8 full", move |b| {
+    c.bench_function("sparse-f32 full", move |b| {
         b.iter(|| net.predict(&input_data))
     });
 }
@@ -86,6 +71,6 @@ where
 criterion_group!{
     name = benches;
     config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
-    targets = classic_full, sepconv_f32_full, /*sepconv_i8_full, */
+    targets = classic_full, sepconv_f32_full, sparse_f32_full /*sepconv_i8_full, */
 }
 criterion_main!(benches);

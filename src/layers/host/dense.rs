@@ -20,18 +20,3 @@ where
         c
     }
 }
-
-impl ComputeOnHost<i8> for DenseLayer<i8> {
-    fn compute(&self, in_buf: &[i8]) -> Vec<i8> {
-        let mut c = vec![i8::zero(); self.num_out()];
-        gemm_naive(
-            1,
-            self.num_out(),
-            in_buf.len(),
-            in_buf,
-            self.weights(),
-            &mut c,
-        );
-        c
-    }
-}

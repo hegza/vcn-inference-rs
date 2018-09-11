@@ -89,6 +89,8 @@ impl ClNetwork<f32> {
             &queue_b,
         );
 
+        // TODO: see if queue finish here has an impact on anything
+
         // Move and store the first and last buffer
         let mut buf_drain = conv_bufs.drain(..);
         let input_buf = buf_drain.next().unwrap();
@@ -154,7 +156,9 @@ where
         let dense4_out = relu(self.dense4.compute(&dense3_out));
 
         // Run the 5th layer (fully-connected)
-        softmax(&self.dense5.compute(&dense4_out))
+        let dense5_out = self.dense5.compute(&dense4_out);
+
+        softmax(&dense5_out)
     }
 }
 

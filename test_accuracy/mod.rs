@@ -25,7 +25,7 @@ const TEST_SEPCONV_F32: bool = true;
 const CLASSIC_SINGLE_SHOT: bool = false;
 const SEPCONV_F32_SINGLE_SHOT: bool = false;
 //const SEPCONV_I8_SINGLE_SHOT: bool = false;
-const PRINT_RESULTS: bool = false;
+const PRINT_PREDICTIONS: bool = false;
 
 pub fn main() {
     env_logger::init();
@@ -172,7 +172,7 @@ where
     let mut num_total_inputs = 0;
     for &(ref input_image, ref correct_inputs) in test_data.iter() {
         let result = predictor.predict(input_image);
-        if PRINT_RESULTS {
+        if PRINT_PREDICTIONS {
             println!(
                 "\t\t{:?}",
                 result

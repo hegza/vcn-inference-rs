@@ -3,6 +3,7 @@
 #![allow(unused_imports)]
 extern crate byteorder;
 extern crate env_logger;
+extern crate itertools;
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]

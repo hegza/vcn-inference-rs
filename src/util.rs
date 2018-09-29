@@ -2,7 +2,7 @@
  * Trivial to understand utility functions that need not clutter other namespaces.
 */
 #![allow(dead_code)]
-use byteorder::{LittleEndian, ReadBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use geometry::{ImageGeometry, Square};
 use layers::Layer;
 use math::GenericOps;
@@ -11,7 +11,7 @@ use std;
 use std::fmt::Debug;
 use std::fs::{create_dir_all, File};
 use std::io::prelude::*;
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter};
 use std::path::Path;
 use std::slice::from_raw_parts_mut;
 use std::str::FromStr;
@@ -31,6 +31,9 @@ pub fn read_file(filename: &str) -> String {
 pub trait ReadBinFromFile: Sized {
     /// Reads a file into a Vec of Selfs.
     fn read_bin_from_file(filename: &str) -> Vec<Self>;
+}
+pub trait WriteBin: Sized {
+    fn write_bin(vec: &[Self], filename: &str);
 }
 
 pub trait WriteLinesIntoFile: Sized {
@@ -68,6 +71,21 @@ impl ReadBinFromFile for f32 {
             floats.push(f);
         }
         floats
+    }
+}
+
+impl WriteBin for f32 {
+    fn write_bin(vec: &[Self], filename: &str) {
+        let mut wtr = vec![];
+        for &val in vec {
+            wtr.write_f32::<LittleEndian>(val).unwrap();
+        }
+
+        let f = File::open(filename).unwrap();
+        let mut writer = BufWriter::new(f);
+        for val in wtr {
+            writer.write(&[val]).unwrap();
+        }
     }
 }
 

@@ -370,6 +370,21 @@ pub fn verify(output: &[f32], correct: &[f32], margin: f32) {
     );
 }
 
+pub fn compare_print_in_chunks<T>(a: &[T], b: &[T], step: usize)
+where
+    T: Debug,
+{
+    for idx in (0..a.len()).step_by(step) {
+        println!(
+            "cmp {}..{}\n{:?}\n{:?}",
+            idx,
+            idx + step,
+            &a[idx..idx + step],
+            &b[idx..idx + step]
+        );
+    }
+}
+
 pub fn is_within_margin<T>(a: &[T], b: &[T], margin: T) -> bool
 where
     T: Num + GenericOps + PartialOrd + Copy,

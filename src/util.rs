@@ -181,13 +181,23 @@ where
             .lines()
             .filter_map(|res| res.ok())
             .fold(String::new(), |total, line| [total, line].join(""));
-        let entries = chars.split(',');
-        // Parse into T
-        entries
-            .map(|e| e.trim().parse::<T>())
-            .filter_map(|res| res.ok())
-            .collect::<Vec<T>>()
+        csv_str_to_vec(chars)
     }
+}
+
+pub fn csv_str_to_vec<T, S>(ss: S) -> Vec<T>
+where
+    T: FromStr,
+    S: Into<String>,
+{
+    let ss = ss.into();
+
+    let entries = ss.split(',');
+    // Parse into T
+    entries
+        .map(|e| e.trim().parse::<T>())
+        .filter_map(|res| res.ok())
+        .collect::<Vec<T>>()
 }
 
 impl<T> WriteCsv for T

@@ -439,7 +439,7 @@ use image;
 use image::{GenericImage, Pixel};
 use std::convert::From;
 use std::ops::{Add, Div};
-pub fn load_jpeg<T, P>(file: P) -> Vec<T>
+pub fn load_jpeg_normalized<T, P>(file: P) -> Vec<T>
 where
     T: From<u8> + Num + Copy,
     P: AsRef<Path>,

@@ -36,8 +36,19 @@ pub fn main() {
 
     debug!("Loading input images for classic networks...");
 
-    let load_fun =
-        |file: &String| -> Vec<f32> { load_jpeg_with_filter_padding(file, (96, 96, 3), 5) };
+    let load_fun = |file: &String| -> Vec<f32> {
+        let raw_input: Vec<f32> = load_jpeg_chw(file);
+        let mut padded = ndarray::Array::zeros((3, 100, 100));
+        padded
+            .slice_mut(s![.., 2..-2, 2..-2])
+            .assign(&ndarray::Array::from_shape_vec((3, 96, 96), raw_input).unwrap());
+
+        padded
+            .permuted_axes((0, 1, 2))
+            .into_iter()
+            .cloned()
+            .collect::<Vec<f32>>()
+    };
     let mut test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
     if CLASSIC_SINGLE_SHOT {
         test_data = test_data
@@ -56,18 +67,26 @@ pub fn main() {
         // Make classifications and measure accuracy using the original network
         let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
         let total_duration = timer.elapsed();
-        let accuracy = correct_inputs as f32 / total_inputs as f32;
-        println!("classic network\t\t\t({} images)", total_inputs);
-        println!(
-            "\ttime: {:?}\t(+ {:?} init)",
-            total_duration - init_duration,
+        report(
+            "classic network",
             init_duration,
-        );
-        println!(
-            "\taccu: {:.5}\t\t({}/{})",
-            accuracy, correct_inputs, total_inputs
+            total_duration,
+            correct_inputs,
+            total_inputs,
+            Some(format!("{}/tf_accuracy.f", classic::WEIGHTS_DIR)),
         );
     }
+
+    let load_fun = |file: &String| -> Vec<f32> {
+        let raw_input: Vec<f32> = load_jpeg_chw(file);
+        let mut padded = ndarray::Array::zeros((3, 100, 100));
+        padded
+            .slice_mut(s![.., 2..-2, 2..-2])
+            .assign(&ndarray::Array::from_shape_vec((3, 96, 96), raw_input).unwrap());
+
+        padded.into_iter().cloned().collect::<Vec<f32>>()
+    };
+    let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
 
     if TEST_SPARSE {
         let timer = Instant::now();
@@ -79,22 +98,19 @@ pub fn main() {
         // Make classifications and measure accuracy using the original network
         let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
         let total_duration = timer.elapsed();
-        let accuracy = correct_inputs as f32 / total_inputs as f32;
-        println!("sparse network\t\t\t({} images)", total_inputs);
-        println!(
-            "\ttime: {:?}\t(+ {:?} init)",
-            total_duration - init_duration,
+        report(
+            "sparse network",
             init_duration,
-        );
-        println!(
-            "\taccu: {:.5}\t\t({}/{})",
-            accuracy, correct_inputs, total_inputs
+            total_duration,
+            correct_inputs,
+            total_inputs,
+            Some(format!("{}/tf_accuracy.f", sparse::WEIGHTS_DIR)),
         );
     }
 
-    debug!("Loading input images for sepconv networks...");
+    debug!("Loading input images for sepconv network...");
 
-    let load_fun = |file: &String| -> Vec<f32> { load_jpeg(file) };
+    let load_fun = |file: &String| -> Vec<f32> { load_jpeg_chw(file) };
     let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
 
     if TEST_SEPCONV_F32 {
@@ -116,50 +132,15 @@ pub fn main() {
         // Make classifications and measure accuracy using the sep-conv network
         let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
         let total_duration = timer.elapsed();
-        let accuracy = correct_inputs as f32 / total_inputs as f32;
-        println!("sepconv-f32 network\t\t({} images)", total_inputs);
-        println!(
-            "\ttime: {:?}\t(+ {:?} init)",
-            total_duration - init_duration,
+        report(
+            "sepconv-f32 network",
             init_duration,
-        );
-        println!(
-            "\taccu: {:.5}\t\t({}/{})",
-            accuracy, correct_inputs, total_inputs
+            total_duration,
+            correct_inputs,
+            total_inputs,
+            Some(format!("{}/tf_accuracy.f", sepconv::WEIGHTS_F32_DIR)),
         );
     }
-
-    /*
-    let load_fun = |file: &String| -> Vec<u8> { load_jpeg_as_u8_lossless(file) };
-    let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
-
-    if TEST_SEPCONV_I8 {
-        let test_data = match SEPCONV_I8_SINGLE_SHOT {
-            true => test_data
-                .iter()
-                .cloned()
-                .take(1)
-                .collect::<Vec<(Vec<u8>, Class)>>(),
-            false => test_data.iter().cloned().collect(),
-        };
-        let test_data = test_data
-            .into_iter()
-            .map(|(vec, c)| (math::quantize_vec_i8(&vec), c))
-            .collect::<Vec<(Vec<u8>, Class)>>();
-
-        use sepconv::Weights;
-        let weights = Weights::<i8>::default();
-
-        // Initialize OpenCL and the sep-conv network
-        let net = sepconv::ClNetwork::<i8>::new(weights);
-
-        // Make classifications and measure accuracy using the sep-conv network
-        let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
-        let accuracy = correct_inputs as f32 / total_inputs as f32;
-        println!("sepconv-i8 network accuracy:");
-        println!("{} ({}/{})", accuracy, correct_inputs, total_inputs);
-    }
-    */
 }
 
 /// Returns (num_correct_inputs, num_total_inputs)
@@ -216,4 +197,41 @@ fn idx_to_class(idx: usize) -> Class {
         3 => Van,
         _ => panic!(),
     }
+}
+
+fn report(
+    case_name: &str,
+    init_duration: Duration,
+    total_duration: Duration,
+    correct_inputs: usize,
+    total_inputs: usize,
+    baseline_accuracy_filename: Option<String>,
+) {
+    let accuracy = correct_inputs as f32 / total_inputs as f32;
+    let acc_mismatch_msg = {
+        if let Some(baseline_acc) =
+            baseline_accuracy_filename.and_then(|f| f32::read_lines_from_file(&f).ok())
+        {
+            const EPSILON: f32 = 0.0001f32;
+            let acc = baseline_acc.first().unwrap();
+            if (acc - accuracy).abs() >= EPSILON {
+                format!(" ACCURACY MISMATCH ({})", acc)
+            } else {
+                "".to_owned()
+            }
+        } else {
+            " NO BASELINE ACCURACY PROVIDED".to_owned()
+        }
+    };
+
+    println!("{0: <31} ({1} images)", case_name, total_inputs);
+    println!(
+        "    time: {:?}\t(+ {:?} init)",
+        total_duration - init_duration,
+        init_duration,
+    );
+    println!(
+        "    accu: {:.5}\t\t({}/{}){}",
+        accuracy, correct_inputs, total_inputs, acc_mismatch_msg
+    );
 }

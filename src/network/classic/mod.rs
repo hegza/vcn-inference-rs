@@ -39,7 +39,7 @@ where
 
 impl<T> ClNetwork<T>
 where
-    T: CoeffFloat,
+    T: Coeff,
 {
     pub fn new(weights: Weights<T>) -> ClNetwork<T> {
         let (queue_a, queue_b, program, _context) = init_cl::<T>();

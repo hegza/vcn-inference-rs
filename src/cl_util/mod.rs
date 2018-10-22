@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 mod cl_types;
 mod info;
+pub mod standalone;
 
 pub use self::cl_types::*;
 pub use self::info::*;

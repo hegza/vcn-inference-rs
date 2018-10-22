@@ -4,7 +4,7 @@ use ocl::SpatialDims;
 use std::ops::Deref;
 use util::*;
 
-// TODO: refactor to use tensors (weights) and tensor-shapes (input dims)
+// TODO: refactor to use tensors (weights) and tensor-shapes (input dims) (ndarray?)
 // TODO: sa: https://www.tensorflow.org/api_docs/python/tf/nn/conv2d
 
 /// A complete descriptor for a convolutional layer

@@ -270,7 +270,7 @@ where
         // Run the 5th layer (fully-connected)
         let dense5_out = self.dense5.compute(&dense4_out);
 
-        softmax(&dense5_out)
+        softmax(dense5_out)
     }
 }
 

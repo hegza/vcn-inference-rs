@@ -1,6 +1,7 @@
 use super::*;
 use geometry::{ImageGeometry, PaddedSquare};
-use tests::{CLASSIC_BASELINE, COARSE_RESULT_MARGIN, RESULT_MARGIN};
+use ndarray::Array;
+use tests::{CLASSIC_BASELINE, COARSE_RESULT_MARGIN, F32_GEMM_MAX_EPSILON, RESULT_MARGIN};
 use util::verify;
 
 lazy_static! {

@@ -37,11 +37,14 @@ where
     dense5: DenseLayer<T>,
 }
 
-impl ClNetwork<f32> {
-    pub fn new(weights: Weights<f32>) -> ClNetwork<f32> {
-        let (queue_a, queue_b, program, _context) = init_cl::<f32>();
+impl<T> ClNetwork<T>
+where
+    T: CoeffFloat,
+{
+    pub fn new(weights: Weights<T>) -> ClNetwork<T> {
+        let (queue_a, queue_b, program, _context) = init_cl::<T>();
 
-        let layers = Layers::<f32>::new(weights);
+        let layers = Layers::<T>::new(weights);
 
         let (conv1, conv2, dense3) = (&layers.conv1, &layers.conv2, &layers.dense3);
 
@@ -96,7 +99,7 @@ impl ClNetwork<f32> {
         let input_buf = buf_drain.next().unwrap();
         let conv2_out_buf = buf_drain.next_back().unwrap();
 
-        ClNetwork::<f32> {
+        ClNetwork::<T> {
             queue_a,
             queue_b,
             input_shape: conv1.input_shape().clone(),
@@ -158,7 +161,7 @@ where
         // Run the 5th layer (fully-connected)
         let dense5_out = self.dense5.compute(&dense4_out);
 
-        softmax(&dense5_out)
+        softmax(dense5_out)
     }
 }
 
@@ -176,8 +179,7 @@ where
             let mut contents = String::new();
             f.read_to_string(&mut contents).unwrap();
             contents
-        })
-        .collect::<Vec<String>>();
+        }).collect::<Vec<String>>();
 
     let platform = Platform::default();
 

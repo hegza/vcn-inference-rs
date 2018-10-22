@@ -1,9 +1,12 @@
 use super::*;
 use cl_util as cl;
+use ndarray::Array;
 use network::Predict;
 use rand;
 use rand::{Rng, ThreadRng};
 use tests::*;
+
+pub const SEPCONV_BASELINE_F32: &'static str = "input/baseline/sepconv-f32-xcorr/case b";
 
 lazy_static! {
     static ref LAYERS: Layers<f32> = { Layers::<f32>::new(Weights::default()) };

@@ -113,7 +113,7 @@ where
     T: ndarray::IntoDimension<Dim = D>,
 {
     // Load sparse 3 weights in NCHW
-    let sparse3_nchw = f32::read_csv("input/weights/sparse-classic-95-96/fc3-f32-nchw.csv");
+    let sparse3_nchw = f32::read_csv("input/weights/sparse/fc3-f32-nchw.csv");
 
     // Create and manipulate representation from_shape to_shape using ndarray
     let mut w = ndarray::Array::from_shape_vec(from_shape, vec).unwrap();

@@ -61,6 +61,7 @@ pub trait GenericOps {
     fn generic_exp(self) -> f32;
 }
 
+// TODO: &mut vs. consume?
 /// Convert negative values in source to zero
 pub fn relu<T>(source: Vec<T>) -> Vec<T>
 where
@@ -72,7 +73,7 @@ where
         .collect()
 }
 
-pub fn softmax<T>(input: &[T]) -> Vec<f32>
+pub fn softmax<T>(input: Vec<T>) -> Vec<f32>
 where
     T: GenericOps + Num + Copy,
 {
@@ -91,7 +92,7 @@ where
 }
 
 impl GenericOps for f32 {
-    fn generic_max(self, other: &f32) -> f32 {
+    fn generic_max(self, other: &Self) -> Self {
         self.max(*other)
     }
     fn generic_abs(self) -> Self {
@@ -102,6 +103,22 @@ impl GenericOps for f32 {
     }
     fn generic_exp(self) -> f32 {
         self.exp()
+    }
+}
+
+impl GenericOps for f64 {
+    fn generic_max(self, other: &Self) -> Self {
+        self.max(*other)
+    }
+    fn generic_abs(self) -> Self {
+        self.abs()
+    }
+    fn generic_partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.partial_cmp(other)
+    }
+    fn generic_exp(self) -> f32 {
+        // HACK: maybe hacky
+        self.exp() as f32
     }
 }
 

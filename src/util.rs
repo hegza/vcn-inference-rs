@@ -6,12 +6,15 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use geometry::{ImageGeometry, Square};
 use layers::Layer;
 use math::GenericOps;
-use num_traits::{Num, Zero};
+use ndarray;
+use ndarray::{Array, Dimension, IntoDimension, StrideShape};
+use num_traits::{Float, Num, Zero};
 use std;
-use std::fmt::Debug;
+use std::cmp::Ord;
+use std::fmt::{Debug, Display};
 use std::fs::{create_dir_all, File};
-use std::io::prelude::*;
-use std::io::{BufReader, BufWriter};
+use std::io::{prelude::*, BufReader, BufWriter};
+use std::iter::{IntoIterator, Iterator};
 use std::path::Path;
 use std::slice::from_raw_parts_mut;
 use std::str::FromStr;
@@ -331,7 +334,10 @@ pub fn duration_between(start: Instant, end: Instant) -> f64 {
 const VEC_DISPLAY_ELEMENTS_MAX: usize = 8;
 
 // Wrap is_within_margin within an assert!()
-pub fn verify(output: &[f32], correct: &[f32], margin: f32) {
+pub fn verify<T>(output: &[T], correct: &[T], margin: T)
+where
+    T: Float + GenericOps + Display + Debug,
+{
     assert_eq!(output.len(), correct.len());
 
     if is_within_margin(output, correct, margin) {
@@ -353,13 +359,37 @@ pub fn verify(output: &[f32], correct: &[f32], margin: f32) {
             &correct[..]
         )
     } else {
+        let total = output.len();
+        let mut zipped = output.iter().zip(correct);
+        let count = zipped
+            .clone()
+            .filter(|(&lhs, &rhs)| (lhs - rhs).abs() >= margin)
+            .count();
+        let frac = count as f32 / total as f32;
+        let first_at = zipped
+            .clone()
+            .position(|(&lhs, &rhs)| (lhs - rhs).abs() >= margin)
+            .unwrap();
+        let vals = zipped
+            .find(|(&lhs, &rhs)| (lhs - rhs).abs() >= margin)
+            .unwrap();
         format!(
-            "{:?}...{:?}{}\n!=\n{:?}...{:?}",
+            "{:?}...{:?}{}\n!=\n{:?}...{:?}\n{:?}",
             &output[0..VEC_DISPLAY_ELEMENTS_MAX / 2],
             &output[output.len() - VEC_DISPLAY_ELEMENTS_MAX / 2..output.len()],
             display_nan_msg,
             &correct[0..VEC_DISPLAY_ELEMENTS_MAX / 2],
             &correct[correct.len() - VEC_DISPLAY_ELEMENTS_MAX / 2..correct.len()],
+            format!(
+                "number of exceptions with margin {:?} is {} ({:.*} %), first is at index {} ({} != {})",
+                margin,
+                count,
+                2,
+                frac * 100f32,
+                first_at,
+                vals.0,
+                vals.1
+            )
         )
     };
 
@@ -414,22 +444,67 @@ where
     let umax: T = T::from(u8::max_value());
     let umin: T = T::from(u8::min_value());
     let mut red_channel = Vec::with_capacity(num_pixels);
-    let mut blue_channel = Vec::with_capacity(num_pixels);
     let mut green_channel = Vec::with_capacity(num_pixels);
+    let mut blue_channel = Vec::with_capacity(num_pixels);
     for pixel in img.pixels() {
         let rgb = pixel.2.to_rgb();
         let r = T::from(rgb[0]) / umax + umin;
         let g = T::from(rgb[1]) / umax + umin;
         let b = T::from(rgb[2]) / umax + umin;
         red_channel.push(r);
-        blue_channel.push(g);
-        green_channel.push(b);
+        green_channel.push(g);
+        blue_channel.push(b);
     }
     red_channel
         .into_iter()
-        .chain(blue_channel)
         .chain(green_channel)
+        .chain(blue_channel)
         .collect::<Vec<T>>()
+}
+
+// FIXME: it's weird that we're using this instead of normalized
+/// Loads a file containing a jpeg image in (channel, height, width) -order. Channels are in RGB order.
+pub fn load_jpeg_chw<T, P>(file: P) -> Vec<T>
+where
+    T: From<u8> + Num + Copy,
+    P: AsRef<Path>,
+{
+    let img = image::open(file).unwrap();
+    let num_pixels = (img.width() * img.height()) as usize;
+    let mut red_channel = Vec::with_capacity(num_pixels);
+    let mut green_channel = Vec::with_capacity(num_pixels);
+    let mut blue_channel = Vec::with_capacity(num_pixels);
+    for pixel in img.pixels() {
+        let rgb = pixel.2.to_rgb();
+        let r = T::from(rgb[0]);
+        let g = T::from(rgb[1]);
+        let b = T::from(rgb[2]);
+        red_channel.push(r);
+        green_channel.push(g);
+        blue_channel.push(b);
+    }
+    red_channel
+        .into_iter()
+        .chain(green_channel)
+        .chain(blue_channel)
+        .collect::<Vec<T>>()
+}
+
+pub fn load_jpeg_hwc<T, P>(file: P) -> Vec<T>
+where
+    T: From<u8> + Num + Copy,
+    P: AsRef<Path>,
+{
+    let img = image::open(file).unwrap();
+    let num_pixels = (img.width() * img.height()) as usize;
+    let mut out = Vec::with_capacity(num_pixels * 3);
+    for pixel in img.pixels() {
+        let rgb = pixel.2.to_rgb();
+        out.push(T::from(rgb[0]));
+        out.push(T::from(rgb[1]));
+        out.push(T::from(rgb[2]));
+    }
+    out
 }
 
 pub fn load_jpeg_as_u8_lossless<P>(file: P) -> Vec<u8>
@@ -439,37 +514,33 @@ where
     let img = image::open(file).unwrap();
     let num_pixels = (img.width() * img.height()) as usize;
     let mut red_channel = Vec::with_capacity(num_pixels);
-    let mut blue_channel = Vec::with_capacity(num_pixels);
     let mut green_channel = Vec::with_capacity(num_pixels);
+    let mut blue_channel = Vec::with_capacity(num_pixels);
     for pixel in img.pixels() {
         let rgb = pixel.2.to_rgb();
         let (r, g, b) = (rgb[0], rgb[1], rgb[2]);
         red_channel.push(r);
-        blue_channel.push(g);
-        green_channel.push(b);
+        green_channel.push(g);
+        blue_channel.push(b);
     }
     red_channel
         .into_iter()
-        .chain(blue_channel)
         .chain(green_channel)
+        .chain(blue_channel)
         .collect::<Vec<u8>>()
 }
 
-use geometry::PaddedSquare;
-use ndarray::IntoDimension;
-pub fn load_jpeg_with_filter_padding<T, S>(file: &str, image_shape: S, filter_side: usize) -> Vec<T>
+pub fn reorder<T, D, Sh, D2>(data: Vec<T>, source_shape: Sh, axes_order: D2) -> Vec<T>
 where
-    T: ReadBinFromFile + From<u8> + Num + Copy,
-    S: IntoDimension,
+    T: Copy,
+    D: Dimension,
+    Sh: Into<StrideShape<D>>,
+    D2: IntoDimension<Dim = D>,
 {
-    let image_shape = image_shape.into_dimension();
-
-    // HACK: ImageGeometry supports square images only
-    let input_shape = ImageGeometry::new(image_shape[0], image_shape[2]);
-    let conv1_filter_shape = PaddedSquare::from_side(filter_side);
-    let padded_image_shape = input_shape.with_filter_padding(&conv1_filter_shape);
-    let padding = padded_image_shape.padding();
-
-    // Load input as a vector of floats in the network format
-    add_channelwise_padding2d(&load_jpeg(file), &input_shape, padding)
+    Array::from_shape_vec(source_shape, data)
+        .unwrap()
+        .permuted_axes(axes_order)
+        .iter()
+        .cloned()
+        .collect::<Vec<T>>()
 }

@@ -1,7 +1,7 @@
 use layers::Coeff;
-use util::{ReadBinFromFile, ReadCsv};
+use util::{reorder, ReadBinFromFile, ReadCsv};
 
-pub const WEIGHTS_F32_DIR: &str = "input/weights/sepconv-96-97";
+pub const WEIGHTS_F32_DIR: &str = "input/weights/sepconv";
 pub const WEIGHTS_I8_DIR: &str = "input/weights/sepconv-96-97/i8-converted";
 
 #[derive(Clone)]

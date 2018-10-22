@@ -7,14 +7,17 @@
 #include "common.h"
 #include "hyperparams.h"
 
-
+// Does matrix multiplication: ´weights´x´input´=´output´
+// input/B: (channels, height, width) [CHW]
+// output/c_mul: () [const]
+// weights/A: (channels, height, width, const) [CHWN]
 __kernel void mtx_mul(
     __global CL_PRIM_N* restrict input,
     __global CL_PRIM* restrict output,
     __global CL_PRIM_N* restrict weights) {
 
     // Divide by number of primitives in vector
-    const int DATA_SIZE = PATCH3SQ * FM_COUNT / VECN;
+    const size_t DATA_SIZE = PATCH3SQ * FM_COUNT / VECN;
 
     size_t gid = get_global_id(0);
 

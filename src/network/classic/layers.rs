@@ -16,7 +16,7 @@ impl<T> Layers<T>
 where
     T: Coeff,
 {
-    pub fn new(weights: Weights<f32>) -> Layers<f32> {
+    pub fn new(weights: Weights<T>) -> Layers<T> {
         // Hyper-parameters
         const INPUT_CHANNELS: usize = 3;
         const INPUT_SIDE: usize = 96;
@@ -28,7 +28,7 @@ where
         const LAYER3_SIZE: usize = 100;
         const NUM_CLASSES: usize = 4;
 
-        // TODO: refactor by making the layers use a tensor-based API
+        // TODO: refactor by making the layers use a tensor-based API (ndarray?)
         let conv1_filter_shape = PaddedSquare::from_side(CONV1_FILTER_SIDE);
         let conv2_filter_shape = PaddedSquare::from_side(CONV2_FILTER_SIDE);
         let input_shape = ImageGeometry::new(INPUT_SIDE, INPUT_CHANNELS);

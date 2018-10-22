@@ -9,7 +9,7 @@ use rand;
 use rand::Rng;
 
 pub const CLASSIC_BASELINE: &'static str = "input/baseline/orig-f32-all-layers";
-pub const SEPCONV_BASELINE: &'static str = "input/baseline/sepconv-f32-xcorr";
+pub const SEPCONV_BASELINE: &'static str = "input/baseline/sepconv-f32-xcorr/case a";
 
 pub fn create_random_vec(len: usize) -> Vec<f32> {
     let mut rng = rand::thread_rng();

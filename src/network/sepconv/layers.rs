@@ -30,7 +30,7 @@ where
         const LAYER3_SIZE: usize = 100;
         const NUM_CLASSES: usize = 4;
 
-        // TODO: refactor by making the layers use a tensor-based API
+        // TODO: refactor by making the layers use a tensor-based API (ndarray?)
 
         let in_shape = ImageGeometry::new(INPUT_SIDE, INPUT_CHANNELS);
         let vconv1 = VConvLayer::new(KERNEL_LEN, &in_shape, CONV_KERNEL_SPLIT, weights.0);

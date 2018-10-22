@@ -120,7 +120,7 @@ where
         let dense4_out = relu(self.dense4.compute(&sparse3_out));
 
         // Run the 5th layer (fully-connected)
-        softmax(&self.dense5.compute(&dense4_out))
+        softmax(self.dense5.compute(&dense4_out))
     }
 }
 
@@ -138,8 +138,7 @@ where
             let mut contents = String::new();
             f.read_to_string(&mut contents).unwrap();
             contents
-        })
-        .collect::<Vec<String>>();
+        }).collect::<Vec<String>>();
 
     let platform = Platform::default();
 

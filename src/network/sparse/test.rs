@@ -1,6 +1,7 @@
 use super::*;
 use geometry::{ImageGeometry, PaddedSquare};
-use tests::{COARSE_RESULT_MARGIN, RESULT_MARGIN};
+use ndarray::Array;
+use tests::{COARSE_RESULT_MARGIN, F32_GEMM_MAX_EPSILON, RESULT_MARGIN};
 use util::verify;
 
 lazy_static! {
@@ -55,7 +56,6 @@ fn l4_returns_baseline() {
 
     let output = relu(layer.compute(&input_data));
     let correct = f32::read_csv(&format!("{}/hidden2.csv", SPARSE_BASELINE));
-    assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
 
@@ -65,9 +65,8 @@ fn l5_returns_baseline() {
     let layer = &LAYERS.dense5;
     let input_data = f32::read_csv(&format!("{}/hidden2.csv", SPARSE_BASELINE));
 
-    let output = softmax(&layer.compute(&input_data));
+    let output = softmax(layer.compute(&input_data));
     let correct = f32::read_csv(&format!("{}/out.csv", SPARSE_BASELINE));
-    assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
 

@@ -51,7 +51,7 @@ fn sepconv_f32_full(c: &mut Criterion) {
 /// Benchmark full computations of sparse implementation.
 fn sparse_f32_full(c: &mut Criterion) {
     let net = sparse::ClNetwork::<f32>::new(sparse::Weights::default());
-    let input_data = criterion::black_box(load_jpeg("input/baseline/sparse-f32/in.jpg"));
+    let input_data = criterion::black_box(load_jpeg_chw("input/baseline/sparse-f32/in.jpg"));
 
     c.bench_function("sparse-f32 full", move |b| {
         b.iter(|| net.predict(&input_data))

@@ -1,8 +1,14 @@
 // TODO: figure out the hyperparams.h dependency thing
 #include "hyperparams.h"
 
+// PAD_NUM == max-pool STRIDE!
+
 #define matrix1(pointer, offset, length, row, col) pointer[offset + row * length + col]
 
+// Does cross correlation (original version was convolution)
+// in-order: (channels, height, width) [CHW]
+// filter-order: (out channels, in channels, height, width)
+// out-order: (channels, height, width) [CHW]
 __kernel void conv_relu_1(
     __global float* restrict fifo_in,
     __global float* restrict fifo_out,
@@ -28,7 +34,7 @@ __kernel void conv_relu_1(
                         for (int j = 0; j < nFilterWidth; j++) {
                             gssample[rst*PAD_NUM + cst] +=
                                 matrix1(fifo_in, (c*PATCH1SQPAD), nInWidth, (rr+rst+i), (cc+cst+j)) *
-                                matrix1(wgt, (CONV1SQ * CHANNELS * fm + c * CONV1SQ), nFilterWidth, (nFilterWidth-1-i), (nFilterWidth-1-j));
+                                matrix1(wgt, (CONV1SQ * CHANNELS * fm + c * CONV1SQ), nFilterWidth, i, j);
                         }
                     }
 
@@ -45,6 +51,9 @@ __kernel void conv_relu_1(
     matrix1(fifo_out, (fm*PATCH2SQPAD), (PATCH2+2*PAD_NUM), (row/2), (col/2)) = tmp;
 }
 
+// in-order: (channels, height, width) [CHW]
+// filter-order: (out channels, in channels, height, width)
+// out-order: (channels, height, width) [CHW]
 __kernel void conv_relu_2(
     __global float* restrict fifo_in,
     __global float* restrict fifo_out,
@@ -66,7 +75,7 @@ __kernel void conv_relu_2(
                     for (int j = 0; j < nFilterWidth; j++) {
                         gssample[rst*PAD_NUM + cst] +=
                             matrix1(fifo_in, (c*PATCH2SQPAD), nInWidth, (row+rst+i), (col+cst+j)) *
-                            matrix1(wgt, (CONV2SQ * FM_COUNT * fm + c * CONV2SQ), nFilterWidth, (nFilterWidth-1-i), (nFilterWidth-1-j));
+                            matrix1(wgt, (CONV2SQ * FM_COUNT * fm + c * CONV2SQ), nFilterWidth, i, j);
                     }
                 }
 

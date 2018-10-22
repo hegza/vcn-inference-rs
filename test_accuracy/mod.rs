@@ -1,5 +1,6 @@
 extern crate env_logger;
 extern crate image;
+#[macro_use]
 extern crate ndarray;
 #[macro_use]
 extern crate log;
@@ -13,7 +14,7 @@ mod util;
 
 use class::Class;
 use rusty_cnn::*;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use util::*;
 
 const INPUT_IMG_DIR: &str = "input/images";

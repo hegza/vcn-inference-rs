@@ -24,12 +24,10 @@ pub fn bench_dense4() -> (&'static str, impl FnMut(&mut Bencher)) {
 
 pub fn bench_dense5() -> (&'static str, impl FnMut(&mut Bencher)) {
     let dense5 = &CLASSIC_LAYERS.dense5;
-    let input_data = black_box(f32::read_lines_from_file(&format!(
-        "{}/fc4.f",
-        CLASSIC_BASELINE
-    )));
+    let input_data =
+        black_box(f32::read_lines_from_file(&format!("{}/fc4.f", CLASSIC_BASELINE)).unwrap());
 
     ("dense 5 - host mtxmul", move |b| {
-        b.iter(|| softmax(&dense5.compute(&input_data)))
+        b.iter(|| softmax(dense5.compute(&input_data)))
     })
 }

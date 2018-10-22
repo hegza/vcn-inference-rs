@@ -85,8 +85,7 @@ where
             let mut contents = String::new();
             f.read_to_string(&mut contents).unwrap();
             contents
-        })
-        .collect::<Vec<String>>();
+        }).collect::<Vec<String>>();
     init_from_sources::<T>(
         &sources.iter().map(AsRef::as_ref).collect::<Vec<&str>>(),
         addt_cmplr_opts,

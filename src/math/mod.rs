@@ -4,6 +4,7 @@ mod quantize;
 #[cfg(test)]
 mod test;
 // HACK: being pub might be hacky
+mod convolve;
 pub mod gemm;
 
 pub use self::gemm::*;

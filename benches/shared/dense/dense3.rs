@@ -24,10 +24,8 @@ pub fn bench_dense3_cl_cpu() -> (&'static str, impl FnMut(&mut Bencher)) {
 pub fn bench_sparse3() -> (&'static str, impl FnMut(&mut Bencher)) {
     let sparse3 = sparse::Layers::<f32>::new(sparse::Weights::default()).sparse3;
 
-    let input = black_box(f32::read_lines_from_file(&format!(
-        "{}/fm2.f",
-        CLASSIC_BASELINE
-    )));
+    let input =
+        black_box(f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE)).unwrap());
 
     // TODO: verify correctness
 
@@ -38,7 +36,7 @@ pub fn bench_sparse3() -> (&'static str, impl FnMut(&mut Bencher)) {
 
 pub fn bench_dense_3_bluss_matrixmultiply() -> (&'static str, impl FnMut(&mut Bencher)) {
     let dense3 = &CLASSIC_LAYERS.dense3;
-    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
+    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE)).unwrap();
 
     let m = 1;
     let n = dense3.num_out();
@@ -71,7 +69,7 @@ pub fn bench_dense_3_bluss_matrixmultiply() -> (&'static str, impl FnMut(&mut Be
     };
 
     // Verify correctness
-    let c_correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
+    let c_correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE)).unwrap();
     verify(&relu(c.clone()), &c_correct, RESULT_MARGIN);
 
     ("dense 3 - bluss matrixmultiply (CPU)", move |be| {
@@ -98,7 +96,7 @@ pub fn bench_dense_3_bluss_matrixmultiply() -> (&'static str, impl FnMut(&mut Be
 
 pub fn bench_dense_3_cnugteren_10() -> (&'static str, impl FnMut(&mut Bencher)) {
     let dense3 = &CLASSIC_LAYERS.dense3;
-    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
+    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE)).unwrap();
 
     let m = 1;
     let n = dense3.num_out();

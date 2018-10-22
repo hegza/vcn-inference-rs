@@ -12,10 +12,8 @@ lazy_static! {
 
 pub fn bench_dense4() -> (&'static str, impl FnMut(&mut Bencher)) {
     let dense4 = &CLASSIC_LAYERS.dense4;
-    let input_data = black_box(f32::read_lines_from_file(&format!(
-        "{}/fc3.f",
-        CLASSIC_BASELINE
-    )));
+    let input_data =
+        black_box(f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE)).unwrap());
 
     ("dense 4 - host mtxmul", move |b| {
         b.iter(|| relu(dense4.compute(&input_data)))

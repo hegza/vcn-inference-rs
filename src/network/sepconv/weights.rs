@@ -17,14 +17,20 @@ pub struct Weights<T>(
 
 impl Default for Weights<f32> {
     fn default() -> Weights<f32> {
+        use ndarray::Array;
+        let load_fun = |f: &'static str| f32::read_csv(&format!("{}/{}", WEIGHTS_F32_DIR, f));
         Weights(
             // Load the weights for the convolutional layers
-            f32::read_csv(&format!("{}/vcr1-f32.csv", WEIGHTS_F32_DIR)),
-            f32::read_csv(&format!("{}/hcr1-f32.csv", WEIGHTS_F32_DIR)),
-            f32::read_csv(&format!("{}/vcr2-f32.csv", WEIGHTS_F32_DIR)),
-            f32::read_csv(&format!("{}/hcr2-f32.csv", WEIGHTS_F32_DIR)),
-            // Load the weights for the dense layers
-            f32::read_csv(&format!("{}/fc3-f32-nchw.csv", WEIGHTS_F32_DIR)),
+            reorder(load_fun("vcr1-f32.csv"), (7, 3, 1, 5), (0, 1, 2, 3)),
+            reorder(load_fun("hcr1-f32.csv"), (32, 7, 5, 1), (0, 1, 2, 3)),
+            reorder(load_fun("vcr2-f32.csv"), (7, 32, 1, 5), (0, 1, 2, 3)),
+            reorder(load_fun("hcr2-f32.csv"), (32, 7, 5, 1), (0, 1, 2, 3)),
+            // Load in CHWN
+            reorder(
+                f32::read_csv(&format!("{}/archive/fc3-f32-nchw.csv", WEIGHTS_F32_DIR)), // likely is nhwc
+                (100, 24, 24, 32),
+                (3, 1, 2, 0),
+            ),
             f32::read_csv(&format!("{}/fc4-f32.csv", WEIGHTS_F32_DIR)),
             f32::read_csv(&format!("{}/fc5-f32.csv", WEIGHTS_F32_DIR)),
         )

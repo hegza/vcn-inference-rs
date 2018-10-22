@@ -46,7 +46,7 @@ pub trait WriteLinesIntoFile: Sized {
 
 pub trait ReadLinesFromFile: Sized {
     /// Read a vector of Selfs from a file with newline for each Self.
-    fn read_lines_from_file(filename: &str) -> Vec<Self>;
+    fn read_lines_from_file(filename: &str) -> Result<Vec<Self>, io::Error>;
 }
 
 pub trait ReadCsv: Sized {
@@ -207,19 +207,24 @@ where
     }
 }
 
+use std::io;
 impl<T> ReadLinesFromFile for T
 where
     T: Num + FromStr,
     <T as FromStr>::Err: Debug,
 {
-    fn read_lines_from_file(filename: &str) -> Vec<T> {
-        let file = File::open(filename).expect(&format!("unable to read file '{}'", filename));
-        let lines = BufReader::new(file).lines();
-        lines
-            .into_iter()
-            .filter_map(|res| res.ok())
-            .map(|line| line.trim().parse::<T>().unwrap())
-            .collect::<Vec<T>>()
+    fn read_lines_from_file(filename: &str) -> Result<Vec<T>, io::Error> {
+        File::open(filename).and_then(|file| {
+            let lines = BufReader::new(file).lines();
+            Ok(lines
+                .into_iter()
+                .filter_map(|res| res.ok())
+                .map(|line| {
+                    line.trim()
+                        .parse::<T>()
+                        .expect(&format!("cannot parse {} as T", line))
+                }).collect::<Vec<T>>())
+        })
     }
 }
 

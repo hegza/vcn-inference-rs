@@ -19,14 +19,16 @@ lazy_static! {
     static ref ADDT_CMPLR_OPTS: Vec<String> =
         ClNetwork::<f32>::compile_flags(&FIXED_SEPCONV_HYPER_PARAMS, &LAYERS);
 }
-pub const SEPCONV_BASELINE_F32: &'static str = "input/baseline/sepconv-f32-xcorr/f32";
 
 #[test]
 fn v1_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
     let layer = &LAYERS.vconv1;
-    let input_data = f32::read_lines_from_file(&format!("{}/in.f", SEPCONV_BASELINE_F32));
 
+    // Load image without padding and in (channels, height, width)-order
+    let input_data = load_jpeg_chw(&format!("{}/in.jpg", SEPCONV_BASELINE_F32));
+
+    // Output is produced in (channels, height, width)-order
     let output = run_single_layer(
         "col_conv",
         layer,
@@ -36,16 +38,34 @@ fn v1_returns_baseline() {
             FIXED_SEPCONV_HYPER_PARAMS.vconv1_blockdim_y,
         )),
     );
-    let correct = f32::read_lines_from_file(&format!("{}/vcr1-out.f", SEPCONV_BASELINE_F32));
 
-    verify(&output, &correct, RESULT_MARGIN);
+    // Load model outputs in (channels, height, width)-order
+    let correct = Array::from_shape_vec(
+        (7, 96, 96),
+        f32::read_csv(&format!("{}/vcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
+
+    verify(&output, &correct, F32_GEMM_MAX_EPSILON);
 }
 
 #[test]
 fn h1_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
     let layer = &LAYERS.hconv1;
-    let input_data = f32::read_lines_from_file(&format!("{}/vcr1-out.f", SEPCONV_BASELINE_F32));
+
+    // Load input in (channels, height, width)-order
+    let input_data = Array::from_shape_vec(
+        (7, 96, 96),
+        f32::read_csv(&format!("{}/vcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
 
     let (queue, program, _context) = cl_util::init::<f32>(
         &["src/cl/sepconv.cl"],
@@ -84,16 +104,34 @@ fn h1_returns_baseline() {
         cl_util::read_buf(&out_buf).unwrap()
     };
     queue.finish().unwrap();
-    let correct = f32::read_lines_from_file(&format!("{}/hcr1-out.f", SEPCONV_BASELINE_F32));
 
-    verify(&output, &correct, COARSE_RESULT_MARGIN);
+    // Load model output in (channels, height, width)-order
+    let correct = Array::from_shape_vec(
+        (32, 96, 96),
+        f32::read_csv(&format!("{}/hcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
+
+    verify(&output, &correct, F32_GEMM_MAX_EPSILON);
 }
 
 #[test]
 fn mxp1_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
     let layer = &LAYERS.mxp1;
-    let input_data = f32::read_lines_from_file(&format!("{}/hcr1-out.f", SEPCONV_BASELINE_F32));
+
+    // Load input in (channels, height, width)-order (this is what happens in the network)
+    let input_data = Array::from_shape_vec(
+        (32, 96, 96),
+        f32::read_csv(&format!("{}/hcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
 
     let output = run_single_layer_unweighted(
         "max_pool_1",
@@ -102,16 +140,34 @@ fn mxp1_returns_baseline() {
         // HACK: dev_max_wgs
         LocalWorkSizePolicy::Infer { dev_max_wgs: 256 },
     );
-    let correct = f32::read_lines_from_file(&format!("{}/mxp1-out.f", SEPCONV_BASELINE_F32));
 
-    verify(&output, &correct, RESULT_MARGIN);
+    // Load model output in (channels, height, width)-order
+    let correct = Array::from_shape_vec(
+        (32, 48, 48),
+        f32::read_csv(&format!("{}/mxp1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
+
+    verify(&output, &correct, F32_GEMM_MAX_EPSILON);
 }
 
 #[test]
 fn v2_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
     let layer = &LAYERS.vconv2;
-    let input_data = f32::read_lines_from_file(&format!("{}/mxp1-out.f", SEPCONV_BASELINE_F32));
+
+    // Load input in (channels, height, width)-order (this is what happens in the network)
+    let input_data = Array::from_shape_vec(
+        (32, 48, 48),
+        f32::read_csv(&format!("{}/mxp1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
 
     let output = run_single_layer(
         "col_conv_2",
@@ -122,16 +178,34 @@ fn v2_returns_baseline() {
             FIXED_SEPCONV_HYPER_PARAMS.vconv1_blockdim_y,
         )),
     );
-    let correct = f32::read_lines_from_file(&format!("{}/vcr2-out.f", SEPCONV_BASELINE_F32));
 
-    verify(&output, &correct, RESULT_MARGIN);
+    // Load model output in (channels, height, width)-order
+    let correct = Array::from_shape_vec(
+        (7, 48, 48),
+        f32::read_csv(&format!("{}/vcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
+
+    verify(&output, &correct, F32_GEMM_MAX_EPSILON);
 }
 
 #[test]
 fn h2_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
     let layer = &LAYERS.hconv2;
-    let input_data = f32::read_lines_from_file(&format!("{}/vcr2-out.f", SEPCONV_BASELINE_F32));
+
+    // Load input in (channels, height, width)-order (this is what happens in the network)
+    let input_data = Array::from_shape_vec(
+        (7, 48, 48),
+        f32::read_csv(&format!("{}/vcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
 
     let output = run_single_layer(
         "row_conv_2",
@@ -142,16 +216,33 @@ fn h2_returns_baseline() {
             FIXED_SEPCONV_HYPER_PARAMS.hconv2_blockdim_y,
         )),
     );
-    let correct = f32::read_lines_from_file(&format!("{}/hcr2-out.f", SEPCONV_BASELINE_F32));
+    // Load model output in (channels, height, width)-order
+    let correct = Array::from_shape_vec(
+        (32, 48, 48),
+        f32::read_csv(&format!("{}/hcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
 
-    verify(&output, &correct, RESULT_MARGIN);
+    verify(&output, &correct, F32_GEMM_MAX_EPSILON);
 }
 
 #[test]
 fn mxp2_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
     let layer = &LAYERS.mxp2;
-    let input_data = f32::read_lines_from_file(&format!("{}/hcr2-out.f", SEPCONV_BASELINE_F32));
+
+    // Load input in (channels, height, width)-order (this is what happens in the network)
+    let input_data = Array::from_shape_vec(
+        (32, 48, 48),
+        f32::read_csv(&format!("{}/hcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
 
     let output = run_single_layer_unweighted(
         "max_pool_2",
@@ -159,72 +250,69 @@ fn mxp2_returns_baseline() {
         &input_data,
         LocalWorkSizePolicy::Infer { dev_max_wgs: 256 },
     );
-    let correct = f32::read_lines_from_file(&format!("{}/mxp2-out.f", SEPCONV_BASELINE_F32));
+    // Load model output in (channels, height, width)-order
+    let correct = Array::from_shape_vec(
+        (32, 24, 24),
+        f32::read_csv(&format!("{}/mxp2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+    ).unwrap()
+    .permuted_axes((0, 2, 1))
+    .iter()
+    .cloned()
+    .collect::<Vec<f32>>();
 
     verify(&output, &correct, RESULT_MARGIN);
 }
 
-// HACK: this does not measure the correct thing
+#[cfg_attr(not(feature = "test_sepconv"), ignore)]
 #[test]
 fn l3_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = &LAYERS.dense3;
-    let input_data = f32::read_lines_from_file(&format!("{}/fc3-flat-in.f", SEPCONV_BASELINE_F32));
-
-    let flags = ClNetwork::<f32>::compile_flags(&FIXED_SEPCONV_HYPER_PARAMS, &LAYERS);
-    let (_queue_a, queue_b, device_a, device_b, program, _context) =
-        init_cl::<f32>(&flags.iter().map(AsRef::as_ref).collect::<Vec<&str>>());
-
-    let (dense3_in_buf, dense3_out_buf) =
-        layer.create_io_bufs(flags::MEM_READ_ONLY, flags::MEM_WRITE_ONLY, &queue_b);
-    let dense3_wgts_buf = layer.create_wgts_buf(&queue_b);
-
-    // Create the kernel for the 3rd layer (Dense layer matrix multiplication)
-    let kernel = layer.create_kernel(
-        "mtx_mul",
-        &dense3_in_buf,
-        &dense3_out_buf,
-        &dense3_wgts_buf,
-        LocalWorkSizePolicy::UseDefault,
-        &program,
-        &queue_b,
-    );
-
-    let output = unsafe {
-        cl_util::map_to_buf(&dense3_in_buf, &input_data).unwrap();
-        kernel.cmd().queue(&queue_b).enq().unwrap();
-        let output = cl_util::read_buf(&dense3_out_buf).unwrap();
-        queue_b.finish().unwrap();
-        output
+    // Load input in (channels, height, width)-order
+    let input_data = {
+        let raw = f32::read_csv(&format!("{}/mxp2_out-cwh.csv", SEPCONV_BASELINE_F32));
+        let chw = Array::from_shape_vec((32, 24, 24), raw)
+            .unwrap()
+            .permuted_axes((0, 2, 1))
+            .into_iter()
+            .cloned()
+            .collect::<Vec<f32>>();
+        chw
     };
 
-    let correct = f32::read_lines_from_file(&format!("{}/fc3-out.f", SEPCONV_BASELINE_F32));
+    // Output is in (fc-const)-order
+    let output = relu(layer.compute(&input_data));
 
-    verify(&output, &correct, RESULT_MARGIN);
+    // Load model output in (fc-const)-order
+    let correct = f32::read_csv(&format!("{}/fc3-out.csv", SEPCONV_BASELINE_F32));
+
+    println!("output:\n{:?}\n", &output);
+    println!("correct:\n{:?}", &correct);
+    verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
 
 #[test]
 fn l4_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = &LAYERS.dense4;
-    let input_data = f32::read_lines_from_file(&format!("{}/fc3-out.f", SEPCONV_BASELINE_F32));
+    let input_data = f32::read_csv(&format!("{}/fc3-out.csv", SEPCONV_BASELINE_F32));
 
     let output = relu(layer.compute(&input_data));
-    let correct = f32::read_lines_from_file(&format!("{}/fc4-out.f", SEPCONV_BASELINE_F32));
+    let correct = f32::read_csv(&format!("{}/fc4-out.csv", SEPCONV_BASELINE_F32));
 
-    verify(&output, &correct, RESULT_MARGIN);
+    verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
 
 #[test]
 fn l5_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = &LAYERS.dense5;
-    let input_data = f32::read_lines_from_file(&format!("{}/fc4-out.f", SEPCONV_BASELINE_F32));
+    let input_data = f32::read_csv(&format!("{}/fc4-out.csv", SEPCONV_BASELINE_F32));
 
-    let output = softmax(&layer.compute(&input_data));
-    let correct = f32::read_lines_from_file(&format!("{}/out.f", SEPCONV_BASELINE_F32));
+    let output = &layer.compute(&input_data);
+    let correct = f32::read_csv(&format!("{}/fc5-out.csv", SEPCONV_BASELINE_F32));
 
-    verify(&output, &correct, RESULT_MARGIN);
+    verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
 
 /*
@@ -260,7 +348,7 @@ fn run_sepconv_i8() -> Vec<f32> {
     );
     let net = ClNetwork::<i8>::new(wgts);
     // TODO: load real input data
-    //let input_data = i8::read_lines_from_file("input/baseline/sepconv-f32-xcorr/in.f");
+    //let input_data = i8::read_csv("input/baseline/sepconv-f32-xcorr/case a/in.csv");
     let input_data: Vec<i8> = (0..96 * 96 * 3)
         .map(|_| rng.gen_range(i8::MIN, i8::MAX))
         .collect();
@@ -268,17 +356,21 @@ fn run_sepconv_i8() -> Vec<f32> {
 }
 */
 
+#[cfg_attr(not(feature = "test_sepconv"), ignore)]
 #[test]
 fn sepconv_f32_predicts() {
     let output = run_sepconv_f32();
-    let correct = f32::read_lines_from_file(&format!("{}/out.f", SEPCONV_BASELINE_F32));
+    let correct = softmax(f32::read_csv(&format!(
+        "{}/fc5-out.csv",
+        SEPCONV_BASELINE_F32
+    )));
 
-    verify(&output, &correct, COARSE_RESULT_MARGIN);
+    verify(&output, &correct, RESULT_MARGIN);
 }
 
 fn run_sepconv_f32() -> Vec<f32> {
     let net = ClNetwork::<f32>::new(Weights::default());
-    let input_data = f32::read_lines_from_file(&format!("{}/in.f", SEPCONV_BASELINE_F32));
+    let input_data = load_jpeg_chw(&format!("{}/in.jpg", SEPCONV_BASELINE_F32));
     net.predict(&input_data)
 }
 

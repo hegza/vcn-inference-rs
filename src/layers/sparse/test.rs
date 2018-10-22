@@ -24,9 +24,9 @@ fn sparse_layer_works_for_dense() {
     let weights = f32::read_csv("input/weights/fc3-f32-chwn.csv");
     let layer = SparseLayer::from_dense(fm2_shape.num_elems(), LAYER3_SIZE, weights);
 
-    let in_buf = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE));
+    let in_buf = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE)).unwrap();
     let out = relu(layer.compute(&in_buf));
-    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE));
+    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE)).unwrap();
     verify(&out, &correct, 0.0001f32);
 }
 

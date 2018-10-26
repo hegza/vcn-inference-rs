@@ -36,6 +36,7 @@ fn classic_predicts() {
     verify(&result, &correct, COARSE_RESULT_MARGIN);
 }
 
+#[cfg_attr(not(feature = "test_classic"), ignore)]
 #[test]
 fn l1_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
@@ -76,6 +77,7 @@ fn l1_returns_baseline() {
     verify(&output, &correct, RESULT_MARGIN);
 }
 
+#[cfg_attr(not(feature = "test_classic"), ignore)]
 #[test]
 fn l2_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file

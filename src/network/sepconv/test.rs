@@ -263,6 +263,7 @@ fn mxp2_returns_baseline() {
     verify(&output, &correct, RESULT_MARGIN);
 }
 
+// `cargo test --feature test_sepconv` to run this test
 #[cfg_attr(not(feature = "test_sepconv"), ignore)]
 #[test]
 fn l3_returns_baseline() {
@@ -356,6 +357,7 @@ fn run_sepconv_i8() -> Vec<f32> {
 }
 */
 
+// `cargo test --feature test_sepconv` to run this test
 #[cfg_attr(not(feature = "test_sepconv"), ignore)]
 #[test]
 fn sepconv_f32_predicts() {

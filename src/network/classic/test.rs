@@ -36,6 +36,7 @@ fn classic_predicts() {
     verify(&result, &correct, COARSE_RESULT_MARGIN);
 }
 
+// `cargo test --feature test_classic` to run this test
 #[cfg_attr(not(feature = "test_classic"), ignore)]
 #[test]
 fn l1_returns_baseline() {
@@ -77,6 +78,7 @@ fn l1_returns_baseline() {
     verify(&output, &correct, RESULT_MARGIN);
 }
 
+// `cargo test --feature test_classic` to run this test
 #[cfg_attr(not(feature = "test_classic"), ignore)]
 #[test]
 fn l2_returns_baseline() {

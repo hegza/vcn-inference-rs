@@ -54,13 +54,18 @@ impl OclGemm<Gemm1Kernel> for Gemm1Kernel {
         // Optimal tile-size is as close to the preferred maximum work-group-size while still
         // fitting into the max work group size on GPU and 1 on CPU because no autovectorization is
         // possible for this kernel. cnugteren used hard-coded 32x32.
-        let ts = if device == DeviceType::CPU {
-            1
+        let (ts_x, ts_y) = if device == DeviceType::CPU {
+            (1, 1)
         } else {
-            let dev_max_lws = cl_util::resolve_device(Some(device)).max_wg_size().unwrap();
-            (dev_max_lws as f64).sqrt() as usize
+            let device = cl_util::resolve_device(Some(device));
+            let dev_max_lws = device.max_wg_size().unwrap();
+            let dev_max_lw_side = (dev_max_lws as f64).sqrt() as usize;
+            (
+                (dev_max_lw_side.min(n) as f64) as usize,
+                (dev_max_lw_side.min(m) as f64) as usize,
+            )
         };
-        let lws = SpatialDims::Two(ts, ts);
+        let lws = SpatialDims::Two(ts_x, ts_y);
 
         let gws = SpatialDims::Two(m, n);
         let kernel = Kernel::builder()

@@ -448,8 +448,8 @@ impl Gemm6WithBTransposeCompileParameters {
             1
         } else {
             let device = cl_util::resolve_device(Some(device));
-            let dev_max_lws = device.max_wg_size().unwrap();
-            dev_max_lws
+            let dev_max_lws = device.max_wg_size().unwrap().min(m * n);
+            (dev_max_lws as f64).sqrt() as usize
         };
 
         let transpose = {

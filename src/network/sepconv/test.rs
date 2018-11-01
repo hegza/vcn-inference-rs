@@ -133,12 +133,14 @@ fn mxp1_returns_baseline() {
     .cloned()
     .collect::<Vec<f32>>();
 
+    let device_a = cl_util::select_device(cl_util::DevicePreference::PreferGpu);
+    let dev_max_wgs = cl_util::max_wgs(Some(&device_a));
+
     let output = run_single_layer_unweighted(
         "max_pool_1",
         layer,
         &input_data,
-        // HACK: dev_max_wgs
-        LocalWorkSizePolicy::Infer { dev_max_wgs: 256 },
+        LocalWorkSizePolicy::Infer { dev_max_wgs },
     );
 
     // Load model output in (channels, height, width)-order
@@ -244,11 +246,14 @@ fn mxp2_returns_baseline() {
     .cloned()
     .collect::<Vec<f32>>();
 
+    let device_a = cl_util::select_device(cl_util::DevicePreference::PreferGpu);
+    let dev_max_wgs = cl_util::max_wgs(Some(&device_a));
+
     let output = run_single_layer_unweighted(
         "max_pool_2",
         layer,
         &input_data,
-        LocalWorkSizePolicy::Infer { dev_max_wgs: 256 },
+        LocalWorkSizePolicy::Infer { dev_max_wgs },
     );
     // Load model output in (channels, height, width)-order
     let correct = Array::from_shape_vec(

@@ -16,7 +16,9 @@ fn mxp_returns_baseline() {
     let mxp = MaxpoolLayer::new(&in_shape, 2);
 
     // Implement mxp on GPU if possible
-    let dev_max_wgs = cl_util::max_wgs(None);
+    let device = cl_util::select_device(cl_util::DevicePreference::PreferGpu);
+    let dev_max_wgs = cl_util::max_wgs(Some(&device));
+
     let cl_impl = mxp.impl_standalone(
         &["src/cl/test/mxp.cl"],
         "max_pool",

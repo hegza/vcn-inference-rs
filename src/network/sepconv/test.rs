@@ -268,8 +268,6 @@ fn mxp2_returns_baseline() {
     verify(&output, &correct, RESULT_MARGIN);
 }
 
-// `cargo test --feature test_sepconv` to run this test
-#[cfg_attr(not(feature = "test_sepconv"), ignore)]
 #[test]
 fn l3_returns_baseline() {
     // Create the representation of the fully-connected layer
@@ -292,8 +290,6 @@ fn l3_returns_baseline() {
     // Load model output in (fc-const)-order
     let correct = f32::read_csv(&format!("{}/fc3-out.csv", SEPCONV_BASELINE_F32));
 
-    println!("output:\n{:?}\n", &output);
-    println!("correct:\n{:?}", &correct);
     verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
 
@@ -362,8 +358,6 @@ fn run_sepconv_i8() -> Vec<f32> {
 }
 */
 
-// `cargo test --feature test_sepconv` to run this test
-#[cfg_attr(not(feature = "test_sepconv"), ignore)]
 #[test]
 fn sepconv_f32_predicts() {
     let output = run_sepconv_f32();

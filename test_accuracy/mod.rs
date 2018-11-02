@@ -167,13 +167,11 @@ where
             .iter()
             .enumerate()
             // Find the largest number
-            .max_by(|x, y|
-                match x.1.partial_cmp(y.1) {
-                    Some(ord) => ord,
-                    // Basically don't care about NaN comparisons
-                    None => std::cmp::Ordering::Greater
-                })
-            .unwrap()
+            .max_by(|x, y| match x.1.partial_cmp(y.1) {
+                Some(ord) => ord,
+                // Basically don't care about NaN comparisons
+                None => std::cmp::Ordering::Greater,
+            }).unwrap()
             // Take the index of the largest number
             .0;
         let prediction = idx_to_class(idx_of_correct_inputs);

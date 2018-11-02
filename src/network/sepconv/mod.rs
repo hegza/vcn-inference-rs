@@ -292,8 +292,7 @@ where
             let mut contents = String::new();
             f.read_to_string(&mut contents).unwrap();
             contents
-        })
-        .collect::<Vec<String>>();
+        }).collect::<Vec<String>>();
 
     let platform = Platform::default();
 

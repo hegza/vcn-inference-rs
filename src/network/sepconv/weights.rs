@@ -27,9 +27,11 @@ impl Default for Weights<f32> {
             reorder(load_fun("hcr2-f32.csv"), (32, 7, 5, 1), (0, 1, 2, 3)),
             // Load in CHWN
             reorder(
-                f32::read_csv(&format!("{}/archive/fc3-f32-nchw.csv", WEIGHTS_F32_DIR)), // likely is nhwc
+                f32::read_csv(&format!("{}/archive/fc3-f32-nchw.csv", WEIGHTS_F32_DIR)),
+                // Read as: n, hwc
                 (100, 24, 24, 32),
-                (3, 1, 2, 0),
+                // n, chw
+                (0, 3, 1, 2),
             ),
             f32::read_csv(&format!("{}/fc4-f32.csv", WEIGHTS_F32_DIR)),
             f32::read_csv(&format!("{}/fc5-f32.csv", WEIGHTS_F32_DIR)),

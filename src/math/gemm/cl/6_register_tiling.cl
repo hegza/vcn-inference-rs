@@ -1,27 +1,41 @@
+/** Optimized matrix multiplication, originally by Cedric Nugteren (CNugteren@github), adapted by
+ * Henri Lunnikivi (hegza@github).
+ *
+ * The algorithm does A*B^T ie. multiplies an M-by-K matrix A with a K-by-N matrix B, producing an
+ * M by N matrix C. B is assumed to be transposed. All dimensions are in C-order. All matrices
+ * might* need to be powers of two. Boundaries are likely to be easily generalizable, however.
+ *
+ * This GEMM algorithm utilizes register tiling to improve performance. Note that OpenCL seems to
+ * autovectorize this code successfully, as cnugteren found that manually vector-loading did not
+ * produce a speed-improvement. I (Henri) found this algorithm to perform the best on an AMD GPU
+ * (Radeon HD 78xx), out of the algorithms described on https://cnugteren.github.io/tutorial/. This
+ * matches with his results (== implementing vectorization and CUDA stuff did not produce an
+ * improvement). Comments use OpenCL standard terminology.
+ *
+ * Local memory usage in bytes: * 4 * TSK * TSM + 4 * (TSK + 2) * TSN
+ */
+
 // Compile with:
-// -D TSM={}    The tile-size in dimension M
-// -D TSN={}    The tile-size in dimension N
-// -D TSK={}    The tile-size in dimension K
-// -D WPWIM={}   The amount of work-per-work-item in dimension M
-// -D WPWIN={}   The amount of work-per-work-item in dimension N
+// -D TSM={}    The tile-size in dimension M.
+// -D TSN={}    The tile-size in dimension N.
+// -D TSK={}    The tile-size in dimension K.
+// -D WPWIM={}  The amount of work-per-work-item in dimension M.
+// -D WPWIN={}  The amount of work-per-work-item in dimension N.
 
-// Local memory usage:
-// local_memory_bytes = 4 * TSK * TSM + 4 * (TSK + 2) * TSN
-
-// From software.intel.com:
-// If your kernel code contains the barrier instruction, the issue of work-group size becomes a
-// tradeoff. The more local and private memory each work-item in the work-group requires, the
-// smaller the optimal work-group size is. The reason is that a barrier also issues copy
-// instructions for the total amount of private and local memory used by all work-items in the
-// work-group in the work-group since the state of each work-item that arrived at the barrier is
-// saved before proceeding with another work-item.
+// My best values on AMD Radeon HD 78xx:
+// -D TSM=64    // Cache line size
+// -D TSN=64    // Cache line size
+// -D TSK=16    // With 16 TMS*TSN*TSK becomes 65536 which fits in my constant memory. Overkill
+//              // causes issues.
+// -D WPWIM=4   // I picked preferred float vector width.
+// -D WPWIN=4   // I picked preferred float vector width.
 
 #include "macros.h"
 
-#define RTSM (TSM / WPWIM)                  // The reduced tile-size in dimension M (== number of work-items)
-#define RTSN (TSN / WPWIN)                  // The reduced tile-size in dimension N (== number of work-items)
-#define LPTA ((TSK * WPWIM * WPWIN) / (TSN)) // The amount of loads-per-work-item for A
-#define LPTB ((TSK * WPWIM * WPWIN) / (TSM)) // The amount of loads-per-work-item for B
+#define RTSM (TSM / WPWIM)                      // The reduced tile-size in dimension M (== number of work-items)
+#define RTSN (TSN / WPWIN)                      // The reduced tile-size in dimension N (== number of work-items)
+#define LPTA ((TSK * WPWIM * WPWIN) / (TSN))    // The amount of loads-per-work-item for A
+#define LPTB ((TSK * WPWIM * WPWIN) / (TSM))    // The amount of loads-per-work-item for B
 
 // Use 2D register blocking (further increase in work per work-item)
 __kernel void myGEMM6(const int M, const int N, const int K,

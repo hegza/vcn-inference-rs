@@ -4,6 +4,7 @@
 #![allow(dead_code)]
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use geometry::{ImageGeometry, Square};
+use image::GenericImageView;
 use layers::Layer;
 use math::GenericOps;
 use ndarray;

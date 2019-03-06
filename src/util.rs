@@ -552,8 +552,15 @@ where
     Sh: Into<StrideShape<D>>,
     D2: IntoDimension<Dim = D>,
 {
-    Array::from_shape_vec(source_shape, data)
-        .unwrap()
+    let data_len = data.len();
+    let source_shape = source_shape.into();
+    Array::from_shape_vec(source_shape.clone(), data)
+        .unwrap_or_else(|_| {
+            panic!(
+                "cannot reorder a vector of length {} into shape {:?}",
+                data_len, source_shape,
+            )
+        })
         .permuted_axes(axes_order)
         .iter()
         .cloned()

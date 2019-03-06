@@ -1,8 +1,8 @@
 use super::*;
-use geometry::{ImageGeometry, PaddedSquare};
+use crate::geometry::{ImageGeometry, PaddedSquare};
 use ndarray::Array;
-use tests::{COARSE_RESULT_MARGIN, F32_GEMM_MAX_EPSILON, RESULT_MARGIN};
-use util::verify;
+use crate::tests::{COARSE_RESULT_MARGIN, F32_GEMM_MAX_EPSILON, RESULT_MARGIN};
+use crate::util::verify;
 
 lazy_static! {
     static ref LAYERS: Layers<f32> = { Layers::<f32>::new(Weights::default()) };

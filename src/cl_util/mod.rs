@@ -12,7 +12,7 @@ use ocl::flags::*;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
 use std::fs;
 use std::io::prelude::*;
-use util::*;
+use crate::util::*;
 
 const PROFILING: bool = false;
 const KERNEL_PATH_PREFIX: &str = "";

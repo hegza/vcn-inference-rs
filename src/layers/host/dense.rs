@@ -1,5 +1,5 @@
 use super::*;
-use math::*;
+use crate::math::*;
 use num_traits::{Float, Num, NumAssign, PrimInt, Zero};
 use std::ops::{AddAssign, Mul};
 

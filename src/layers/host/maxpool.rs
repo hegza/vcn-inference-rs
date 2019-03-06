@@ -1,5 +1,5 @@
 use super::*;
-use math::*;
+use crate::math::*;
 
 impl<T> ComputeOnHost<T> for MaxpoolLayer
 where

@@ -2,6 +2,7 @@
 name = "rusty-cnn"
 version = "0.2.0"
 authors = ["Henri Lunnikivi <henri.lunnikivi@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 byteorder = "^1"
@@ -25,6 +26,7 @@ enclose = "0.1.1"
 [[bin]]
 name = "test_accuracy"
 path = "test_accuracy/mod.rs"
+edition = "2018"
 
 [[bench]]
 name = "network_wall"

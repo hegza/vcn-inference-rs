@@ -1,10 +1,10 @@
 use super::*;
-use cl_util as cl;
+use crate::cl_util as cl;
+use crate::network::Predict;
+use crate::tests::*;
 use ndarray::Array;
-use network::Predict;
 use rand;
-use rand::{Rng, ThreadRng};
-use tests::*;
+use rand::Rng;
 
 pub const SEPCONV_BASELINE_F32: &'static str = "input/baseline/sepconv-f32-xcorr/case b";
 
@@ -43,7 +43,8 @@ fn v1_returns_baseline() {
     let correct = Array::from_shape_vec(
         (7, 96, 96),
         f32::read_csv(&format!("{}/vcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -61,7 +62,8 @@ fn h1_returns_baseline() {
     let input_data = Array::from_shape_vec(
         (7, 96, 96),
         f32::read_csv(&format!("{}/vcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -109,7 +111,8 @@ fn h1_returns_baseline() {
     let correct = Array::from_shape_vec(
         (32, 96, 96),
         f32::read_csv(&format!("{}/hcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -127,7 +130,8 @@ fn mxp1_returns_baseline() {
     let input_data = Array::from_shape_vec(
         (32, 96, 96),
         f32::read_csv(&format!("{}/hcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -147,7 +151,8 @@ fn mxp1_returns_baseline() {
     let correct = Array::from_shape_vec(
         (32, 48, 48),
         f32::read_csv(&format!("{}/mxp1_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -165,7 +170,8 @@ fn v2_returns_baseline() {
     let input_data = Array::from_shape_vec(
         (32, 48, 48),
         f32::read_csv(&format!("{}/mxp1_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -185,7 +191,8 @@ fn v2_returns_baseline() {
     let correct = Array::from_shape_vec(
         (7, 48, 48),
         f32::read_csv(&format!("{}/vcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -203,7 +210,8 @@ fn h2_returns_baseline() {
     let input_data = Array::from_shape_vec(
         (7, 48, 48),
         f32::read_csv(&format!("{}/vcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -222,7 +230,8 @@ fn h2_returns_baseline() {
     let correct = Array::from_shape_vec(
         (32, 48, 48),
         f32::read_csv(&format!("{}/hcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -240,7 +249,8 @@ fn mxp2_returns_baseline() {
     let input_data = Array::from_shape_vec(
         (32, 48, 48),
         f32::read_csv(&format!("{}/hcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()
@@ -259,7 +269,8 @@ fn mxp2_returns_baseline() {
     let correct = Array::from_shape_vec(
         (32, 24, 24),
         f32::read_csv(&format!("{}/mxp2_out-cwh.csv", SEPCONV_BASELINE_F32)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .iter()
     .cloned()

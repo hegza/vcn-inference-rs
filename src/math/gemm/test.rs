@@ -1,6 +1,6 @@
 use super::*;
-use tests::COARSE_RESULT_MARGIN;
-use verify;
+use crate::tests::COARSE_RESULT_MARGIN;
+use crate::verify;
 
 // Cubic-root of the dimension of the test matrices in the files
 const D: usize = 64;

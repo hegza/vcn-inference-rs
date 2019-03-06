@@ -16,7 +16,7 @@ const NOISE_THRESHOLD: f64 = 0.06;
 
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
 use rusty_cnn::math::gemm::*;
-use shared::*;
+use crate::shared::*;
 use std::collections::HashMap;
 
 fn bench_transpose_gpu(c: &mut Criterion) {

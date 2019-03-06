@@ -2,11 +2,12 @@
  * Trivial to understand utility functions that need not clutter other namespaces.
 */
 #![allow(dead_code)]
+use crate::geometry::{ImageGeometry, Square};
+use crate::layers::Layer;
+use crate::math::GenericOps;
+use crate::Coeff;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use geometry::{ImageGeometry, Square};
 use image::GenericImageView;
-use layers::Layer;
-use math::GenericOps;
 use ndarray;
 use ndarray::{Array, Dimension, IntoDimension, StrideShape};
 use num_traits::{Float, Num, Zero};
@@ -20,7 +21,6 @@ use std::path::Path;
 use std::slice::from_raw_parts_mut;
 use std::str::FromStr;
 use std::time::Instant;
-use Coeff;
 
 /// Reads a file into a string.
 pub fn read_file(filename: &str) -> String {
@@ -305,7 +305,7 @@ where
                 .iter_mut()
                 .for_each(|row| row.iter_mut().for_each(|elem| *elem = Zero::zero()));
             for (row_idx, row) in n_rows.iter_mut().enumerate() {
-                let (mut pad_left, mut im_middle, mut pad_right) =
+                let (pad_left, im_middle, pad_right) =
                     split_in_three_mut(row, padding, padded_shape.side() - padding);
                 // Pad left side of image with 0's
                 pad_left.iter_mut().for_each(|x| *x = Zero::zero());

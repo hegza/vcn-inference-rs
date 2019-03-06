@@ -38,12 +38,12 @@ pub mod network;
 mod tests;
 mod util;
 
-use cl_util as cl;
-pub use layers::*;
-pub use math::*;
-pub use network::*;
+use crate::cl_util as cl;
+pub use crate::layers::*;
+pub use crate::math::*;
+pub use crate::network::*;
 use num_traits::{Float, Num, NumAssign, Zero};
 use ocl::{flags, Buffer, Kernel, OclPrm, Program, Queue};
 use std::ops::Deref;
 use std::ops::Mul;
-pub use util::*;
+pub use crate::util::*;

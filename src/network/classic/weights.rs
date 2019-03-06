@@ -1,5 +1,5 @@
-use layers::Coeff;
-use util::{reorder, ReadBinFromFile, ReadCsv};
+use crate::layers::Coeff;
+use crate::util::{reorder, ReadBinFromFile, ReadCsv};
 
 pub const WEIGHTS_DIR: &str = "input/weights";
 

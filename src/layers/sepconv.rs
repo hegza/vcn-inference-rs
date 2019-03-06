@@ -1,5 +1,5 @@
 use super::*;
-use geometry::*;
+use crate::geometry::*;
 use ocl::SpatialDims;
 use std::ops::Deref;
 

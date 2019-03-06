@@ -13,12 +13,13 @@ extern crate rusty_cnn;
 
 mod shared;
 
+use crate::shared::*;
 use criterion::Criterion;
 use num_traits::bounds::Bounded;
 use rand::distributions::range::SampleRange;
+use rand::distributions::uniform::SampleUniform;
 use rand::Rng;
 use rusty_cnn::*;
-use shared::*;
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.05;
@@ -69,7 +70,7 @@ where
         .collect()
 }
 
-criterion_group!{
+criterion_group! {
     name = benches;
     config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
     targets = classic_full, sepconv_f32_full, sparse_f32_full /*sepconv_i8_full, */

@@ -17,7 +17,7 @@ mod shared;
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
 use rusty_cnn::math::gemm::*;
 use rusty_cnn::verify;
-use shared::*;
+use crate::shared::*;
 use std::collections::HashMap;
 
 const SAMPLE_SIZE: usize = 20;

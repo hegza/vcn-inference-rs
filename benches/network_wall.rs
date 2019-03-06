@@ -13,7 +13,7 @@ mod shared;
 
 use criterion::Criterion;
 use rusty_cnn::*;
-use shared::*;
+use crate::shared::*;
 
 const SAMPLE_SIZE: usize = 10;
 const NOISE_THRESHOLD: f64 = 0.03;

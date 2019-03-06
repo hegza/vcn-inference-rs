@@ -1,9 +1,9 @@
 use super::*;
-use cl_util as cl;
-use geometry::*;
+use crate::cl_util as cl;
+use crate::geometry::*;
 use ocl::SpatialDims;
 use std::ops::Deref;
-use util::*;
+use crate::util::*;
 
 #[derive(Clone)]
 pub struct MaxpoolLayer {

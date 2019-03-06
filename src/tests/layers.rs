@@ -1,5 +1,5 @@
 use super::*;
-use geometry::*;
+use crate::geometry::*;
 use ocl::flags::DeviceType;
 use ocl::{flags, Context, Device, Kernel, Platform, Program, SpatialDims};
 
@@ -39,7 +39,7 @@ fn mxp_returns_baseline() {
 }
 
 use ndarray::Array;
-use network::sparse::WEIGHTS_DIR;
+use crate::network::sparse::WEIGHTS_DIR;
 use ocl::flags::*;
 #[test]
 fn conv2d_cl_returns_tf_baseline() {

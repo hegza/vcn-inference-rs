@@ -26,8 +26,8 @@ pub use self::gemm_6::Gemm6WithBTransposeKernel as GemmKernel;
 pub use self::gemm_6::*;
 pub use ocl::flags::DeviceType;
 
-use cl_util;
-use layers::Coeff;
+use crate::cl_util;
+use crate::layers::Coeff;
 use ocl;
 use ocl::{flags, Buffer, Context, Device, Kernel, OclPrm, Platform, Program, Queue, SpatialDims};
 use std::cmp::min;

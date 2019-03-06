@@ -14,7 +14,7 @@ mod shared;
 use criterion::{black_box, Bencher, Benchmark, Criterion};
 use rusty_cnn::geometry::*;
 use rusty_cnn::{classic, read_image_with_padding_from_bin_in_channels, sparse, Predict};
-use shared::CLASSIC_BASELINE;
+use crate::shared::CLASSIC_BASELINE;
 
 // Sample size of 100 puts the max-min of the benches at around 10 us at worst.
 const SAMPLE_SIZE: usize = 100;

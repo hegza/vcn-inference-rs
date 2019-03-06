@@ -15,7 +15,7 @@ extern crate rusty_cnn;
 mod shared;
 
 use criterion::{Benchmark, Criterion};
-use shared::conv::*;
+use crate::shared::conv::*;
 
 // Sample size of 100 puts the max-min of the benches at around 10 us at worst.
 const SAMPLE_SIZE: usize = 100;

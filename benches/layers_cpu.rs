@@ -15,7 +15,7 @@ extern crate rusty_cnn;
 mod shared;
 
 use criterion::{Benchmark, Criterion};
-use shared::dense::*;
+use crate::shared::dense::*;
 
 const SAMPLE_SIZE: usize = 150;
 const NOISE_THRESHOLD: f64 = 0.1;

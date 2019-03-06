@@ -8,7 +8,7 @@ pub use self::dense::*;
 pub use self::unweighted_layer::*;
 pub use self::weighted_layer::*;
 use super::*;
-use cl_util as cl;
+use crate::cl_util as cl;
 use ocl::builders::KernelBuilder;
 use ocl::Result as OclResult;
 use ocl::*;

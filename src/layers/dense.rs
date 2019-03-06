@@ -1,7 +1,7 @@
 use super::*;
 use ocl::SpatialDims;
 use std::ops::Deref;
-use util::*;
+use crate::util::*;
 
 /// A complete descriptor for a fully-connected layer
 #[derive(Clone)]

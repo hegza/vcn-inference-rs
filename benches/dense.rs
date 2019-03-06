@@ -15,7 +15,7 @@ extern crate rusty_cnn;
 mod shared;
 
 use criterion::{AxisScale, Benchmark, Criterion, PlotConfiguration};
-use shared::dense::*;
+use crate::shared::dense::*;
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.06;

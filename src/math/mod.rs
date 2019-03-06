@@ -14,7 +14,7 @@ use std;
 use std::cmp::Ordering;
 use std::mem::size_of;
 use std::ops::{AddAssign, Mul};
-use util::*;
+use crate::util::*;
 
 /// Naive matrix multiplication on the host
 pub fn gemm_naive<T>(m: usize, n: usize, k: usize, a: &[T], b: &[T], c: &mut [T])

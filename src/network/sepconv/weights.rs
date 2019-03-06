@@ -1,5 +1,5 @@
-use layers::Coeff;
-use util::{reorder, ReadBinFromFile, ReadCsv};
+use crate::layers::Coeff;
+use crate::util::{reorder, ReadBinFromFile, ReadCsv};
 
 pub const WEIGHTS_F32_DIR: &str = "input/weights/sepconv";
 pub const WEIGHTS_I8_DIR: &str = "input/weights/sepconv-96-97/i8-converted";

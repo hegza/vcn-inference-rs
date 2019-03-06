@@ -1,4 +1,4 @@
-use math::GenericOps;
+use crate::math::GenericOps;
 use ndarray::{Array, ArrayBase, Axis, Dim, Dimension, IntoDimension, Ix3, Ix4, OwnedRepr};
 use num_traits::bounds::Bounded;
 use num_traits::Zero;
@@ -164,11 +164,11 @@ impl IntoShape for (usize, usize) {
 #[cfg(test)]
 mod test {
     use super::*;
-    use math::relu;
-    use network::sparse::WEIGHTS_DIR;
-    use tests::F32_GEMM_MAX_EPSILON;
-    use util::{load_jpeg_chw, ReadCsv};
-    use verify;
+    use crate::math::relu;
+    use crate::network::sparse::WEIGHTS_DIR;
+    use crate::tests::F32_GEMM_MAX_EPSILON;
+    use crate::util::{load_jpeg_chw, ReadCsv};
+    use crate::verify;
 
     #[test]
     fn cross_correlation_works_for_sparse_baseline_l1() {

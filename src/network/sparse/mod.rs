@@ -6,10 +6,10 @@ mod weights;
 pub use self::layers::*;
 pub use self::weights::*;
 use super::Predict;
-use cl_util::*;
-use geometry::{ImageGeometry, PaddedSquare, Square};
-use layers::*;
-use math::{relu, softmax};
+use crate::cl_util::*;
+use crate::geometry::{ImageGeometry, PaddedSquare, Square};
+use crate::layers::*;
+use crate::math::{relu, softmax};
 use ocl;
 use ocl::builders::*;
 use ocl::enums::*;
@@ -17,7 +17,7 @@ use ocl::flags::*;
 use ocl::{flags, Buffer, Context, Device, EventList, Kernel, OclPrm, Platform, Program, Queue};
 use std::fs;
 use std::io::prelude::*;
-use util::*;
+use crate::util::*;
 
 pub struct ClNetwork<T>
 where

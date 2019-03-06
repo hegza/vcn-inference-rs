@@ -12,10 +12,10 @@ extern crate rusty_cnn;
 mod class;
 mod util;
 
-use class::Class;
+use crate::class::Class;
 use rusty_cnn::*;
 use std::time::{Duration, Instant};
-use util::*;
+use crate::util::*;
 
 const INPUT_IMG_DIR: &str = "input/images";
 
@@ -187,7 +187,7 @@ where
 }
 
 fn idx_to_class(idx: usize) -> Class {
-    use class::Class::*;
+    use crate::class::Class::*;
     match idx {
         0 => Bus,
         1 => NormalCar,

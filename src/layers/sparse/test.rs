@@ -1,9 +1,9 @@
 use super::*;
-use classic;
-use geometry::{ImageGeometry, PaddedSquare, Square};
-use math::relu;
-use tests::CLASSIC_BASELINE;
-use util::*;
+use crate::classic;
+use crate::geometry::{ImageGeometry, PaddedSquare, Square};
+use crate::math::relu;
+use crate::tests::CLASSIC_BASELINE;
+use crate::util::*;
 
 #[test]
 fn sparse_layer_works_for_dense() {

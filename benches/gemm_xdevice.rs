@@ -18,8 +18,8 @@ use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration,
 use rusty_cnn::math::gemm::*;
 use rusty_cnn::math::gemm_naive;
 use rusty_cnn::verify;
-use shared::gemm::*;
-use shared::*;
+use crate::shared::gemm::*;
+use crate::shared::*;
 use std::collections::HashMap;
 
 const SAMPLE_SIZE: usize = 20;

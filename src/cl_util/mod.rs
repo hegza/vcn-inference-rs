@@ -5,6 +5,7 @@ pub mod standalone;
 
 pub use self::cl_types::*;
 pub use self::info::*;
+use crate::util::*;
 use ocl;
 use ocl::builders::*;
 use ocl::enums::*;
@@ -12,7 +13,6 @@ use ocl::flags::*;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
 use std::fs;
 use std::io::prelude::*;
-use crate::util::*;
 
 const PROFILING: bool = false;
 const KERNEL_PATH_PREFIX: &str = "";
@@ -86,7 +86,8 @@ where
             let mut contents = String::new();
             f.read_to_string(&mut contents).unwrap();
             contents
-        }).collect::<Vec<String>>();
+        })
+        .collect::<Vec<String>>();
     init_from_sources::<T>(
         &sources.iter().map(AsRef::as_ref).collect::<Vec<&str>>(),
         addt_cmplr_opts,

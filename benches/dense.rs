@@ -14,8 +14,8 @@ extern crate rusty_cnn;
 
 mod shared;
 
-use criterion::{AxisScale, Benchmark, Criterion, PlotConfiguration};
 use crate::shared::dense::*;
+use criterion::{AxisScale, Benchmark, Criterion, PlotConfiguration};
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.06;
@@ -36,7 +36,7 @@ fn bench_dense_layer_variants(c: &mut Criterion) {
     c.bench("layer-3-f32", bench.plot_config(plot_config));
 }
 
-criterion_group!{
+criterion_group! {
     name = benches;
     config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
     targets = bench_dense_layer_variants

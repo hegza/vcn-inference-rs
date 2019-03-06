@@ -10,6 +10,7 @@ use crate::cl_util;
 use crate::geometry::{ImageGeometry, PaddedSquare, Square};
 use crate::layers::*;
 use crate::math::{relu, softmax};
+use crate::util::*;
 use ocl;
 use ocl::{
     builders::*, enums::*, flags, flags::*, Buffer, Context, Device, EventList, Kernel, OclPrm,
@@ -17,7 +18,6 @@ use ocl::{
 };
 use std::fs;
 use std::io::prelude::*;
-use crate::util::*;
 
 pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     side: 96,
@@ -292,7 +292,8 @@ where
             let mut contents = String::new();
             f.read_to_string(&mut contents).unwrap();
             contents
-        }).collect::<Vec<String>>();
+        })
+        .collect::<Vec<String>>();
 
     let platform = Platform::default();
 

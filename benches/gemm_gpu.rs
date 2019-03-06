@@ -14,10 +14,10 @@ extern crate rusty_cnn;
 
 mod shared;
 
+use crate::shared::*;
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
 use rusty_cnn::math::gemm::*;
 use rusty_cnn::verify;
-use crate::shared::*;
 use std::collections::HashMap;
 
 const SAMPLE_SIZE: usize = 20;
@@ -283,7 +283,7 @@ fn bench_gemm_variants(c: &mut Criterion) {
     );
 }
 
-criterion_group!{
+criterion_group! {
     name = benches;
     config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
     targets = bench_gemm_variants

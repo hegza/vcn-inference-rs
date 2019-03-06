@@ -234,7 +234,8 @@ where
                     line.trim()
                         .parse::<T>()
                         .expect(&format!("cannot parse {} as T", line))
-                }).collect::<Vec<T>>())
+                })
+                .collect::<Vec<T>>())
         })
     }
 }

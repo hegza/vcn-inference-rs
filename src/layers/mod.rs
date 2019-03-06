@@ -18,11 +18,11 @@ use crate::cl_util::ClVecTypeName;
 use crate::flags::DeviceType;
 use crate::geometry::*;
 use crate::math::GenericOps;
+use crate::util::*;
 use num_traits::{Float, NumAssign, PrimInt};
 use ocl::*;
 use std::fmt::Display;
 use std::ops::Deref;
-use crate::util::*;
 
 pub trait Coeff: NumAssign + GenericOps + OclPrm + ClVecTypeName + Display {}
 pub trait CoeffFloat: Coeff + Float {}

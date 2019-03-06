@@ -10,6 +10,7 @@ use crate::cl_util::*;
 use crate::geometry::{ImageGeometry, PaddedSquare, Square};
 use crate::layers::*;
 use crate::math::{relu, softmax};
+use crate::util::*;
 use ocl;
 use ocl::builders::*;
 use ocl::enums::*;
@@ -17,7 +18,6 @@ use ocl::flags::*;
 use ocl::{flags, Buffer, Context, Device, EventList, Kernel, OclPrm, Platform, Program, Queue};
 use std::fs;
 use std::io::prelude::*;
-use crate::util::*;
 
 pub struct ClNetwork<T>
 where
@@ -138,7 +138,8 @@ where
             let mut contents = String::new();
             f.read_to_string(&mut contents).unwrap();
             contents
-        }).collect::<Vec<String>>();
+        })
+        .collect::<Vec<String>>();
 
     let platform = Platform::default();
 

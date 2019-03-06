@@ -11,9 +11,9 @@ extern crate rusty_cnn;
 
 mod shared;
 
+use crate::shared::*;
 use criterion::Criterion;
 use rusty_cnn::*;
-use crate::shared::*;
 
 const SAMPLE_SIZE: usize = 10;
 const NOISE_THRESHOLD: f64 = 0.03;
@@ -41,7 +41,7 @@ fn net_wall_benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group!{
+criterion_group! {
     name = benches;
     config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD);
     targets = net_wall_benchmark

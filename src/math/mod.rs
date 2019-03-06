@@ -9,12 +9,12 @@ pub mod gemm;
 
 pub use self::gemm::*;
 pub use self::quantize::*;
+use crate::util::*;
 use num_traits::{Float, Num, NumAssign, PrimInt, Zero};
 use std;
 use std::cmp::Ordering;
 use std::mem::size_of;
 use std::ops::{AddAssign, Mul};
-use crate::util::*;
 
 /// Naive matrix multiplication on the host
 pub fn gemm_naive<T>(m: usize, n: usize, k: usize, a: &[T], b: &[T], c: &mut [T])

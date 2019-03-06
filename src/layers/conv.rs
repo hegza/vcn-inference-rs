@@ -1,8 +1,8 @@
 use super::*;
 use crate::geometry::*;
+use crate::util::*;
 use ocl::SpatialDims;
 use std::ops::Deref;
-use crate::util::*;
 
 // TODO: refactor to use tensors (weights) and tensor-shapes (input dims) (ndarray?)
 // TODO: sa: https://www.tensorflow.org/api_docs/python/tf/nn/conv2d

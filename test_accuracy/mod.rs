@@ -13,9 +13,9 @@ mod class;
 mod util;
 
 use crate::class::Class;
+use crate::util::*;
 use rusty_cnn::*;
 use std::time::{Duration, Instant};
-use crate::util::*;
 
 const INPUT_IMG_DIR: &str = "input/images";
 
@@ -171,7 +171,8 @@ where
                 Some(ord) => ord,
                 // Basically don't care about NaN comparisons
                 None => std::cmp::Ordering::Greater,
-            }).unwrap()
+            })
+            .unwrap()
             // Take the index of the largest number
             .0;
         let prediction = idx_to_class(idx_of_correct_inputs);

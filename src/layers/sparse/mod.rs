@@ -2,10 +2,10 @@
 mod test;
 
 use super::*;
+use crate::util::*;
 use ocl::SpatialDims;
 use sprs::{CsMat, CsMatBase, CsMatI, CsVec, TriMatBase};
 use std::ops::Deref;
-use crate::util::*;
 
 const FLOAT_ZERO_THRESHOLD: f32 = 0.0000001f32;
 

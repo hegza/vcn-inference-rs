@@ -14,9 +14,9 @@ mod shared;
 const SAMPLE_SIZE: usize = 20;
 const NOISE_THRESHOLD: f64 = 0.06;
 
+use crate::shared::*;
 use criterion::{AxisScale, Criterion, ParameterizedBenchmark, PlotConfiguration, Throughput};
 use rusty_cnn::math::gemm::*;
-use crate::shared::*;
 use std::collections::HashMap;
 
 fn bench_transpose_gpu(c: &mut Criterion) {
@@ -252,7 +252,7 @@ fn bench_transpose(c: &mut Criterion, params: Vec<usize>, device: DeviceType, gr
     );
 }
 
-criterion_group!{
+criterion_group! {
     name = benches;
     config = Criterion::default().sample_size(SAMPLE_SIZE).noise_threshold(NOISE_THRESHOLD).retain_baseline("baseline 26-07-2018 fresh computer".to_string());
     targets = bench_transpose_gpu, bench_transpose_cpu

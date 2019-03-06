@@ -79,18 +79,20 @@ where
                     ..,
                     pad_left as isize..-(pad_right as isize),
                     pad_top as isize..-(pad_bottom as isize)
-                ]).assign(&conv_input);
+                ])
+                .assign(&conv_input);
             for ch in 0..output_depth {
                 // Loop over every pixel of the output
                 for x in 0..output_width {
                     for y in 0..output_height {
                         // element-wise multiplication of the kernel and the image
                         *output.get_mut((ch, x, y)).unwrap() =
-                            (&conv_kernel.slice(s![ch, .., .., ..]) * &image_padded.slice(s![
-                                ..,
-                                x * strides[0]..x * strides[0] + kernel_w,
-                                y * strides[1]..y * strides[1] + kernel_h,
-                            ]))
+                            (&conv_kernel.slice(s![ch, .., .., ..])
+                                * &image_padded.slice(s![
+                                    ..,
+                                    x * strides[0]..x * strides[0] + kernel_w,
+                                    y * strides[1]..y * strides[1] + kernel_h,
+                                ]))
                                 .scalar_sum()
                                 + bias[ch];
                     }
@@ -119,11 +121,12 @@ where
                     for y in 0..output_height {
                         // element-wise multiplication of the kernel and the image
                         *output.get_mut((ch, x, y)).unwrap() =
-                            (&conv_kernel.slice(s![ch, .., .., ..]) * &conv_input.slice(s![
-                                ..,
-                                x * strides[0]..x * strides[0] + kernel_w,
-                                y * strides[1]..y * strides[1] + kernel_h,
-                            ]))
+                            (&conv_kernel.slice(s![ch, .., .., ..])
+                                * &conv_input.slice(s![
+                                    ..,
+                                    x * strides[0]..x * strides[0] + kernel_w,
+                                    y * strides[1]..y * strides[1] + kernel_h,
+                                ]))
                                 .scalar_sum()
                                 + bias[ch];
                     }
@@ -173,17 +176,21 @@ mod test {
     #[test]
     fn cross_correlation_works_for_sparse_baseline_l1() {
         // Load input in (channels, width, height)-order
-        let input = Array::from_shape_vec((3, 96, 96), load_jpeg_chw("input/baseline/sparse-f32/in.jpg"))
-                .unwrap()
-                // Convert from (channels, height, width) to (channels, width, height)
-                .permuted_axes((0, 2, 1));
+        let input = Array::from_shape_vec(
+            (3, 96, 96),
+            load_jpeg_chw("input/baseline/sparse-f32/in.jpg"),
+        )
+        .unwrap()
+        // Convert from (channels, height, width) to (channels, width, height)
+        .permuted_axes((0, 2, 1));
 
         // Load filters in (out channels, in channels, width, height)-order
         let weights = {
             Array::from_shape_vec(
                 (32, 3, 5, 5),
                 f32::read_csv(&format!("{}/{}", WEIGHTS_DIR, "conv1-f32-dcwh.csv")),
-            ).unwrap()
+            )
+            .unwrap()
         };
 
         let output = relu(

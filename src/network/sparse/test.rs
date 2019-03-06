@@ -1,8 +1,8 @@
 use super::*;
 use crate::geometry::{ImageGeometry, PaddedSquare};
-use ndarray::Array;
 use crate::tests::{COARSE_RESULT_MARGIN, F32_GEMM_MAX_EPSILON, RESULT_MARGIN};
 use crate::util::verify;
+use ndarray::Array;
 
 lazy_static! {
     static ref LAYERS: Layers<f32> = { Layers::<f32>::new(Weights::default()) };
@@ -33,7 +33,8 @@ fn l1_returns_baseline() {
     let correct = Array::from_shape_vec(
         (32, 52, 52),
         f32::read_csv(&format!("{}/fm1_mxp-cwh.csv", SPARSE_BASELINE)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .into_iter()
     .cloned()
@@ -52,7 +53,8 @@ fn l2_returns_baseline() {
     let input_data = Array::from_shape_vec(
         (32, 52, 52),
         f32::read_csv(&format!("{}/fm1_mxp-cwh.csv", SPARSE_BASELINE)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .into_iter()
     .cloned()
@@ -65,7 +67,8 @@ fn l2_returns_baseline() {
     let correct = Array::from_shape_vec(
         (24, 24, 32),
         f32::read_csv(&format!("{}/fm2_mxp-hwc.csv", SPARSE_BASELINE)),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((2, 0, 1))
     .into_iter()
     .cloned()

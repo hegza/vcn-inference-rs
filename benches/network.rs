@@ -16,7 +16,6 @@ mod shared;
 use crate::shared::*;
 use criterion::Criterion;
 use num_traits::bounds::Bounded;
-use rand::distributions::range::SampleRange;
 use rand::distributions::uniform::SampleUniform;
 use rand::Rng;
 use rusty_cnn::*;

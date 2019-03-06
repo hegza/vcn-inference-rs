@@ -38,8 +38,8 @@ fn mxp_returns_baseline() {
     assert!(is_within_margin(&cpu_out, &correct, RESULT_MARGIN));
 }
 
-use ndarray::Array;
 use crate::network::sparse::WEIGHTS_DIR;
+use ndarray::Array;
 use ocl::flags::*;
 #[test]
 fn conv2d_cl_returns_tf_baseline() {
@@ -59,7 +59,8 @@ fn conv2d_cl_returns_tf_baseline() {
         let raw_filters = Array::from_shape_vec(
             (32, 3, 5, 5),
             f32::read_csv(&format!("{}/{}", WEIGHTS_DIR, "conv1-f32-dcwh.csv")),
-        ).unwrap();
+        )
+        .unwrap();
         let dhwc_order = raw_filters.permuted_axes((0, 3, 2, 1));
 
         dhwc_order.into_iter().cloned().collect::<Vec<f32>>()
@@ -98,7 +99,8 @@ fn conv2d_cl_returns_tf_baseline() {
         let raw = Array::from_shape_vec(
             (32, 96, 96),
             f32::read_csv("input/baseline/sparse-f32/fm1-cwh.csv"),
-        ).unwrap();
+        )
+        .unwrap();
         let hwc_order = raw.permuted_axes((2, 1, 0));
         hwc_order.into_iter().cloned().collect::<Vec<f32>>()
     };
@@ -167,7 +169,8 @@ fn conv2d_cl_convolves_simple() {
         vec![
             988f32, 1580f32, 1124f32, 2372f32, 3750f32, 2636f32, 2708f32, 4220f32, 2924f32,
         ],
-    ).unwrap();
+    )
+    .unwrap();
 
     verify(
         &output.iter().cloned().collect::<Vec<f32>>(),

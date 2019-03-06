@@ -1,8 +1,8 @@
 use super::*;
 use crate::geometry::{ImageGeometry, PaddedSquare};
-use ndarray::Array;
 use crate::tests::{CLASSIC_BASELINE, COARSE_RESULT_MARGIN, F32_GEMM_MAX_EPSILON, RESULT_MARGIN};
 use crate::util::verify;
+use ndarray::Array;
 
 lazy_static! {
     static ref LAYERS: Layers<f32> = { Layers::<f32>::new(Weights::default()) };
@@ -18,10 +18,12 @@ fn classic_predicts() {
             read_image_with_padding_from_bin_in_channels::<f32>(
                 &format!("{}/in.bin", CLASSIC_BASELINE),
                 network.input_shape(),
-            ).into_iter()
+            )
+            .into_iter()
             .map(|x| f32::from(x))
             .collect::<Vec<f32>>(),
-        ).unwrap()
+        )
+        .unwrap()
         .permuted_axes((0, 1, 2))
         .iter()
         .cloned()
@@ -54,7 +56,8 @@ fn l1_returns_baseline() {
                 &format!("{}/in.bin", CLASSIC_BASELINE),
                 &padded_input_shape,
             ),
-        ).unwrap()
+        )
+        .unwrap()
         .permuted_axes((0, 2, 1))
         .iter()
         .cloned()
@@ -69,7 +72,8 @@ fn l1_returns_baseline() {
     let correct = Array::from_shape_vec(
         (32, 52, 52),
         f32::read_lines_from_file(&format!("input/baseline/orig-f32-all-layers/fm1.f")).unwrap(),
-    ).unwrap()
+    )
+    .unwrap()
     .permuted_axes((0, 2, 1))
     .into_iter()
     .cloned()

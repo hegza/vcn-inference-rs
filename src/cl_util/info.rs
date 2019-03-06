@@ -1,8 +1,8 @@
+use crate::util::*;
 use ocl;
 use ocl::builders::*;
 use ocl::enums::*;
 use ocl::{flags, Buffer, Context, Device, OclPrm, Platform, Program, Queue};
-use crate::util::*;
 
 /// Returns the max work-group-size of the given OpenCL device (primary by default).
 pub fn max_wgs(device: Option<&Device>) -> usize {

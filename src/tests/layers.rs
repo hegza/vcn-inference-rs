@@ -1,6 +1,9 @@
 use super::*;
 use crate::geometry::*;
+use crate::VCN_SPARSE_WEIGHTS_DIR as WEIGHTS_DIR;
+use ndarray::Array;
 use ocl::flags::DeviceType;
+use ocl::flags::*;
 use ocl::{flags, Context, Device, Kernel, Platform, Program, SpatialDims};
 
 // Test that Maxpool + ReLU produces the correct output
@@ -38,14 +41,11 @@ fn mxp_returns_baseline() {
     assert!(is_within_margin(&cpu_out, &correct, RESULT_MARGIN));
 }
 
-use crate::network::sparse::WEIGHTS_DIR;
-use ndarray::Array;
-use ocl::flags::*;
 #[test]
 fn conv2d_cl_returns_tf_baseline() {
     // Load image with padding and in (height, width, channels)-order
     let padded_input: Vec<f32> = {
-        let raw_input: Vec<f32> = load_jpeg_hwc("input/baseline/sparse-f32/in.jpg");
+        let raw_input: Vec<f32> = load_jpeg_hwc(TEST_IMAGE_JPEG_PATH);
         let mut padded = Array::zeros((100, 100, 3));
         padded
             .slice_mut(s![2..-2, 2..-2, ..])
@@ -98,7 +98,7 @@ fn conv2d_cl_returns_tf_baseline() {
     let model_output = {
         let raw = Array::from_shape_vec(
             (32, 96, 96),
-            f32::read_csv("input/baseline/sparse-f32/fm1-cwh.csv"),
+            f32::read_csv(&format!("{}/fm1-cwh.csv", VCN_SPARSE_BASELINE_DIR)),
         )
         .unwrap();
         let hwc_order = raw.permuted_axes((2, 1, 0));

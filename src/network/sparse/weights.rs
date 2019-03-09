@@ -1,7 +1,6 @@
 use crate::layers::Coeff;
 use crate::util::{reorder, ReadBinFromFile, ReadCsv};
-
-pub const WEIGHTS_DIR: &str = "input/weights/sparse";
+use crate::VCN_SPARSE_WEIGHTS_DIR as WEIGHTS_DIR;
 
 #[derive(Clone)]
 pub struct Weights<T>(pub Vec<T>, pub Vec<T>, pub Vec<T>, pub Vec<T>, pub Vec<T>);
@@ -20,7 +19,7 @@ where
             reorder(load_fun("conv2-f32-dcwh.csv"), (32, 32, 5, 5), (0, 1, 3, 2)),
             // Load weights in CHWN
             reorder(
-                load_fun("archive/fc3-f32-nhwc.csv"),
+                load_fun("fc3-f32-nhwc.csv"),
                 (100, 24, 24, 32),
                 (3, 1, 2, 0),
             ),

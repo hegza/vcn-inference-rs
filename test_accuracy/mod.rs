@@ -15,6 +15,7 @@ mod util;
 use crate::class::Class;
 use crate::util::*;
 use rusty_cnn::*;
+use rusty_cnn::{VCN_SEPCONV_F32_WEIGHTS_DIR, VCN_SPARSE_WEIGHTS_DIR, VCN_WEIGHTS_DIR};
 use std::time::{Duration, Instant};
 
 const INPUT_IMG_DIR: &str = "input/images";
@@ -73,7 +74,7 @@ pub fn main() {
             total_duration,
             correct_inputs,
             total_inputs,
-            Some(format!("{}/tf_accuracy.f", classic::WEIGHTS_DIR)),
+            Some(format!("{}/tf_accuracy.f", VCN_WEIGHTS_DIR)),
         );
     }
 
@@ -104,7 +105,7 @@ pub fn main() {
             total_duration,
             correct_inputs,
             total_inputs,
-            Some(format!("{}/tf_accuracy.f", sparse::WEIGHTS_DIR)),
+            Some(format!("{}/tf_accuracy.f", VCN_SPARSE_WEIGHTS_DIR)),
         );
     }
 
@@ -138,7 +139,7 @@ pub fn main() {
             total_duration,
             correct_inputs,
             total_inputs,
-            Some(format!("{}/tf_accuracy.f", sepconv::WEIGHTS_F32_DIR)),
+            Some(format!("{}/tf_accuracy.f", VCN_SEPCONV_F32_WEIGHTS_DIR)),
         );
     }
 }

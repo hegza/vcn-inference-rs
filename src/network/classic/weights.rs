@@ -1,7 +1,7 @@
 use crate::layers::Coeff;
 use crate::util::{reorder, ReadBinFromFile, ReadCsv};
 
-pub const WEIGHTS_DIR: &str = "input/weights";
+use crate::VCN_WEIGHTS_DIR as WEIGHTS_DIR;
 
 #[derive(Clone)]
 pub struct Weights<T>(pub Vec<T>, pub Vec<T>, pub Vec<T>, pub Vec<T>, pub Vec<T>);

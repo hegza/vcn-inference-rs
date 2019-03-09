@@ -2,13 +2,12 @@ use super::*;
 use crate::geometry::{ImageGeometry, PaddedSquare};
 use crate::tests::{COARSE_RESULT_MARGIN, F32_GEMM_MAX_EPSILON, RESULT_MARGIN};
 use crate::util::verify;
+use crate::{TEST_IMAGE_JPEG_PATH, VCN_SPARSE_BASELINE_DIR as SPARSE_BASELINE};
 use ndarray::Array;
 
 lazy_static! {
     static ref LAYERS: Layers<f32> = { Layers::<f32>::new(Weights::default()) };
 }
-
-pub const SPARSE_BASELINE: &str = "input/baseline/sparse-f32";
 
 #[test]
 fn l1_returns_baseline() {
@@ -17,7 +16,7 @@ fn l1_returns_baseline() {
 
     // Load image with padding and in (channels, height, width)-order
     let padded_input: Vec<f32> = {
-        let raw_input: Vec<f32> = load_jpeg_chw("input/baseline/sparse-f32/in.jpg");
+        let raw_input: Vec<f32> = load_jpeg_chw(TEST_IMAGE_JPEG_PATH);
         let mut padded = Array::zeros((3, 100, 100));
         padded
             .slice_mut(s![.., 2..-2, 2..-2])
@@ -147,7 +146,7 @@ fn sparse_predicts() {
 
     // Load image with padding and in (channels, height, width)-order
     let padded_input: Vec<f32> = {
-        let raw_input: Vec<f32> = load_jpeg_chw("input/baseline/sparse-f32/in.jpg");
+        let raw_input: Vec<f32> = load_jpeg_chw(TEST_IMAGE_JPEG_PATH);
         let mut padded = Array::zeros((3, 100, 100));
         padded
             .slice_mut(s![.., 2..-2, 2..-2])

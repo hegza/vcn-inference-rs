@@ -2,11 +2,10 @@ use super::*;
 use crate::cl_util as cl;
 use crate::network::Predict;
 use crate::tests::*;
+use crate::{TEST_IMAGE_JPEG_PATH, VCN_SEPCONV_F32_BASELINE_DIR as SEPCONV_BASELINE};
 use ndarray::Array;
 use rand;
 use rand::Rng;
-
-pub const SEPCONV_BASELINE_F32: &str = "input/baseline/sepconv-f32-xcorr/case b";
 
 lazy_static! {
     static ref LAYERS: Layers<f32> = { Layers::<f32>::new(Weights::default()) };
@@ -26,7 +25,7 @@ fn v1_returns_baseline() {
     let layer = &LAYERS.vconv1;
 
     // Load image without padding and in (channels, height, width)-order
-    let input_data = load_jpeg_chw(&format!("{}/in.jpg", SEPCONV_BASELINE_F32));
+    let input_data = load_jpeg_chw(TEST_IMAGE_JPEG_PATH);
 
     // Output is produced in (channels, height, width)-order
     let output = run_single_layer(
@@ -42,7 +41,7 @@ fn v1_returns_baseline() {
     // Load model outputs in (channels, height, width)-order
     let correct = Array::from_shape_vec(
         (7, 96, 96),
-        f32::read_csv(&format!("{}/vcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/vcr1_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -61,7 +60,7 @@ fn h1_returns_baseline() {
     // Load input in (channels, height, width)-order
     let input_data = Array::from_shape_vec(
         (7, 96, 96),
-        f32::read_csv(&format!("{}/vcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/vcr1_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -110,7 +109,7 @@ fn h1_returns_baseline() {
     // Load model output in (channels, height, width)-order
     let correct = Array::from_shape_vec(
         (32, 96, 96),
-        f32::read_csv(&format!("{}/hcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/hcr1_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -129,7 +128,7 @@ fn mxp1_returns_baseline() {
     // Load input in (channels, height, width)-order (this is what happens in the network)
     let input_data = Array::from_shape_vec(
         (32, 96, 96),
-        f32::read_csv(&format!("{}/hcr1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/hcr1_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -150,7 +149,7 @@ fn mxp1_returns_baseline() {
     // Load model output in (channels, height, width)-order
     let correct = Array::from_shape_vec(
         (32, 48, 48),
-        f32::read_csv(&format!("{}/mxp1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/mxp1_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -169,7 +168,7 @@ fn v2_returns_baseline() {
     // Load input in (channels, height, width)-order (this is what happens in the network)
     let input_data = Array::from_shape_vec(
         (32, 48, 48),
-        f32::read_csv(&format!("{}/mxp1_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/mxp1_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -190,7 +189,7 @@ fn v2_returns_baseline() {
     // Load model output in (channels, height, width)-order
     let correct = Array::from_shape_vec(
         (7, 48, 48),
-        f32::read_csv(&format!("{}/vcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/vcr2_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -209,7 +208,7 @@ fn h2_returns_baseline() {
     // Load input in (channels, height, width)-order (this is what happens in the network)
     let input_data = Array::from_shape_vec(
         (7, 48, 48),
-        f32::read_csv(&format!("{}/vcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/vcr2_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -229,7 +228,7 @@ fn h2_returns_baseline() {
     // Load model output in (channels, height, width)-order
     let correct = Array::from_shape_vec(
         (32, 48, 48),
-        f32::read_csv(&format!("{}/hcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/hcr2_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -248,7 +247,7 @@ fn mxp2_returns_baseline() {
     // Load input in (channels, height, width)-order (this is what happens in the network)
     let input_data = Array::from_shape_vec(
         (32, 48, 48),
-        f32::read_csv(&format!("{}/hcr2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/hcr2_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -268,7 +267,7 @@ fn mxp2_returns_baseline() {
     // Load model output in (channels, height, width)-order
     let correct = Array::from_shape_vec(
         (32, 24, 24),
-        f32::read_csv(&format!("{}/mxp2_out-cwh.csv", SEPCONV_BASELINE_F32)),
+        f32::read_csv(&format!("{}/mxp2_out-cwh.csv", SEPCONV_BASELINE)),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))
@@ -285,7 +284,7 @@ fn l3_returns_baseline() {
     let layer = &LAYERS.dense3;
     // Load input in (channels, height, width)-order
     let input_data = {
-        let raw = f32::read_csv(&format!("{}/mxp2_out-cwh.csv", SEPCONV_BASELINE_F32));
+        let raw = f32::read_csv(&format!("{}/mxp2_out-cwh.csv", SEPCONV_BASELINE));
         // return chw
         Array::from_shape_vec((32, 24, 24), raw)
             .unwrap()
@@ -299,7 +298,7 @@ fn l3_returns_baseline() {
     let output = relu(layer.compute(&input_data));
 
     // Load model output in (fc-const)-order
-    let correct = f32::read_csv(&format!("{}/fc3-out.csv", SEPCONV_BASELINE_F32));
+    let correct = f32::read_csv(&format!("{}/fc3-out.csv", SEPCONV_BASELINE));
 
     verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
@@ -308,10 +307,10 @@ fn l3_returns_baseline() {
 fn l4_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = &LAYERS.dense4;
-    let input_data = f32::read_csv(&format!("{}/fc3-out.csv", SEPCONV_BASELINE_F32));
+    let input_data = f32::read_csv(&format!("{}/fc3-out.csv", SEPCONV_BASELINE));
 
     let output = relu(layer.compute(&input_data));
-    let correct = f32::read_csv(&format!("{}/fc4-out.csv", SEPCONV_BASELINE_F32));
+    let correct = f32::read_csv(&format!("{}/fc4-out.csv", SEPCONV_BASELINE));
 
     verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
@@ -320,10 +319,10 @@ fn l4_returns_baseline() {
 fn l5_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = &LAYERS.dense5;
-    let input_data = f32::read_csv(&format!("{}/fc4-out.csv", SEPCONV_BASELINE_F32));
+    let input_data = f32::read_csv(&format!("{}/fc4-out.csv", SEPCONV_BASELINE));
 
     let output = &layer.compute(&input_data);
-    let correct = f32::read_csv(&format!("{}/fc5-out.csv", SEPCONV_BASELINE_F32));
+    let correct = f32::read_csv(&format!("{}/fc5-out.csv", SEPCONV_BASELINE));
 
     verify(&output, &correct, COARSE_RESULT_MARGIN);
 }
@@ -372,17 +371,14 @@ fn run_sepconv_i8() -> Vec<f32> {
 #[test]
 fn sepconv_f32_predicts() {
     let output = run_sepconv_f32();
-    let correct = softmax(f32::read_csv(&format!(
-        "{}/fc5-out.csv",
-        SEPCONV_BASELINE_F32
-    )));
+    let correct = softmax(f32::read_csv(&format!("{}/fc5-out.csv", SEPCONV_BASELINE)));
 
     verify(&output, &correct, RESULT_MARGIN);
 }
 
 fn run_sepconv_f32() -> Vec<f32> {
     let net = ClNetwork::<f32>::new(Weights::default());
-    let input_data = load_jpeg_chw(&format!("{}/in.jpg", SEPCONV_BASELINE_F32));
+    let input_data = load_jpeg_chw(TEST_IMAGE_JPEG_PATH);
     net.predict(&input_data)
 }
 

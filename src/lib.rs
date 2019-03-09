@@ -16,6 +16,17 @@ extern crate ocl;
 extern crate rand;
 extern crate sprs;
 
+// Locations for input files
+pub const VCN_WEIGHTS_DIR: &str = "weights/vcn-unknown-accuracy";
+pub const VCN_BASELINE_DIR: &str = "src/tests/in/baseline/vcn";
+pub const VCN_SPARSE_WEIGHTS_DIR: &str = "weights/vcn-sparse-0.954198";
+pub const VCN_SPARSE_BASELINE_DIR: &str = "src/tests/in/baseline/vcn-sparse";
+pub const VCN_SEPCONV_F32_WEIGHTS_DIR: &str = "weights/vcn-sepconv-0.964885";
+pub const VCN_SEPCONV_F32_BASELINE_DIR: &str = "src/tests/in/baseline/vcn-sepconv-f32";
+pub const VCN_SEPCONV_I8_WEIGHTS_DIR: &str = "weights/vcn-sepconv-i8-unknown-accuracy"; // 96-97 %
+pub const TEST_IMAGE_JPEG_PATH: &str = "src/tests/in/baseline/in.jpg";
+pub const TEST_IMAGE_BIN_PATH: &str = "src/tests/in/baseline/in.bin";
+
 /// Usage: println!("{}", format_result!(expression));
 #[macro_use]
 #[allow(unused_macros)]

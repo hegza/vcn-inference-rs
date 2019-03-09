@@ -1,4 +1,3 @@
-use super::*;
 use criterion::{black_box, Bencher};
 use ocl::{Device, SpatialDims};
 use rusty_cnn::cl_util as cl;
@@ -17,10 +16,7 @@ lazy_static! {
 pub fn bench_sepconv1() -> impl FnMut(&mut Bencher) {
     let layers = sepconv::Layers::<f32>::new(sepconv::Weights::default());
 
-    let input_data = black_box(f32::read_bin_from_file(&format!(
-        "{}/in.bin",
-        SEPCONV_BASELINE
-    )));
+    let input_data = black_box(f32::read_bin_from_file(TEST_IMAGE_BIN_PATH));
 
     // Init OpenCL
     let (queue, program, _context) = cl::init::<f32>(
@@ -89,7 +85,7 @@ pub fn bench_sepconv2() -> impl FnMut(&mut Bencher) {
     let layers = sepconv::Layers::<f32>::new(sepconv::Weights::default());
     let input_data = black_box(f32::read_bin_from_file(&format!(
         "{}/mxp1-out.bin",
-        SEPCONV_BASELINE
+        VCN_SEPCONV_F32_BASELINE_DIR
     )));
 
     // Init OpenCL
@@ -160,7 +156,7 @@ pub fn bench_sepconv1and2() -> impl FnMut(&mut Bencher) {
 
     let input_data = black_box(f32::read_bin_from_file(&format!(
         "{}/in.bin",
-        SEPCONV_BASELINE
+        VCN_SEPCONV_F32_BASELINE_DIR
     )));
 
     // Init OpenCL
@@ -294,7 +290,7 @@ pub fn bench_conv1and2() -> impl FnMut(&mut Bencher) {
     let conv2 = &CLASSIC_LAYERS.conv2;
 
     let input_data = black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", CLASSIC_BASELINE),
+        TEST_IMAGE_BIN_PATH,
         conv1.input_shape(),
     ));
 

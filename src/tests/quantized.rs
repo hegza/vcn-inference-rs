@@ -1,6 +1,5 @@
 use super::*;
-
-const QUANTIZED_BASELINE: &str = SEPCONV_BASELINE;
+use crate::VCN_SEPCONV_F32_BASELINE_DIR as QUANTIZED_BASELINE;
 
 fn run_quantized(_input: &[u8]) -> Vec<f32> {
     Vec::new()

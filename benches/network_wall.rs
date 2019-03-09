@@ -11,7 +11,6 @@ extern crate rusty_cnn;
 
 mod shared;
 
-use crate::shared::*;
 use criterion::Criterion;
 use rusty_cnn::*;
 
@@ -29,7 +28,7 @@ fn net_wall_benchmark(c: &mut Criterion) {
 
     // Load input image with padding from disk
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", CLASSIC_BASELINE),
+        TEST_IMAGE_BIN_PATH,
         input_shape,
     ));
 

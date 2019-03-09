@@ -1,9 +1,8 @@
 use super::*;
-use crate::classic;
 use crate::geometry::{ImageGeometry, PaddedSquare, Square};
 use crate::math::relu;
-use crate::tests::CLASSIC_BASELINE;
 use crate::util::*;
+use crate::{classic, VCN_BASELINE_DIR};
 
 #[test]
 fn sparse_layer_works_for_dense() {
@@ -21,12 +20,12 @@ fn sparse_layer_works_for_dense() {
     // Feature map 2 is a fraction of the side of the tier 1 feature map due to stride
     let fm2_shape = ImageGeometry::new(fm1_shape.side() / CONV2_STRIDE, NUM_FEATURE_MAPS);
 
-    let weights = f32::read_csv("input/weights/fc3-f32-chwn.csv");
+    let weights = f32::read_csv(&"src/tests/in/vcn-fc3-f32-chwn.csv");
     let layer = SparseLayer::from_dense(fm2_shape.num_elems(), LAYER3_SIZE, weights);
 
-    let in_buf = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE)).unwrap();
+    let in_buf = f32::read_lines_from_file(&format!("{}/fm2.f", VCN_BASELINE_DIR)).unwrap();
     let out = relu(layer.compute(&in_buf));
-    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE)).unwrap();
+    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", VCN_BASELINE_DIR)).unwrap();
     verify(&out, &correct, 0.0001f32);
 }
 

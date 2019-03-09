@@ -1,7 +1,8 @@
 use super::*;
 use crate::geometry::{ImageGeometry, PaddedSquare};
-use crate::tests::{CLASSIC_BASELINE, COARSE_RESULT_MARGIN, F32_GEMM_MAX_EPSILON, RESULT_MARGIN};
+use crate::tests::{COARSE_RESULT_MARGIN, F32_GEMM_MAX_EPSILON, RESULT_MARGIN};
 use crate::util::verify;
+use crate::{TEST_IMAGE_BIN_PATH, VCN_BASELINE_DIR};
 use ndarray::Array;
 
 lazy_static! {
@@ -16,7 +17,7 @@ fn classic_predicts() {
         Array::from_shape_vec(
             (3, 100, 100),
             read_image_with_padding_from_bin_in_channels::<f32>(
-                &format!("{}/in.bin", CLASSIC_BASELINE),
+                TEST_IMAGE_BIN_PATH,
                 network.input_shape(),
             ),
         )
@@ -29,7 +30,7 @@ fn classic_predicts() {
 
     let result = network.predict(&input);
 
-    let correct = f32::read_lines_from_file(&format!("{}/out5.f", CLASSIC_BASELINE)).unwrap();
+    let correct = f32::read_lines_from_file(&format!("{}/out5.f", VCN_BASELINE_DIR)).unwrap();
 
     verify(&result, &correct, COARSE_RESULT_MARGIN);
 }
@@ -49,7 +50,7 @@ fn l1_returns_baseline() {
         Array::from_shape_vec(
             (3, 100, 100),
             read_image_with_padding_from_bin_in_channels::<f32>(
-                &format!("{}/in.bin", CLASSIC_BASELINE),
+                TEST_IMAGE_BIN_PATH,
                 &padded_input_shape,
             ),
         )
@@ -83,10 +84,10 @@ fn l1_returns_baseline() {
 fn l2_returns_baseline() {
     // Create the representation of the 1st convolutional layer with weights from a file
     let layer = &LAYERS.conv2;
-    let input_data = f32::read_lines_from_file(&format!("{}/fm1.f", CLASSIC_BASELINE)).unwrap();
+    let input_data = f32::read_lines_from_file(&format!("{}/fm1.f", VCN_BASELINE_DIR)).unwrap();
 
     let output = run_single_layer("conv_relu_2", layer, &input_data);
-    let correct = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE)).unwrap();
+    let correct = f32::read_lines_from_file(&format!("{}/fm2.f", VCN_BASELINE_DIR)).unwrap();
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -95,10 +96,10 @@ fn l2_returns_baseline() {
 fn l3_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = &LAYERS.dense3;
-    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE)).unwrap();
+    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", VCN_BASELINE_DIR)).unwrap();
 
     let output = run_single_layer("mtx_mul", layer, &input_data);
-    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE)).unwrap();
+    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", VCN_BASELINE_DIR)).unwrap();
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -107,10 +108,10 @@ fn l3_returns_baseline() {
 fn l4_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = &LAYERS.dense4;
-    let input_data = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE)).unwrap();
+    let input_data = f32::read_lines_from_file(&format!("{}/fc3.f", VCN_BASELINE_DIR)).unwrap();
 
     let output = relu(layer.compute(&input_data));
-    let correct = f32::read_lines_from_file(&format!("{}/fc4.f", CLASSIC_BASELINE)).unwrap();
+    let correct = f32::read_lines_from_file(&format!("{}/fc4.f", VCN_BASELINE_DIR)).unwrap();
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -119,10 +120,10 @@ fn l4_returns_baseline() {
 fn l5_returns_baseline() {
     // Create the representation of the fully-connected layer
     let layer = &LAYERS.dense5;
-    let input_data = f32::read_lines_from_file(&format!("{}/fc4.f", CLASSIC_BASELINE)).unwrap();
+    let input_data = f32::read_lines_from_file(&format!("{}/fc4.f", VCN_BASELINE_DIR)).unwrap();
 
     let output = softmax(layer.compute(&input_data));
-    let correct = f32::read_lines_from_file(&format!("{}/out5.f", CLASSIC_BASELINE)).unwrap();
+    let correct = f32::read_lines_from_file(&format!("{}/out5.f", VCN_BASELINE_DIR)).unwrap();
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);
 }
@@ -140,10 +141,10 @@ fn dense3_cl_cpu_vec4_returns_baseline() {
         LocalWorkSizePolicy::UseDefault,
     );
 
-    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", CLASSIC_BASELINE)).unwrap();
+    let input_data = f32::read_lines_from_file(&format!("{}/fm2.f", VCN_BASELINE_DIR)).unwrap();
     let output = &cl_impl.run_with_input(&input_data);
 
-    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", CLASSIC_BASELINE)).unwrap();
+    let correct = f32::read_lines_from_file(&format!("{}/fc3.f", VCN_BASELINE_DIR)).unwrap();
 
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, COARSE_RESULT_MARGIN);

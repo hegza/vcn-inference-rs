@@ -1,8 +1,7 @@
 use crate::layers::Coeff;
 use crate::util::{reorder, ReadBinFromFile, ReadCsv};
-
-pub const WEIGHTS_F32_DIR: &str = "input/weights/sepconv";
-pub const WEIGHTS_I8_DIR: &str = "input/weights/sepconv-96-97/i8-converted";
+use crate::VCN_SEPCONV_F32_WEIGHTS_DIR as WEIGHTS_F32_DIR;
+use crate::VCN_SEPCONV_I8_WEIGHTS_DIR as WEIGHTS_I8_DIR;
 
 #[derive(Clone)]
 pub struct Weights<T>(
@@ -27,7 +26,7 @@ impl Default for Weights<f32> {
             reorder(load_fun("hcr2-f32.csv"), (32, 7, 5, 1), (0, 1, 2, 3)),
             // Load in CHWN
             reorder(
-                f32::read_csv(&format!("{}/archive/fc3-f32-nchw.csv", WEIGHTS_F32_DIR)),
+                f32::read_csv(&format!("{}/fc3-f32-nchw.csv", WEIGHTS_F32_DIR)),
                 // Read as: n, hwc
                 (100, 24, 24, 32),
                 // n, chw

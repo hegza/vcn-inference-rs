@@ -1,4 +1,5 @@
 use crate::math::GenericOps;
+use crate::{TEST_IMAGE_JPEG_PATH, VCN_SPARSE_BASELINE_DIR};
 use ndarray::{Array, ArrayBase, Axis, Dim, Dimension, IntoDimension, Ix3, Ix4, OwnedRepr};
 use num_traits::bounds::Bounded;
 use num_traits::Zero;
@@ -168,21 +169,18 @@ impl IntoShape for (usize, usize) {
 mod test {
     use super::*;
     use crate::math::relu;
-    use crate::network::sparse::WEIGHTS_DIR;
     use crate::tests::F32_GEMM_MAX_EPSILON;
     use crate::util::{load_jpeg_chw, ReadCsv};
     use crate::verify;
+    use crate::VCN_SPARSE_WEIGHTS_DIR as WEIGHTS_DIR;
 
     #[test]
     fn cross_correlation_works_for_sparse_baseline_l1() {
         // Load input in (channels, width, height)-order
-        let input = Array::from_shape_vec(
-            (3, 96, 96),
-            load_jpeg_chw("input/baseline/sparse-f32/in.jpg"),
-        )
-        .unwrap()
-        // Convert from (channels, height, width) to (channels, width, height)
-        .permuted_axes((0, 2, 1));
+        let input = Array::from_shape_vec((3, 96, 96), load_jpeg_chw(TEST_IMAGE_JPEG_PATH))
+            .unwrap()
+            // Convert from (channels, height, width) to (channels, width, height)
+            .permuted_axes((0, 2, 1));
 
         // Load filters in (out channels, in channels, width, height)-order
         let weights = {
@@ -201,7 +199,7 @@ mod test {
         );
 
         // Load output in (channels, width, height)-order
-        let model_output = f32::read_csv("input/baseline/sparse-f32/fm1-cwh.csv");
+        let model_output = f32::read_csv(&format!("{}/fm1-cwh.csv", VCN_SPARSE_BASELINE_DIR));
 
         verify(&output, &model_output, F32_GEMM_MAX_EPSILON);
     }

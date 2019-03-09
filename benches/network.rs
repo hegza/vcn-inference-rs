@@ -13,13 +13,11 @@ extern crate rusty_cnn;
 
 mod shared;
 
-use crate::shared::*;
 use criterion::Criterion;
 use num_traits::bounds::Bounded;
 use rand::distributions::uniform::SampleUniform;
 use rand::Rng;
 use rusty_cnn::*;
-use shared::*;
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.05;
@@ -28,7 +26,7 @@ const NOISE_THRESHOLD: f64 = 0.05;
 fn classic_full(c: &mut Criterion) {
     let net = classic::ClNetwork::<f32>::new(classic::Weights::default());
     let input_data = criterion::black_box(read_image_with_padding_from_bin_in_channels(
-        &format!("{}/in.bin", CLASSIC_BASELINE),
+        TEST_IMAGE_BIN_PATH,
         net.input_shape(),
     ));
 
@@ -40,10 +38,7 @@ fn classic_full(c: &mut Criterion) {
 /// Benchmark full computations of sepconv implementation.
 fn sepconv_f32_full(c: &mut Criterion) {
     let net = sepconv::ClNetwork::<f32>::new(sepconv::Weights::default());
-    let input_data = criterion::black_box(f32::read_bin_from_file(&format!(
-        "{}/in.bin",
-        SEPCONV_BASELINE
-    )));
+    let input_data = criterion::black_box(f32::read_bin_from_file(TEST_IMAGE_BIN_PATH));
 
     c.bench_function("sepconv-f32 full", move |b| {
         b.iter(|| net.predict(&input_data))
@@ -53,7 +48,7 @@ fn sepconv_f32_full(c: &mut Criterion) {
 /// Benchmark full computations of sparse implementation.
 fn sparse_f32_full(c: &mut Criterion) {
     let net = sparse::ClNetwork::<f32>::new(sparse::Weights::default());
-    let input_data = criterion::black_box(load_jpeg_chw("input/baseline/sparse-f32/in.jpg"));
+    let input_data = criterion::black_box(load_jpeg_chw(TEST_IMAGE_JPEG_PATH));
 
     c.bench_function("sparse-f32 full", move |b| {
         b.iter(|| net.predict(&input_data))

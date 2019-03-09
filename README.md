@@ -6,6 +6,16 @@
 
 Also, Windows users need to make sure to have OpenCL.lib in the project root directory since I don't think they've yet to figure out a standard place to put their libraries on Windows.
 
+## Running
+Run the accuracy test binary.
+`cargo run --release`
+
+Run tests.
+`cargo test`
+
+Run all benchmarks (regardless of if some of them fail due to OpenCL things).
+`cargo bench --no-fail-fast`
+
 ## Logging
 All programs that are included read the log level from an environment variable
 with the key `RUST_LOG`. Here are a couple of examples on how to turn on
@@ -18,4 +28,3 @@ Additionally, setting `CRITERION_DEBUG=1` allows to view the gnuplots scripts ge
 ## Bonus
 Run clippy to find things I might've missed. Requires cargo clippy subcommand.
 `cargo +nightly clippy`
-

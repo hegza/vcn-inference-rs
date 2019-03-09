@@ -7,7 +7,7 @@ use ocl::SpatialDims;
 use sprs::{CsMat, CsMatBase, CsMatI, CsVec, TriMatBase};
 use std::ops::Deref;
 
-const FLOAT_ZERO_THRESHOLD: f32 = 0.0000001f32;
+const FLOAT_ZERO_THRESHOLD: f32 = 0.000_000_1f32;
 
 /// A complete descriptor for a sparsified fully-connected layer
 pub struct SparseLayer<T>

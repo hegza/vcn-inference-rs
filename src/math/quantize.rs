@@ -51,7 +51,7 @@ impl QuantizationParams<f32, u8> {
         let qmax = f32::from(u8::max_value());
 
         // First determine the scale.
-        let scale = (max - min) as f64 / (qmax - qmin) as f64;
+        let scale = f64::from(max - min) / f64::from(qmax - qmin);
 
         // Zero-point computation.
         // First the initial floating-point computation. The zero-point can be
@@ -59,7 +59,7 @@ impl QuantizationParams<f32, u8> {
         // (real value, corresponding quantized value).
         // We know two such pairs: (rmin, qmin) and (rmax, qmax).
         // Let's use the first one here.
-        let initial_zero_point = qmin as f64 - min as f64 / scale;
+        let initial_zero_point = f64::from(qmin) - f64::from(min) / scale;
 
         // Now we need to nudge the zero point to be an integer
         // (our zero points are integer, and this is motivated by the requirement
@@ -68,9 +68,9 @@ impl QuantizationParams<f32, u8> {
         // padding).
         let nudged_zero_point: u8;
         // Note: qmin and qmax are guaranteed to be within range of T
-        if initial_zero_point < qmin as f64 {
+        if initial_zero_point < f64::from(qmin) {
             nudged_zero_point = qmin as u8;
-        } else if initial_zero_point > qmax as f64 {
+        } else if initial_zero_point > f64::from(qmax) {
             nudged_zero_point = qmax as u8;
         } else {
             // Note: I chose to use .floor() here instead of .round() of the original
@@ -99,7 +99,7 @@ impl QuantizationParams<f32, i8> {
         let qmax = f32::from(i8::max_value());
 
         // First determine the scale.
-        let scale = (max - min) as f64 / (qmax - qmin) as f64;
+        let scale = f64::from(max - min) / f64::from(qmax - qmin);
 
         // Zero-point computation.
         // First the initial floating-point computation. The zero-point can be
@@ -107,7 +107,7 @@ impl QuantizationParams<f32, i8> {
         // (real value, corresponding quantized value).
         // We know two such pairs: (rmin, qmin) and (rmax, qmax).
         // Let's use the first one here.
-        let initial_zero_point = qmin as f64 - min as f64 / scale;
+        let initial_zero_point = f64::from(qmin) - f64::from(min) / scale;
 
         // Now we need to nudge the zero point to be an integer
         // (our zero points are integer, and this is motivated by the requirement
@@ -116,9 +116,9 @@ impl QuantizationParams<f32, i8> {
         // padding).
         let nudged_zero_point: i8;
         // Note: qmin and qmax are guaranteed to be within range of T
-        if initial_zero_point < qmin as f64 {
+        if initial_zero_point < f64::from(qmin) {
             nudged_zero_point = qmin as i8;
-        } else if initial_zero_point > qmax as f64 {
+        } else if initial_zero_point > f64::from(qmax) {
             nudged_zero_point = qmax as i8;
         } else {
             // Note: I chose to use .ceil() here instead of .round() of the original implementation,

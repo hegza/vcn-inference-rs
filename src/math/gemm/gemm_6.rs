@@ -42,7 +42,7 @@ impl OclGemm<Gemm6WithBTransposeKernel> for Gemm6WithBTransposeKernel {
         let src_mtx_mul = String::from_utf8_lossy(include_bytes!("cl/6_register_tiling.cl"));
 
         let c_params = Gemm6WithBTransposeCompileParameters::choose(m, n, device);
-        let mut c_params_list: Vec<String> = c_params.clone().into();
+        let mut c_params_list: Vec<String> = c_params.into();
         c_params_list.push("-I./src/math/gemm/cl".to_owned());
 
         let (queue, program, _context) = cl_util::init_from_sources::<f32>(
@@ -187,15 +187,14 @@ impl OclGemm<Gemm6WithBTransposeKernel> for Gemm6WithBTransposeKernel {
     ///
     /// a and b are column-major (b will be transposed automatically into row-major by the algorithm)
     fn set_buffers_from_slices(&self, a: &[f32], b: &[f32]) {
-        match self.gemm6.use_host_ptr {
-            true => unsafe {
+        if self.gemm6.use_host_ptr {
+            unsafe {
                 cl_util::map_to_buf(&self.gemm6.a_buf, a).unwrap();
                 cl_util::map_to_buf(&self.b_untransposed_buf, b).unwrap();
-            },
-            false => {
-                self.gemm6.a_buf.write(a).enq().unwrap();
-                self.b_untransposed_buf.write(b).enq().unwrap();
             }
+        } else {
+            self.gemm6.a_buf.write(a).enq().unwrap();
+            self.b_untransposed_buf.write(b).enq().unwrap();
         }
     }
 
@@ -237,7 +236,7 @@ impl OclGemm<Gemm6Kernel> for Gemm6Kernel {
         let src_mtx_mul = String::from_utf8_lossy(include_bytes!("cl/6_register_tiling.cl"));
 
         let c_params = Gemm6CompileParameters::choose(m, n, device);
-        let mut c_params_list: Vec<String> = c_params.clone().into();
+        let mut c_params_list: Vec<String> = c_params.into();
         c_params_list.push("-I./src/math/gemm/cl".to_owned());
 
         let (queue, program, _context) = cl_util::init_from_sources::<f32>(
@@ -350,15 +349,14 @@ impl OclGemm<Gemm6Kernel> for Gemm6Kernel {
 
     /// a is column-major and b_transposed is row-major.
     fn set_buffers_from_slices(&self, a: &[f32], b_transposed: &[f32]) {
-        match self.use_host_ptr {
-            true => unsafe {
+        if self.use_host_ptr {
+            unsafe {
                 cl_util::map_to_buf(&self.a_buf, a).unwrap();
                 cl_util::map_to_buf(&self.b_transposed_buf, b_transposed).unwrap();
-            },
-            false => {
-                self.a_buf.write(a).enq().unwrap();
-                self.b_transposed_buf.write(b_transposed).enq().unwrap();
             }
+        } else {
+            self.a_buf.write(a).enq().unwrap();
+            self.b_transposed_buf.write(b_transposed).enq().unwrap();
         }
     }
 

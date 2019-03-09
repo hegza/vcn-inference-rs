@@ -19,6 +19,7 @@ use num_traits::bounds::Bounded;
 use rand::distributions::uniform::SampleUniform;
 use rand::Rng;
 use rusty_cnn::*;
+use shared::*;
 
 const SAMPLE_SIZE: usize = 100;
 const NOISE_THRESHOLD: f64 = 0.05;
@@ -61,7 +62,7 @@ fn sparse_f32_full(c: &mut Criterion) {
 
 fn rng_vec<T>(len: usize) -> Vec<T>
 where
-    T: Bounded + PartialOrd + SampleRange,
+    T: Bounded + PartialOrd + SampleUniform,
 {
     let mut rng = rand::thread_rng();
     (0..len)

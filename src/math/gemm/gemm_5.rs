@@ -174,15 +174,14 @@ impl OclGemm<Gemm5Kernel> for Gemm5Kernel {
 
     /// a and b are column-major (b will be transposed automatically into row-major by the algorithm)
     fn set_buffers_from_slices(&self, a: &[f32], b: &[f32]) {
-        match self.use_host_ptr {
-            true => unsafe {
+        if self.use_host_ptr {
+            unsafe {
                 cl_util::map_to_buf(&self.a_buf, a).unwrap();
                 cl_util::map_to_buf(&self.b_untransposed_buf, b).unwrap();
-            },
-            false => {
-                self.a_buf.write(a).enq().unwrap();
-                self.b_untransposed_buf.write(b).enq().unwrap();
             }
+        } else {
+            self.a_buf.write(a).enq().unwrap();
+            self.b_untransposed_buf.write(b).enq().unwrap();
         }
     }
 

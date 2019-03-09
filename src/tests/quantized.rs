@@ -1,6 +1,6 @@
 use super::*;
 
-const QUANTIZED_BASELINE: &'static str = SEPCONV_BASELINE;
+const QUANTIZED_BASELINE: &str = SEPCONV_BASELINE;
 
 fn run_quantized(_input: &[u8]) -> Vec<f32> {
     Vec::new()

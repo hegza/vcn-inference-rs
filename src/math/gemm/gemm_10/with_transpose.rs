@@ -27,7 +27,7 @@ impl OclGemm<Gemm10WithBTransposeKernel> for Gemm10WithBTransposeKernel {
         let src_mtx_mul = String::from_utf8_lossy(include_bytes!("../cl/10_incomplete_tiles.cl"));
 
         let params = Gemm10WithBTransposeCompileParameters::choose(m, n, k, device);
-        let mut params_list: Vec<String> = params.clone().into();
+        let mut params_list: Vec<String> = params.into();
         params_list.push("-I./src/math/gemm/cl".to_owned());
 
         let (queue, program, _context) = cl_util::init_from_sources::<f32>(
@@ -234,15 +234,14 @@ impl OclGemm<Gemm10WithBTransposeKernel> for Gemm10WithBTransposeKernel {
     ///
     /// a and b are column-major (b will be transposed automatically into row-major by the algorithm)
     fn set_buffers_from_slices(&self, a: &[f32], b: &[f32]) {
-        match self.gemm10.use_host_ptr {
-            true => unsafe {
+        if self.gemm10.use_host_ptr {
+            unsafe {
                 cl_util::map_to_buf(&self.gemm10.a_buf, a).unwrap();
                 cl_util::map_to_buf(&self.b_untransposed_buf, b).unwrap();
-            },
-            false => {
-                self.gemm10.a_buf.write(a).enq().unwrap();
-                self.b_untransposed_buf.write(b).enq().unwrap();
             }
+        } else {
+            self.gemm10.a_buf.write(a).enq().unwrap();
+            self.b_untransposed_buf.write(b).enq().unwrap();
         }
     }
 
@@ -281,8 +280,8 @@ impl Gemm10WithBTransposeCompileParameters {
             1
         } else {
             let device = cl_util::resolve_device(Some(device));
-            let dev_max_lws = device.max_wg_size().unwrap();
-            dev_max_lws
+            // return dev max lws
+            device.max_wg_size().unwrap()
         };
 
         // Optimal tile-size is as close to the preferred maximum work-group-size while still

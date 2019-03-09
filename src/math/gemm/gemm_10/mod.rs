@@ -36,7 +36,7 @@ impl OclGemm<Gemm10Kernel> for Gemm10Kernel {
         let src_mtx_mul = String::from_utf8_lossy(include_bytes!("../cl/10_incomplete_tiles.cl"));
 
         let params = Gemm10CompileParameters::choose(m, n, k, device);
-        let mut params_list: Vec<String> = params.clone().into();
+        let mut params_list: Vec<String> = params.into();
         params_list.push("-I./src/math/gemm/cl".to_owned());
 
         let (queue, program, _context) = cl_util::init_from_sources::<f32>(
@@ -213,15 +213,14 @@ impl OclGemm<Gemm10Kernel> for Gemm10Kernel {
 
     /// a is column-major and b_transposed is row-major (or transposed column-major)
     fn set_buffers_from_slices(&self, a: &[f32], b_transposed: &[f32]) {
-        match self.use_host_ptr {
-            true => unsafe {
+        if self.use_host_ptr {
+            unsafe {
                 cl_util::map_to_buf(&self.a_buf, a).unwrap();
                 cl_util::map_to_buf(&self.b_transposed_buf, b_transposed).unwrap();
-            },
-            false => {
-                self.a_buf.write(a).enq().unwrap();
-                self.b_transposed_buf.write(b_transposed).enq().unwrap();
             }
+        } else {
+            self.a_buf.write(a).enq().unwrap();
+            self.b_transposed_buf.write(b_transposed).enq().unwrap();
         }
     }
 

@@ -122,7 +122,7 @@ where
         let out_shape = ImageGeometry::new(in_shape.side(), num_out_channels);
         SepconvLayer {
             weights,
-            in_shape: in_shape.clone(),
+            in_shape: *in_shape,
             out_shape,
         }
     }

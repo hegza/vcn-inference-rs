@@ -13,22 +13,18 @@ fn classic_predicts() {
     let network = ClNetwork::<f32>::new(Weights::default());
 
     let input = {
-        let padded_raw = Array::from_shape_vec(
+        Array::from_shape_vec(
             (3, 100, 100),
             read_image_with_padding_from_bin_in_channels::<f32>(
                 &format!("{}/in.bin", CLASSIC_BASELINE),
                 network.input_shape(),
-            )
-            .into_iter()
-            .map(|x| f32::from(x))
-            .collect::<Vec<f32>>(),
+            ),
         )
         .unwrap()
         .permuted_axes((0, 1, 2))
         .iter()
         .cloned()
-        .collect::<Vec<f32>>();
-        padded_raw
+        .collect::<Vec<f32>>()
     };
 
     let result = network.predict(&input);
@@ -50,7 +46,7 @@ fn l1_returns_baseline() {
         let input_shape = ImageGeometry::new(96, 3);
         let filter_shape = PaddedSquare::from_side(5);
         let padded_input_shape = input_shape.with_filter_padding(&filter_shape);
-        let padded_raw = Array::from_shape_vec(
+        Array::from_shape_vec(
             (3, 100, 100),
             read_image_with_padding_from_bin_in_channels::<f32>(
                 &format!("{}/in.bin", CLASSIC_BASELINE),
@@ -61,8 +57,7 @@ fn l1_returns_baseline() {
         .permuted_axes((0, 2, 1))
         .iter()
         .cloned()
-        .collect::<Vec<f32>>();
-        padded_raw
+        .collect::<Vec<f32>>()
     };
 
     // Out is in same order as in
@@ -71,7 +66,7 @@ fn l1_returns_baseline() {
     // Load model outputs in (channels, height, width)-order
     let correct = Array::from_shape_vec(
         (32, 52, 52),
-        f32::read_lines_from_file(&format!("input/baseline/orig-f32-all-layers/fm1.f")).unwrap(),
+        f32::read_lines_from_file(&"input/baseline/orig-f32-all-layers/fm1.f".to_string()).unwrap(),
     )
     .unwrap()
     .permuted_axes((0, 2, 1))

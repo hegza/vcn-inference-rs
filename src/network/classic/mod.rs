@@ -102,7 +102,7 @@ where
         ClNetwork::<T> {
             queue_a,
             queue_b,
-            input_shape: conv1.input_shape().clone(),
+            input_shape: *conv1.input_shape(),
             input_buf,
             conv1_kernel: conv_relu1,
             conv2_kernel: conv_relu2,

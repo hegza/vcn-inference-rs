@@ -152,7 +152,7 @@ trait IntoShape {
 
 impl IntoShape for Shape {
     fn into_shape(self) -> Shape {
-        return self;
+        self
     }
 }
 
@@ -194,7 +194,7 @@ mod test {
         };
 
         let output = relu(
-            xcorr2d(input, weights, &vec![0f32; 32], (1, 1), PaddingStyle::Same)
+            xcorr2d(input, weights, &[0f32; 32], (1, 1), PaddingStyle::Same)
                 .into_iter()
                 .cloned()
                 .collect::<Vec<f32>>(),

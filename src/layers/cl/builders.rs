@@ -27,8 +27,8 @@ where
             queue,
             layer_idx: 0,
             wgts_idx: 0,
-            io_bufs: io_bufs.clone(),
-            wgts_bufs: wgts_bufs.clone(),
+            io_bufs: io_bufs,
+            wgts_bufs: wgts_bufs,
         }
     }
     pub fn build_io_kernel(

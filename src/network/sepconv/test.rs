@@ -6,7 +6,7 @@ use ndarray::Array;
 use rand;
 use rand::Rng;
 
-pub const SEPCONV_BASELINE_F32: &'static str = "input/baseline/sepconv-f32-xcorr/case b";
+pub const SEPCONV_BASELINE_F32: &str = "input/baseline/sepconv-f32-xcorr/case b";
 
 lazy_static! {
     static ref LAYERS: Layers<f32> = { Layers::<f32>::new(Weights::default()) };
@@ -286,13 +286,13 @@ fn l3_returns_baseline() {
     // Load input in (channels, height, width)-order
     let input_data = {
         let raw = f32::read_csv(&format!("{}/mxp2_out-cwh.csv", SEPCONV_BASELINE_F32));
-        let chw = Array::from_shape_vec((32, 24, 24), raw)
+        // return chw
+        Array::from_shape_vec((32, 24, 24), raw)
             .unwrap()
             .permuted_axes((0, 2, 1))
             .into_iter()
             .cloned()
-            .collect::<Vec<f32>>();
-        chw
+            .collect::<Vec<f32>>()
     };
 
     // Output is in (fc-const)-order

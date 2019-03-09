@@ -64,8 +64,8 @@ where
     bufs.push(in_buf);
 
     // Buffers in-between layers 1..N-1
-    for idx in 1..layers.len() {
-        let buf = layers[idx].create_in_buf(flags::MEM_READ_WRITE, queue);
+    for layer in layers[1..].iter() {
+        let buf = layer.create_in_buf(flags::MEM_READ_WRITE, queue);
         bufs.push(buf);
     }
 

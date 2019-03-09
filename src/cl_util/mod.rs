@@ -63,9 +63,10 @@ where
     let program = program_b.build(&context).unwrap();
 
     // Create the queue for the default device
-    let profile_flag = match PROFILING {
-        true => Some(flags::CommandQueueProperties::PROFILING_ENABLE),
-        false => None,
+    let profile_flag = if PROFILING {
+        Some(flags::CommandQueueProperties::PROFILING_ENABLE)
+    } else {
+        None
     };
     let queue = Queue::new(&context, device, profile_flag).unwrap();
     (queue, program, context)
@@ -138,7 +139,7 @@ pub unsafe fn map_to_buf<T: OclPrm>(buf: &Buffer<T>, data: &[T]) -> ocl::Result<
     let mut mem_map = buf.map().flags(flags::MAP_WRITE).len(buf.len()).enq()?;
 
     // Read the input into the input_buf as T
-    for (idx, f) in data.into_iter().enumerate() {
+    for (idx, f) in data.iter().enumerate() {
         mem_map[idx] = *f;
     }
 

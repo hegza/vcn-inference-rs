@@ -8,7 +8,7 @@ lazy_static! {
     static ref LAYERS: Layers<f32> = { Layers::<f32>::new(Weights::default()) };
 }
 
-pub const SPARSE_BASELINE: &'static str = "input/baseline/sparse-f32";
+pub const SPARSE_BASELINE: &str = "input/baseline/sparse-f32";
 
 #[test]
 fn l1_returns_baseline() {
@@ -84,13 +84,13 @@ fn l3_returns_baseline() {
     // Load input in (channels, height, width)-order
     let input_data = {
         let raw = f32::read_csv(&format!("{}/fm2_mxp-hwc.csv", SPARSE_BASELINE));
-        let chw = Array::from_shape_vec((24, 24, 32), raw)
+        // return CHW
+        Array::from_shape_vec((24, 24, 32), raw)
             .unwrap()
             .permuted_axes((2, 0, 1))
             .into_iter()
             .cloned()
-            .collect::<Vec<f32>>();
-        chw
+            .collect::<Vec<f32>>()
     };
 
     // Output is in (fc-const)-order

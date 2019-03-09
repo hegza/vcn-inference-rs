@@ -79,7 +79,7 @@ impl ClNetwork<f32> {
 
         ClNetwork::<f32> {
             queue,
-            input_shape: conv1.input_shape().clone(),
+            input_shape: *conv1.input_shape(),
             input_buf,
             conv1_kernel: conv_relu1,
             conv2_kernel: conv_relu2,

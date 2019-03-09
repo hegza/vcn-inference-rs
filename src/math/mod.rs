@@ -149,7 +149,7 @@ impl GenericOps for i8 {
         self.partial_cmp(other)
     }
     fn generic_exp(self) -> f32 {
-        (self as f32).exp()
+        f32::from(self).exp()
     }
 }
 
@@ -164,6 +164,6 @@ impl GenericOps for u8 {
         self.partial_cmp(other)
     }
     fn generic_exp(self) -> f32 {
-        (self as f32).exp()
+        f32::from(self).exp()
     }
 }

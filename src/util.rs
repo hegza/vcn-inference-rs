@@ -61,10 +61,10 @@ pub trait WriteCsv: Sized {
 
 impl ReadBinFromFile for f32 {
     fn read_bin_from_file(filename: &str) -> Vec<f32> {
-        let metadata =
-            std::fs::metadata(&filename).expect(&format!("file not found '{}'", filename));
+        let metadata = std::fs::metadata(&filename)
+            .unwrap_or_else(|_| panic!("file not found '{}'", filename));
 
-        let f = File::open(filename).expect(&format!("file not found '{}'", filename));
+        let f = File::open(filename).unwrap_or_else(|_| panic!("file not found '{}'", filename));
         // f32 = 4 bytes
         let len_f32s = metadata.len() as usize * 4;
         let mut reader = BufReader::with_capacity(len_f32s, f);
@@ -88,17 +88,17 @@ impl WriteBin for f32 {
         let f = File::open(filename).unwrap();
         let mut writer = BufWriter::new(f);
         for val in wtr {
-            writer.write(&[val]).unwrap();
+            writer.write_all(&[val]).unwrap();
         }
     }
 }
 
 impl ReadBinFromFile for i8 {
     fn read_bin_from_file(filename: &str) -> Vec<i8> {
-        let metadata =
-            std::fs::metadata(&filename).expect(&format!("file not found '{}'", filename));
+        let metadata = std::fs::metadata(&filename)
+            .unwrap_or_else(|_| panic!("file not found '{}'", filename));
 
-        let f = File::open(filename).expect(&format!("file not found '{}'", filename));
+        let f = File::open(filename).unwrap_or_else(|_| panic!("file not found '{}'", filename));
         // i8 = 1 byte
         let len_i8s = metadata.len() as usize;
         let mut reader = BufReader::with_capacity(len_i8s, f);
@@ -115,10 +115,10 @@ impl ReadBinFromFile for i8 {
 
 impl ReadBinFromFile for f64 {
     fn read_bin_from_file(filename: &str) -> Vec<f64> {
-        let metadata =
-            std::fs::metadata(&filename).expect(&format!("file not found '{}'", filename));
+        let metadata = std::fs::metadata(&filename)
+            .unwrap_or_else(|_| panic!("file not found '{}'", filename));
 
-        let f = File::open(filename).expect(&format!("file not found '{}'", filename));
+        let f = File::open(filename).unwrap_or_else(|_| panic!("file not found '{}'", filename));
         // f64 = 8 bytes
         let len_f64s = metadata.len() as usize * 8;
         let mut reader = BufReader::with_capacity(len_f64s, f);
@@ -177,7 +177,8 @@ where
     <T as FromStr>::Err: Debug,
 {
     fn read_csv(filename: &str) -> Vec<T> {
-        let file = File::open(filename).expect(&format!("unable to read file '{}'", filename));
+        let file =
+            File::open(filename).unwrap_or_else(|_| panic!("unable to read file '{}'", filename));
         let chars = BufReader::new(file)
             .lines()
             .filter_map(|res| res.ok())
@@ -228,12 +229,11 @@ where
         File::open(filename).and_then(|file| {
             let lines = BufReader::new(file).lines();
             Ok(lines
-                .into_iter()
                 .filter_map(|res| res.ok())
                 .map(|line| {
                     line.trim()
                         .parse::<T>()
-                        .expect(&format!("cannot parse {} as T", line))
+                        .unwrap_or_else(|_| panic!("cannot parse {} as T", line))
                 })
                 .collect::<Vec<T>>())
         })
@@ -275,8 +275,8 @@ fn split_in_three_mut<T>(
     unsafe {
         (
             from_raw_parts_mut(ptr, first_mark),
-            from_raw_parts_mut(ptr.offset(first_mark as isize), second_mark - first_mark),
-            from_raw_parts_mut(ptr.offset(second_mark as isize), len - second_mark),
+            from_raw_parts_mut(ptr.add(first_mark), second_mark - first_mark),
+            from_raw_parts_mut(ptr.add(second_mark), len - second_mark),
         )
     }
 }

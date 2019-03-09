@@ -15,7 +15,7 @@ impl MaxpoolLayer {
     pub fn new(in_shape: &ImageGeometry, stride: usize) -> MaxpoolLayer {
         let out_shape = ImageGeometry::new(in_shape.side() / stride, in_shape.channels());
         let layer = MaxpoolLayer {
-            in_shape: in_shape.clone(),
+            in_shape: *in_shape,
             out_shape,
         };
         debug!(
@@ -61,7 +61,7 @@ impl Layer for MaxpoolLayer {
 
         // Find a local-work-size-side as large as possible that it fits with the data
         while (self.in_shape.side() % lws_side) != 0 {
-            lws_side = lws_side >> 1;
+            lws_side >>= 1;
 
             // Fail if the local-work-size-side becomes too small
             if lws_side == 1 {

@@ -19,6 +19,7 @@ use ocl::{
 };
 use std::fs;
 use std::io::prelude::*;
+use std::ops::{AddAssign, Div};
 
 pub const SEPCONV_HYPER_PARAMS: SepconvHyperParams = SepconvHyperParams {
     side: 96,
@@ -234,6 +235,7 @@ where
 impl<T> Predict<T> for ClNetwork<T>
 where
     T: CoeffFloat,
+    f32: AddAssign<T>,
 {
     // Maps the input buffer, and runs the network, returning the result.
     fn predict(&self, input_data: &[T]) -> Vec<f32> {
@@ -272,7 +274,7 @@ where
         // Run the 5th layer (fully-connected)
         let dense5_out = self.dense5.compute(&dense4_out);
 
-        softmax(dense5_out)
+        softmax::<T, f32>(dense5_out)
     }
 }
 

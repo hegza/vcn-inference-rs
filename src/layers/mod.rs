@@ -22,10 +22,10 @@ use crate::util::*;
 use num_traits::{Float, NumAssign, PrimInt};
 use ocl::*;
 use std::fmt::Display;
-use std::ops::Deref;
+use std::ops::{Deref, Div};
 
 pub trait Coeff: NumAssign + GenericOps + OclPrm + ClVecTypeName + Display {}
-pub trait CoeffFloat: Coeff + Float {}
+pub trait CoeffFloat: Coeff + Float + Div<f32, Output = f32> {}
 
 /// Describes a layer of a convolutive neural network.
 pub trait Layer {
@@ -50,6 +50,6 @@ pub trait WeightedLayer<T>: Layer {
 impl Coeff for f32 {}
 impl CoeffFloat for f32 {}
 impl Coeff for f64 {}
-impl CoeffFloat for f64 {}
+//impl CoeffFloat for f64 {}
 impl Coeff for i8 {}
 impl Coeff for u8 {}

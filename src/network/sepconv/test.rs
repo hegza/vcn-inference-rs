@@ -371,7 +371,7 @@ fn run_sepconv_i8() -> Vec<f32> {
 #[test]
 fn sepconv_f32_predicts() {
     let output = run_sepconv_f32();
-    let correct = softmax(f32::read_csv(&format!("{}/fc5-out.csv", SEPCONV_BASELINE)));
+    let correct = softmax::<f32, f32>(f32::read_csv(&format!("{}/fc5-out.csv", SEPCONV_BASELINE)));
 
     verify(&output, &correct, RESULT_MARGIN);
 }

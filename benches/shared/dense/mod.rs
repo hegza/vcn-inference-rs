@@ -26,6 +26,6 @@ pub fn bench_dense5() -> (&'static str, impl FnMut(&mut Bencher)) {
         black_box(f32::read_lines_from_file(&format!("{}/fc4.f", VCN_BASELINE_DIR)).unwrap());
 
     ("dense 5 - host mtxmul", move |b| {
-        b.iter(|| softmax(dense5.compute(&input_data)))
+        b.iter(|| softmax::<f32, f32>(dense5.compute(&input_data)))
     })
 }

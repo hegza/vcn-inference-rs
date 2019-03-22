@@ -18,6 +18,7 @@ use ocl::flags::*;
 use ocl::{flags, Buffer, Context, Device, EventList, Kernel, OclPrm, Platform, Program, Queue};
 use std::fs;
 use std::io::prelude::*;
+use std::ops::{AddAssign, Div};
 
 pub struct ClNetwork<T>
 where
@@ -118,6 +119,7 @@ impl ClNetwork<f32> {
 impl<T> Predict<T> for ClNetwork<T>
 where
     T: CoeffFloat,
+    f32: AddAssign<T>,
 {
     fn predict(&self, input_data: &[T]) -> Vec<f32> {
         unsafe {
@@ -140,7 +142,7 @@ where
         let dense4_out = relu(self.dense4.compute(&sparse3_out));
 
         // Run the 5th layer (fully-connected)
-        softmax(self.dense5.compute(&dense4_out))
+        softmax::<T, f32>(self.dense5.compute(&dense4_out))
     }
 }
 

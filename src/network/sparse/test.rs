@@ -118,7 +118,7 @@ fn l5_returns_baseline() {
     let layer = &LAYERS.dense5;
     let input_data = f32::read_csv(&format!("{}/hidden2.csv", SPARSE_BASELINE));
 
-    let output = softmax(layer.compute(&input_data));
+    let output = softmax::<f32, f32>(layer.compute(&input_data));
     let correct = f32::read_csv(&format!("{}/out.csv", SPARSE_BASELINE));
     verify(&output, &correct, RESULT_MARGIN);
 }

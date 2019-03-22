@@ -122,7 +122,7 @@ fn l5_returns_baseline() {
     let layer = &LAYERS.dense5;
     let input_data = f32::read_lines_from_file(&format!("{}/fc4.f", VCN_BASELINE_DIR)).unwrap();
 
-    let output = softmax(layer.compute(&input_data));
+    let output = softmax::<f32, f32>(layer.compute(&input_data));
     let correct = f32::read_lines_from_file(&format!("{}/out5.f", VCN_BASELINE_DIR)).unwrap();
     assert_eq!(output.len(), correct.len());
     verify(&output, &correct, RESULT_MARGIN);

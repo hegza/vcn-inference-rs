@@ -10,11 +10,12 @@ pub mod gemm;
 pub use self::gemm::*;
 pub use self::quantize::*;
 use crate::util::*;
+use num_traits::real::Real;
 use num_traits::{Float, Num, NumAssign, PrimInt, Zero};
 use std;
 use std::cmp::Ordering;
 use std::mem::size_of;
-use std::ops::{AddAssign, Mul};
+use std::ops::{AddAssign, Div, Mul};
 
 /// Naive matrix multiplication on the host
 pub fn gemm_naive<T>(m: usize, n: usize, k: usize, a: &[T], b: &[T], c: &mut [T])
@@ -74,22 +75,25 @@ where
         .collect()
 }
 
-pub fn softmax<T>(input: Vec<T>) -> Vec<f32>
+/// Converts `values` into action probabilities
+///
+/// Converts N `values` into N floating point action probabilities, where N is
+/// the number of classes. This implementation is a minimum guarantees
+/// implementation, and as such probably the best possible implementation.
+/// (allocating)
+///
+/// # Arguments
+/// * `values` - The real values to be converted to action probabilities
+pub fn softmax<T, FOut>(values: Vec<T>) -> Vec<FOut>
 where
-    T: GenericOps + Num + Copy,
+    T: Real + Div<FOut, Output = FOut>,
+    FOut: Zero + AddAssign<T> + Copy,
 {
-    let m = input.len();
-    let n = 1;
-    let mut sum = 0f32;
-    for i in 0..m {
-        for j in 0..n {
-            sum += input.elem(n, i, j).generic_exp();
-        }
+    let mut sum = FOut::zero();
+    for x in &values {
+        sum += x.exp();
     }
-    input
-        .iter()
-        .map(|&val| val.generic_exp() / sum)
-        .collect::<Vec<f32>>()
+    values.iter().map(|v| v.exp() / sum).collect()
 }
 
 impl GenericOps for f32 {

@@ -48,6 +48,17 @@
             "problemMatcher": [
                 "$rustc"
             ]
+        },
+        {
+            "type": "shell",
+            "label": "cargo check benches",
+            "command": "cargo",
+            "args": [
+                "bench --no-run"
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ]
         }
     ]
 }

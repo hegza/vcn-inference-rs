@@ -17,7 +17,7 @@
         {
             "type": "shell",
             "label": "cargo check",
-            "command": "cargo check --bins --tests --benches",
+            "command": "cargo check --all-targets",
             "problemMatcher": [
                 "$rustc"
             ],

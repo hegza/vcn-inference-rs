@@ -62,10 +62,10 @@ impl SparseLayer<f32> {
             num_out: output_dim,
         };
         debug!(
-            "Create Sparse layer with input: {}, output: {}, weights: {}.",
+            "Create sparse layer with input: {}, output: {}, nnz-weights: {}.",
             layer.num_in(),
             layer.num_out(),
-            layer.num_weights()
+            num_nnz
         );
 
         layer

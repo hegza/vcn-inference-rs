@@ -72,6 +72,26 @@ impl ClNetwork<f32> {
             &queue,
         );
 
+        // Log info about the created network
+        debug!("A sparse network was created with layers:");
+        debug!(
+            "  {:?} (devices = {:?})",
+            conv1,
+            conv_relu1.devices().unwrap()
+        );
+        debug!(
+            "  {:?} (devices = {:?})",
+            conv2,
+            conv_relu2.devices().unwrap()
+        );
+        debug!("  {:?} (device = host)", layers.sparse3);
+        debug!("  {:?} (device = host)", layers.dense4);
+        debug!("  {:?} (device = host)", layers.dense5);
+        info!(
+            "Sparse layers 1-2 will be run on {}, layers 3-5 will be run on host (Rust).",
+            device_id_to_name(conv_relu1.devices().unwrap()[0])
+        );
+
         // Move and store the first and last buffer
         let mut buf_drain = conv_bufs.drain(..);
         let input_buf = buf_drain.next().unwrap();

@@ -92,6 +92,13 @@ where
             &queue_b,
         );
 
+        // Log info about the created network
+        info!(
+            "Classic layers 1-2 will be run on {}, layer 3 will be run on {}, layers 4-5 will be run on host (Rust).",
+            device_id_to_name(conv_relu1.devices().unwrap()[0]),
+            device_id_to_name(dense3_kernel.devices().unwrap()[0]),
+        );
+
         // TODO: see if queue finish here has an impact on anything
 
         // Move and store the first and last buffer

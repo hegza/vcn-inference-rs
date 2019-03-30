@@ -6,7 +6,7 @@ mod weights;
 pub use self::layers::*;
 pub use self::weights::*;
 use super::{Predict, PRIMARY_DEVICE};
-use crate::cl_util;
+use crate::cl_util::*;
 use crate::geometry::{ImageGeometry, PaddedSquare, Square};
 use crate::layers::*;
 use crate::math::{relu, softmax};
@@ -112,7 +112,7 @@ where
         let (dense3_in_buf, dense3_out_buf) =
             dense3.create_io_bufs(flags::MEM_READ_WRITE, flags::MEM_WRITE_ONLY, &queue_b);
 
-        let dev_max_wgs = cl_util::max_wgs(Some(&device_a));
+        let dev_max_wgs = max_wgs(Some(&device_a));
 
         // Create kernels
         let kernels = {
@@ -173,6 +173,13 @@ where
             &queue_b,
         );
 
+        // Log info about the created network
+        info!(
+            "SepConv conv layers will be run on {}, layer 3 will be run on {}, layers 4-5 will be run on host (Rust).",
+            device_id_to_name(kernels.0.devices().unwrap()[0]),
+            device_id_to_name(dense3_kernel.devices().unwrap()[0]),
+        );
+
         // TODO: see if queue finish here has an impact on anything
 
         // Move and store the first and last buffer
@@ -200,14 +207,14 @@ where
     }
     pub fn fix_params_for_default_gpu(p: &mut SepconvHyperParams) {
         // HACK: Max-work-size is not enough, use halved dimensions for hconv1
-        let max_wgs = cl_util::max_wgs(None);
+        let max_wgs = max_wgs(None);
         if p.side * p.hconv1_blockdim_y > max_wgs {
             p.hconv1_blockdim_y /= 2;
             warn!("using halved dimension for horizontal convolution 1");
         }
     }
     pub fn compile_flags(p: &SepconvHyperParams, layers: &Layers<T>) -> Vec<String> {
-        let max_wgs = cl_util::max_wgs(Some(&PRIMARY_DEVICE));
+        let max_wgs = max_wgs(Some(&PRIMARY_DEVICE));
         let mxp1_lws = layers.mxp1.lws_hint(max_wgs).to_lens().unwrap()[0];
         let mxp2_lws = layers.mxp2.lws_hint(max_wgs).to_lens().unwrap()[0];
 
@@ -233,7 +240,7 @@ where
         let mut event_list = EventList::new();
 
         unsafe {
-            cl_util::map_to_buf(&self.in_buf, input_data).unwrap();
+            map_to_buf(&self.in_buf, input_data).unwrap();
 
             self.krn_vconv1.cmd().queue(q).enq().unwrap();
             self.krn_hconv1.cmd().queue(q).enq().unwrap();
@@ -262,7 +269,7 @@ where
         self.queue_b.finish().unwrap();
 
         // Load the 3rd layer from the GPU and Run ReLU on it
-        let dense3_out = unsafe { cl_util::read_buf(&self.dense3_out_buf).unwrap() };
+        let dense3_out = unsafe { read_buf(&self.dense3_out_buf).unwrap() };
 
         // Run the 4th layer (fully-connected)
         let dense4_out = relu(self.dense4.compute(&dense3_out));
@@ -298,9 +305,9 @@ where
     let platform = Platform::default();
 
     // Prefer GPU a device for the convolution device
-    let device_a = cl_util::select_device(cl_util::DevicePreference::PreferGpu);
+    let device_a = select_device(DevicePreference::PreferGpu);
     // Prefer CPU for the dense-3 matrix multiplication
-    let device_b = cl_util::select_device(cl_util::DevicePreference::RequireCpu);
+    let device_b = select_device(DevicePreference::RequireCpu);
 
     let context = Context::builder()
         .platform(platform)
@@ -311,7 +318,7 @@ where
     let mut program_b = Program::builder();
 
     // Add default compiler options
-    cl_util::configure_program::<T, &[Device]>(&mut program_b, &[device_a, device_b]);
+    configure_program::<T, &[Device]>(&mut program_b, &[device_a, device_b]);
     for &opt in flags {
         program_b.cmplr_opt(opt);
     }

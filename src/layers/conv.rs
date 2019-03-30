@@ -2,6 +2,7 @@ use super::*;
 use crate::geometry::*;
 use crate::util::*;
 use ocl::SpatialDims;
+use std::fmt;
 use std::ops::Deref;
 
 // TODO: refactor to use tensors (weights) and tensor-shapes (input dims) (ndarray?)
@@ -90,5 +91,18 @@ where
 {
     fn weights(&self) -> &[T] {
         &self.weights
+    }
+}
+
+impl<T> fmt::Debug for ConvLayer<T>
+where
+    T: Coeff,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "ConvLayer {{ in: {{ {:?} }}, out: {{ {:?} }} }}",
+            self.input_shape, self.output_shape
+        )
     }
 }

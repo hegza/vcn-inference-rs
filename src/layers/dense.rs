@@ -1,6 +1,7 @@
 use super::*;
 use crate::util::*;
 use ocl::SpatialDims;
+use std::fmt;
 use std::ops::Deref;
 
 /// A complete descriptor for a fully-connected layer
@@ -71,5 +72,18 @@ where
 {
     fn weights(&self) -> &[T] {
         &self.weights
+    }
+}
+
+impl<T> fmt::Debug for DenseLayer<T>
+where
+    T: Coeff,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "DenseLayer {{ in: {}, out: {}}}",
+            self.num_in, self.num_out
+        )
     }
 }

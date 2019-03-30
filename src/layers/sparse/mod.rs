@@ -5,6 +5,7 @@ use super::*;
 use crate::util::*;
 use ocl::SpatialDims;
 use sprs::{CsMat, CsMatBase, CsMatI, CsVec, TriMatBase};
+use std::fmt;
 use std::ops::Deref;
 
 const FLOAT_ZERO_THRESHOLD: f32 = 0.000_000_1f32;
@@ -127,5 +128,18 @@ where
         }
 
         out
+    }
+}
+
+impl<T> fmt::Debug for SparseLayer<T>
+where
+    T: Coeff,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "SparseLayer {{ in: {}, out: {} }}",
+            self.num_in, self.num_out
+        )
     }
 }

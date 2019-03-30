@@ -179,3 +179,7 @@ pub fn select_device(preference: DevicePreference) -> Device {
             .unwrap(),
     }
 }
+
+pub fn device_id_to_name(id: ocl::core::DeviceId) -> String {
+    Device::from(id).name().unwrap()
+}

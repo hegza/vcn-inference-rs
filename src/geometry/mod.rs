@@ -1,3 +1,4 @@
+use std::fmt;
 // TODO: most of the stuff in this file should be deprecated in favor of a tensor API (ndarray?)
 
 /// A descriptor for the filter-geometry
@@ -8,7 +9,7 @@ pub struct PaddedSquare {
 }
 
 /// A descriptor for input and intermediary image geometry
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct ImageGeometry {
     side: usize,
     padding: usize,
@@ -88,5 +89,15 @@ impl Square for ImageGeometry {
     }
     fn num_elems(&self) -> usize {
         self.side() * self.side() * self.channels
+    }
+}
+
+impl fmt::Debug for ImageGeometry {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "ImageGeometry {}x{}x{}, padding: {}",
+            self.channels, self.side, self.side, self.padding
+        )
     }
 }

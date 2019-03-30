@@ -1,5 +1,5 @@
 use super::*;
-use crate::cl_util as cl;
+use crate::cl_util;
 use crate::network::Predict;
 use crate::tests::*;
 use crate::{TEST_IMAGE_JPEG_PATH, VCN_SEPCONV_F32_BASELINE_DIR as SEPCONV_BASELINE};

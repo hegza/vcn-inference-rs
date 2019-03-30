@@ -6,11 +6,15 @@
     "configurations": [
         {
             "type": "lldb",
-            "request": "launch",
-            "name": "Debug",
-            "program": "${workspaceRoot}/target/debug/test_accuracy",
-            "args": [],
-            "cwd": "${workspaceRoot}"
+            "request": "custom",
+            "name": "Debug test_accuracy",
+            "targetCreateCommands": [
+                "target create ${workspaceFolder}/target/debug/test_accuracy"
+            ],
+            "processCreateCommands": [
+                "settings set target.run-args value1 value2 value3",
+                "process launch"
+            ]
         }
     ]
 }

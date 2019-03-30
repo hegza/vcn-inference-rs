@@ -232,6 +232,10 @@ fn report(
         init_duration,
     );
     println!(
+        "    per-image: {:?}",
+        (total_duration - init_duration) / 655
+    );
+    println!(
         "    accu: {:.5}\t\t({}/{}){}",
         accuracy, correct_inputs, total_inputs, acc_mismatch_msg
     );

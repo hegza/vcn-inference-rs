@@ -304,7 +304,7 @@ where
 
     let platform = Platform::default();
 
-    // Prefer GPU a device for the convolution device
+    // Prefer a GPU device for the convolution device
     let device_a = select_device(DevicePreference::PreferGpu);
     // Prefer CPU for the dense-3 matrix multiplication
     let device_b = select_device(DevicePreference::RequireCpu);
@@ -318,7 +318,7 @@ where
     let mut program_b = Program::builder();
 
     // Add default compiler options
-    configure_program::<T, &[Device]>(&mut program_b, &[device_a, device_b]);
+    configure_program::<T>(&mut program_b);
     for &opt in flags {
         program_b.cmplr_opt(opt);
     }

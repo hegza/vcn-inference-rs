@@ -23,10 +23,8 @@ const INPUT_IMG_DIR: &str = "input/images";
 const TEST_CLASSIC: bool = true;
 const TEST_SPARSE: bool = true;
 const TEST_SEPCONV_F32: bool = true;
-//const TEST_SEPCONV_I8: bool = true;
 const CLASSIC_SINGLE_SHOT: bool = false;
 const SEPCONV_F32_SINGLE_SHOT: bool = false;
-//const SEPCONV_I8_SINGLE_SHOT: bool = false;
 const PRINT_PREDICTIONS: bool = false;
 
 pub fn main() {
@@ -35,7 +33,7 @@ pub fn main() {
     // Figure out the existing classes for the network based on directory names
     let class_dir_names = list_dirs(INPUT_IMG_DIR).unwrap();
 
-    debug!("Loading input images for classic networks...");
+    debug!("Loading input images for classic network...");
 
     let load_fun = |file: &String| -> Vec<f32> {
         let raw_input: Vec<f32> = load_jpeg_chw(file);
@@ -59,6 +57,7 @@ pub fn main() {
     }
 
     if TEST_CLASSIC {
+        debug!("Starting to test classic network.");
         let timer = Instant::now();
 
         // Initialize OpenCL and the network
@@ -90,6 +89,7 @@ pub fn main() {
     let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
 
     if TEST_SPARSE {
+        debug!("Starting to test sparse network.");
         let timer = Instant::now();
 
         // Initialize OpenCL and the network
@@ -124,6 +124,7 @@ pub fn main() {
             false => test_data.iter().cloned().collect(),
         };
 
+        debug!("Starting to test sepconv network.");
         let timer = Instant::now();
 
         // Initialize OpenCL and the sep-conv network

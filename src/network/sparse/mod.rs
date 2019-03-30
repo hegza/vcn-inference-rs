@@ -175,7 +175,7 @@ where
     let mut program_b = Program::builder();
 
     // Add default compiler options
-    configure_program::<T, Device>(&mut program_b, device);
+    configure_program::<T>(&mut program_b);
 
     // Input the kernel source files
     for src in sources {

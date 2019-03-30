@@ -48,7 +48,7 @@ where
     let mut program_b = Program::builder();
 
     // Add default compiler options
-    configure_program::<T, Device>(&mut program_b, device);
+    configure_program::<T>(&mut program_b);
 
     // Additional compiler options
     for &opt in addt_cmplr_opts {
@@ -96,13 +96,12 @@ where
     )
 }
 
-pub fn configure_program<T, D>(program_b: &mut ProgramBuilder, devices: D)
+pub fn configure_program<T>(program_b: &mut ProgramBuilder)
 where
     T: ClVecTypeName,
-    D: Into<DeviceSpecifier>,
 {
     program_b
-        .devices(devices)
+        .devices(DeviceType::all())
         .cmplr_opt("-I./src/cl")
         .cmplr_opt("-cl-std=CL1.2")
         .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()))

@@ -163,8 +163,19 @@ where
 
     let platform = Platform::default();
 
-    // Prefer GPU a device for the convolution device
-    let device = select_device(DevicePreference::PreferGpu);
+    let all_devices = Device::list(platform, None).unwrap();
+    if all_devices.is_empty() {
+        panic!("running the sparse network requires at least one OpenCL device");
+    }
+
+    // Prefer a GPU device for the convolution device
+    let device = *match all_devices
+        .iter()
+        .find(|&&dt| device_type_of(dt).contains(DeviceType::empty().gpu()))
+    {
+        Some(d) => d,
+        None => all_devices.first().unwrap(),
+    };
 
     let context = Context::builder()
         .platform(platform)
@@ -173,6 +184,7 @@ where
         .unwrap();
 
     let mut program_b = Program::builder();
+    program_b.devices(device);
 
     // Add default compiler options
     configure_program::<T>(&mut program_b);

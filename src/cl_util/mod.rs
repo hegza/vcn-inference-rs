@@ -101,7 +101,6 @@ where
     T: ClVecTypeName,
 {
     program_b
-        .devices(DeviceType::all())
         .cmplr_opt("-I./src/cl")
         .cmplr_opt("-cl-std=CL1.2")
         .cmplr_opt(format!("-D CL_PRIM={}", T::cl_type_name()))
@@ -181,4 +180,11 @@ pub fn select_device(preference: DevicePreference) -> Device {
 
 pub fn device_id_to_name(id: ocl::core::DeviceId) -> String {
     Device::from(id).name().unwrap()
+}
+
+pub fn device_type_of(device: Device) -> DeviceType {
+    match device.info(DeviceInfo::Type).unwrap() {
+        DeviceInfoResult::Type(dt) => dt,
+        _ => panic!("incorrect DeviceInfoResult from ocl API"),
+    }
 }

@@ -1,5 +1,6 @@
 use super::*;
 
+pub mod cl_context;
 pub mod classic;
 pub mod sepconv;
 pub mod sparse;

@@ -21,7 +21,7 @@ itertools = "^0.8"
 [dev-dependencies]
 criterion = { version = "^0.2" }
 matrixmultiply = { version = "^0.2" }
-enclose = "0.1.1"
+enclose = "^0.1"
 
 [[bin]]
 name = "test_accuracy"

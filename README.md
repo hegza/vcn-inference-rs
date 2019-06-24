@@ -14,7 +14,9 @@ their libraries on Windows.
 
 ### Input files
 - The best way to get the set of images for inference testing is to contact me
-or any of the team members of Effproc at Tampere University.
+or any of the team members of Effproc at Tampere University. Inputs files in
+classes `bus, normalcar, truck, van` should be placed in
+`input/images/<label>/*.jpg`, eg. `input/images/normalcar/*.jpg`.
 
 ## Running
 `export RUSTFLAGS="-C target-cpu=native"` to make sure all CPU features are used

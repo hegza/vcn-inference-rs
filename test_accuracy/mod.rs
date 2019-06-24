@@ -78,38 +78,6 @@ pub fn main() {
         );
     }
 
-    let load_fun = |file: &String| -> Vec<f32> {
-        let raw_input: Vec<f32> = load_jpeg_chw(file);
-        let mut padded = ndarray::Array::zeros((3, 100, 100));
-        padded
-            .slice_mut(s![.., 2..-2, 2..-2])
-            .assign(&ndarray::Array::from_shape_vec((3, 96, 96), raw_input).unwrap());
-
-        padded.into_iter().cloned().collect::<Vec<f32>>()
-    };
-    let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
-
-    if TEST_SPARSE {
-        debug!("Starting to test sparse network.");
-        let timer = Instant::now();
-
-        // Initialize OpenCL and the network
-        let net = sparse::ClNetwork::<f32>::new(sparse::Weights::default());
-        let init_duration = timer.elapsed();
-
-        // Make classifications and measure accuracy using the original network
-        let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
-        let total_duration = timer.elapsed();
-        report(
-            "sparse network",
-            init_duration,
-            total_duration,
-            correct_inputs,
-            total_inputs,
-            Some(format!("{}/tf_accuracy.f", VCN_SPARSE_WEIGHTS_DIR)),
-        );
-    }
-
     debug!("Loading input images for sepconv network...");
 
     let load_fun = |file: &String| -> Vec<f32> { load_jpeg_chw(file) };
@@ -145,6 +113,39 @@ pub fn main() {
             Some(format!("{}/tf_accuracy.f", VCN_SEPCONV_F32_WEIGHTS_DIR)),
         );
     }
+
+    let load_fun = |file: &String| -> Vec<f32> {
+        let raw_input: Vec<f32> = load_jpeg_chw(file);
+        let mut padded = ndarray::Array::zeros((3, 100, 100));
+        padded
+            .slice_mut(s![.., 2..-2, 2..-2])
+            .assign(&ndarray::Array::from_shape_vec((3, 96, 96), raw_input).unwrap());
+
+        padded.into_iter().cloned().collect::<Vec<f32>>()
+    };
+    let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
+
+    if TEST_SPARSE {
+        debug!("Starting to test sparse network.");
+        let timer = Instant::now();
+
+        // Initialize OpenCL and the network
+        let net = sparse::ClNetwork::<f32>::new(sparse::Weights::default());
+        let init_duration = timer.elapsed();
+
+        // Make classifications and measure accuracy using the original network
+        let (correct_inputs, total_inputs) = measure_accuracy(&net, &test_data);
+        let total_duration = timer.elapsed();
+        report(
+            "sparse network",
+            init_duration,
+            total_duration,
+            correct_inputs,
+            total_inputs,
+            Some(format!("{}/tf_accuracy.f", VCN_SPARSE_WEIGHTS_DIR)),
+        );
+    }
+
 }
 
 /// Returns (num_correct_inputs, num_total_inputs)

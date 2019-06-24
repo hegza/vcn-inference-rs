@@ -243,27 +243,22 @@ where
         unsafe {
             map_to_buf(&self.in_buf, input_data).unwrap();
 
-            self.krn_vconv1.cmd().queue(q).enq().unwrap();
-            self.krn_hconv1.cmd().queue(q).enq().unwrap();
-            self.krn_max_pool1.cmd().queue(q).enq().unwrap();
-            self.krn_vconv2.cmd().queue(q).enq().unwrap();
-            self.krn_hconv2.cmd().queue(q).enq().unwrap();
-            self.krn_max_pool2.cmd().queue(q).enq().unwrap();
+            self.krn_vconv1.cmd().enq().unwrap();
+            self.krn_hconv1.cmd().enq().unwrap();
+            self.krn_max_pool1.cmd().enq().unwrap();
+            self.krn_vconv2.cmd().enq().unwrap();
+            self.krn_hconv2.cmd().enq().unwrap();
+            self.krn_max_pool2.cmd().enq().unwrap();
 
+            // Copy GPU buffer to host
             self.device_a_out_buf
                 .copy(&self.dense3_in_buf, None, None)
-                .queue(q)
                 .enew(&mut event_list)
                 .enq()
                 .unwrap();
 
             // Enqueue the 3rd layer (fully-connected)
-            self.krn_dense3
-                .cmd()
-                .queue(&self.cl.cpu_queue)
-                .ewait(&event_list)
-                .enq()
-                .unwrap();
+            self.krn_dense3.cmd().ewait(&event_list).enq().unwrap();
         }
 
         // Wait for all on-device calculations to finish

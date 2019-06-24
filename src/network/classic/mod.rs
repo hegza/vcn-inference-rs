@@ -137,32 +137,19 @@ where
             map_to_buf(&self.input_buf, input_data).unwrap();
 
             // Enqueue the kernel for the 1st layer (Convolution + ReLU)
-            self.conv1_kernel
-                .cmd()
-                .queue(&self.cl.conv_queue())
-                .enq()
-                .unwrap();
+            self.conv1_kernel.cmd().enq().unwrap();
             // Enqueue the kernel for the 2nd layer (Convolution + ReLU)
-            self.conv2_kernel
-                .cmd()
-                .queue(&self.cl.conv_queue())
-                .enq()
-                .unwrap();
+            self.conv2_kernel.cmd().enq().unwrap();
 
+            // Copy GPU buffer to host
             self.conv2_out_buf
                 .copy(&self.dense3_in_buf, None, None)
-                .queue(&self.cl.conv_queue())
                 .enew(&mut event_list)
                 .enq()
                 .unwrap();
 
             // Enqueue the 3rd layer (fully-connected)
-            self.dense3_kernel
-                .cmd()
-                .queue(&self.cl.cpu_queue)
-                .ewait(&event_list)
-                .enq()
-                .unwrap();
+            self.dense3_kernel.cmd().ewait(&event_list).enq().unwrap();
         }
         // Wait for all on-device calculations to finish
         self.cl.cpu_queue.finish().unwrap();

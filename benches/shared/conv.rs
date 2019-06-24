@@ -83,8 +83,8 @@ pub fn bench_sepconv1() -> impl FnMut(&mut Bencher) {
 
 pub fn bench_sepconv2() -> impl FnMut(&mut Bencher) {
     let layers = sepconv::Layers::<f32>::new(sepconv::Weights::default());
-    let input_data = black_box(f32::read_bin_from_file(&format!(
-        "{}/mxp1-out.bin",
+    let input_data = black_box(f32::read_csv(&format!(
+        "{}/mxp1_out-cwh.csv",
         VCN_SEPCONV_F32_BASELINE_DIR
     )));
 
@@ -155,7 +155,7 @@ pub fn bench_sepconv1and2() -> impl FnMut(&mut Bencher) {
     let layers = sepconv::Layers::<f32>::new(sepconv::Weights::default());
 
     let input_data = black_box(f32::read_bin_from_file(&format!(
-        "{}/in.bin",
+        "{}/../in.bin",
         VCN_SEPCONV_F32_BASELINE_DIR
     )));
 

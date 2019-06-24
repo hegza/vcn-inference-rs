@@ -237,7 +237,6 @@ where
 {
     // Maps the input buffer, and runs the network, returning the result.
     fn predict(&self, input_data: &[T]) -> Vec<f32> {
-        let q = &self.cl.conv_queue();
         let mut event_list = EventList::new();
 
         unsafe {

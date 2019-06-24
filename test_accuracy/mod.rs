@@ -1,3 +1,4 @@
+#![allow(clippy::deref_addrof)]
 extern crate env_logger;
 extern crate image;
 #[macro_use]
@@ -115,13 +116,14 @@ pub fn main() {
     let test_data = load_test_data(INPUT_IMG_DIR, &class_dir_names, load_fun);
 
     if TEST_SEPCONV_F32 {
-        let test_data = match SEPCONV_F32_SINGLE_SHOT {
-            true => test_data
+        let test_data = if SEPCONV_F32_SINGLE_SHOT {
+            test_data
                 .iter()
                 .cloned()
                 .take(1)
-                .collect::<Vec<(Vec<f32>, Class)>>(),
-            false => test_data.iter().cloned().collect(),
+                .collect::<Vec<(Vec<f32>, Class)>>()
+        } else {
+            test_data.to_vec()
         };
 
         debug!("Starting to test sepconv network.");

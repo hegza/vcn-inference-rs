@@ -9,6 +9,7 @@ pub fn list_dirs<P>(dir: P) -> io::Result<Vec<String>>
 where
     P: AsRef<Path>,
 {
+    let dir = dir.as_ref();
     let mut dirs = Vec::new();
     for entry in read_dir(dir)? {
         let entry = entry?;
@@ -25,6 +26,7 @@ pub fn list_files<P>(dir: P) -> io::Result<Vec<String>>
 where
     P: AsRef<Path>,
 {
+    let dir = dir.as_ref();
     let mut files = Vec::new();
     for entry in read_dir(dir)? {
         let entry = entry?;

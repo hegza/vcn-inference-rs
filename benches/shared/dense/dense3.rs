@@ -2,8 +2,25 @@ use super::*;
 use matrixmultiply;
 use rusty_cnn::math::gemm::*;
 use rusty_cnn::*;
+use num_traits::Zero;
 
 const RESULT_MARGIN: f32 = 0.00002f32;
+
+pub fn bench_dense3_host() -> (&'static str, impl FnMut(&mut Bencher)) {
+    let in_buf = black_box(create_random_vec(32*24*24));
+    let w = create_random_vec(100*32*24*24);
+    let mut c = vec![Zero::zero(); 100];
+    ("dense 3 - host", move |b: &mut Bencher| {
+        b.iter(|| gemm_naive(
+            1,
+            100,
+            32*24*24,
+            &in_buf,
+            &w,
+            &mut c,
+        ));
+    })
+}
 
 pub fn bench_dense3_cl_cpu() -> (&'static str, impl FnMut(&mut Bencher)) {
     let dense3 = CLASSIC_LAYERS.dense3.impl_standalone(

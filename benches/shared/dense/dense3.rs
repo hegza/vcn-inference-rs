@@ -31,10 +31,13 @@ pub fn bench_dense3_cl_cpu() -> (&'static str, impl FnMut(&mut Bencher)) {
         LocalWorkSizePolicy::UseDefault,
     );
 
-    // TODO: verify correctness
+    let in_data = black_box(create_random_vec(32*24*24));
 
     ("dense 3 - cl (CPU)", move |b: &mut Bencher| {
-        b.iter(|| dense3.dry_run())
+        b.iter(|| {
+            dense3.map_input(&in_data);
+            dense3.dry_run()
+        })
     })
 }
 

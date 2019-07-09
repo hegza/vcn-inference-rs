@@ -24,6 +24,7 @@ fn bench_dense_layer_variants(c: &mut Criterion) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
     let (host_id, host) = bench_dense3_host();
+    // ???: this is always ~610 us on all platforms
     let (cl_id, cl) = bench_dense3_cl_cpu();
     let (matrixmultiply_id, matrixmultiply) = bench_dense_3_bluss_matrixmultiply();
     let (cnugteren_10_id, cnugteren_10) = bench_dense_3_cnugteren_10();

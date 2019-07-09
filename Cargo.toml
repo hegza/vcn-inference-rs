@@ -28,16 +28,16 @@ name = "test_accuracy"
 path = "test_accuracy/mod.rs"
 edition = "2018"
 
-[[bench]]
-name = "network_wall"
-harness = false
+#[[bench]]
+#name = "network_wall"
+#harness = false
 
 [[bench]]
 name = "network"
 harness = false
 
 [[bench]]
-name = "layers_cpu"
+name = "other_layers"
 harness = false
 
 [[bench]]
@@ -52,14 +52,14 @@ harness = false
 name = "gemm_gpu"
 harness = false
 
-[[bench]]
-name = "transpose"
-harness = false
+#[[bench]]
+#name = "transpose"
+#harness = false
 
 [[bench]]
 name = "dense"
 harness = false
 
-[[bench]]
-name = "network_auxiliaries"
-harness = false
+#[[bench]]
+#name = "network_auxiliaries"
+#harness = false

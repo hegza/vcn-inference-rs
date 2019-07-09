@@ -22,15 +22,12 @@ const NOISE_THRESHOLD: f64 = 0.1;
 
 /// Benchmark each layer separately.
 fn per_layer_benchmark(c: &mut Criterion) {
-    let (dense3_cl_id, dense3_cl) = bench_dense3_cl_cpu();
-    let (dense3_matrixmultiply_id, dense3_matrixmultiply) = bench_dense_3_bluss_matrixmultiply();
     let (dense4_cl_id, dense4_cl) = bench_dense4();
     let (dense5_cl_id, dense5_cl) = bench_dense5();
-    let bench = Benchmark::new(dense3_cl_id, dense3_cl)
-        .with_function(dense3_matrixmultiply_id, dense3_matrixmultiply)
-        .with_function(dense4_cl_id, dense4_cl)
+
+    let bench = Benchmark::new(dense4_cl_id, dense4_cl)
         .with_function(dense5_cl_id, dense5_cl);
-    c.bench("layers (CPU)", bench);
+    c.bench("other layers", bench);
 }
 
 criterion_group!{

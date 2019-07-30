@@ -64,7 +64,7 @@ pub fn bench_dense_3_bluss_matrixmultiply() -> (&'static str, impl FnMut(&mut Be
 
     let a = black_box(input_data);
     assert_eq!(a.len(), m * k);
-    let b = black_box(dense3.weights());
+    let b = dense3.weights();
     assert_eq!(b.len(), k * n);
     let mut c = vec![0f32; m * n];
 
@@ -126,7 +126,7 @@ pub fn bench_dense_3_cnugteren_10() -> (&'static str, impl FnMut(&mut Bencher)) 
     let a = black_box(input_data);
     assert_eq!(a.len(), m * k);
     // B is stored on disk as column-major
-    let b = black_box(dense3.weights());
+    let b = dense3.weights();
     assert_eq!(b.len(), k * n);
 
     // Setup
